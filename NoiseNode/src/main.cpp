@@ -1,42 +1,41 @@
 #include <Arduino.h>
-#include <Adafruit_NeoPixel.h>
 
-#define LED_PIN 1
-#define NUM_LEDS 1
-
-Adafruit_NeoPixel led(
-    NUM_LEDS,
-    LED_PIN,
-    NEO_GRB + NEO_KHZ800
-);
+// DFRobot Gravity analog sound level meter (SEN0232):
+// A/signal -> senseBox IO2 (GPIO2), + -> 3.3V, - -> GND.
+// Change this pin if the signal is connected to another analogue input.
+constexpr uint8_t SOUND_PIN = A2;
+constexpr unsigned long READING_INTERVAL_MS = 250;
 
 void setup() {
     Serial.begin(115200);
 
-    led.begin();
-    led.setBrightness(30);
-    led.clear();
-    led.show();
+    // Enable power to the senseBox digital/analogue connectors.
+    pinMode(IO_ENABLE, OUTPUT);
+    digitalWrite(IO_ENABLE, HIGH);
+    pinMode(SOUND_PIN, INPUT);
+    analogReadResolution(12);
+    analogSetPinAttenuation(SOUND_PIN, ADC_11db);
+
+    // Allow USB serial and the sensor to start without waiting indefinitely.
+    delay(1000);
+    Serial.println("Sound level meter ready (signal: GPIO2, 115200 baud)");
 }
 
 void loop() {
-    // Red
-    led.setPixelColor(0, led.Color(255, 0, 0));
-    led.show();
-    delay(1000);
+    // Use the ESP32 voltage conversion rather than assuming a linear 3.3V ADC.
+    const uint32_t millivolts = analogReadMilliVolts(SOUND_PIN);
+    const float voltage = millivolts / 1000.0f;
 
-    // Green
-    led.setPixelColor(0, led.Color(0, 255, 0));
-    led.show();
-    delay(1000);
+    // The sensor already measures A-weighted sound level; no FFT/RMS needed.
+    // Manufacturer's conversion: 0.6-2.6V corresponds to 30-130 dBA.
+    const float decibels = voltage * 50.0f;
 
-    // Blue
-    led.setPixelColor(0, led.Color(0, 0, 255));
-    led.show();
-    delay(1000);
-
-    // Purple
-    led.setPixelColor(0, led.Color(128, 0, 255));
-    led.show();
-    delay(1000);
-}
+    Serial.print(decibels, 1);
+    Serial.print(" dBA | ");
+    Serial.print(voltage, 3);
+    Serial.print(" V");
+    if (millivolts < 600 || millivolts > 2600) {
+        Serial.print(" | outside sensor range (check wiring/power)");
+    }
+    Serial.println();
+    delay(READING_INTERVAL_MS);
