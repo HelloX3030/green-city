@@ -1,9 +1,9 @@
 #include <Arduino.h>
 
 // DFRobot Gravity analog sound level meter (SEN0232):
-// A/signal -> senseBox IO2 (GPIO2), + -> 3.3V, - -> GND.
+// A/signal -> senseBox IO6 (GPIO6), + -> 3.3V, - -> GND.
 // Change this pin if the signal is connected to another analogue input.
-constexpr uint8_t SOUND_PIN = A2;
+constexpr uint8_t SOUND_PIN = A6;
 constexpr unsigned long READING_INTERVAL_MS = 250;
 
 void setup() {
@@ -18,7 +18,7 @@ void setup() {
 
     // Allow USB serial and the sensor to start without waiting indefinitely.
     delay(1000);
-    Serial.println("Sound level meter ready (signal: GPIO2, 115200 baud)");
+    Serial.println("Sound level meter ready (signal: GPIO6, 115200 baud)");
 }
 
 void loop() {
