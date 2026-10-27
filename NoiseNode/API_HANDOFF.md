@@ -39,18 +39,34 @@ means no new measurement is available; never convert that to zero.
 
 API reference: https://docs.opensensemap.org/#api-Measurements-getData
 
-## Current measurement meaning and limitations
+## Initial channel meaning and limitations
 
-The cloud channel currently contains an **instantaneous prototype sound-level
-reading**, not a minute LAeq. Firmware samples every 125 ms but uploads only
-**one valid reading per boot**, after NTP obtains UTC. A reset starts another
-one-shot upload. Failed uploads retain that reading in RAM for retry; a power
-cycle loses unsent data. This is not yet a continuous cloud feed.
+The original cloud channel contains an **instantaneous prototype sound-level
+reading**, not a minute LAeq. Its first-upload firmware sent one value per
+boot. The new periodic firmware uses separate minute channels and leaves this
+original channel untouched. Do not treat its last value as a live feed.
 
-Local Serial output includes approximate energy-based minute LAeq, maximum
-sampled level, distinct-event count and sampling diagnostics. Those summaries
-are not uploaded yet. They will require separate registered sensor channels
-and periodic transmission. See README.md for calculation and coverage details.
+## Periodic channels (registration and hardware verification pending)
+
+| Channel | Unit | Meaning |
+|---|---|---|
+| LAeq_1min | dB(A) | Approximate energy average of a complete minute of 125 ms samples |
+| Lmax_1min | dB(A) | Maximum sampled level in that minute; not certified peak SPL |
+| EventCount_1min | count | Onsets >=80 dBA, rearmed <=75 dBA, counted once across boundaries |
+
+Their public IDs will be filled in after registration. All three readings in
+a request share a UTC timestamp labelling the end of the window. Normal cadence
+is one upload per minute after NTP establishes time. Only complete windows with
+480 valid samples are published. The first minute after boot is usually omitted.
+A gap means unavailable data, not zero. Failed uploads retain up to 30 windows
+in RAM; overflow drops the newest and resets lose the queue. Consumers should
+identify records using sensor ID plus timestamp. Sampling diagnostics remain
+on Serial. See README.md for exact eligibility rules and recovery policy.
+
+The periodic implementation compiles and its native policy tests pass; it has
+not yet been flashed or verified against the new channels. The previously
+verified instantaneous upload above remains evidence of Wi-Fi/HTTPS operation,
+not evidence that periodic uploads have been tested.
 
 The complete measurement system has not been reference-calibrated. Readings
 are unsuitable for certified or legally enforceable noise assessments. No

@@ -15,6 +15,7 @@ constexpr float LED_SMOOTHING = 0.25f;
 NoiseAggregator aggregator(EVENT_THRESHOLD_DBA, EVENT_REARM_DBA);
 
 Adafruit_NeoPixel led(1, PIN_NEOPIXEL, NEO_GRB + NEO_KHZ800);
+time_t windowStartUtc = 0;
 
 void updateNoiseLed(float decibels) {
     static bool initialized = false;
@@ -55,6 +56,7 @@ void setup() {
     Serial.println("Sound level meter ready (signal: GPIO6, 115200 baud)");
     beginCloudUpload();
     aggregator.begin(millis());
+    windowStartUtc = time(nullptr);
 }
 
 void loop() {
@@ -78,6 +80,9 @@ void loop() {
         } else {
             Serial.println("approx_LAeq=unavailable sampled_Lmax=unavailable events=unavailable");
         }
+        const time_t windowEndUtc = time(nullptr);
+        offerCloudSummary(summary, windowStartUtc, windowEndUtc);
+        windowStartUtc = windowEndUtc;
     }
     // Use the ESP32 voltage conversion rather than assuming a linear 3.3V ADC.
     const uint32_t millivolts = analogReadMilliVolts(SOUND_PIN);
@@ -94,7 +99,6 @@ void loop() {
         led.clear(); // Do not show a reassuring green for an invalid reading.
         led.show();
     }
-    offerCloudMeasurement(decibels);
 
     Serial.print(decibels, 1);
     Serial.print(" dBA | ");

@@ -7,3 +7,8 @@
 #define QUIETNODE_SENSOR_ID ""
 // Station access token, NOT an account password or Bearer/JWT token.
 #define QUIETNODE_ACCESS_TOKEN ""
+
+// Dedicated minute-statistic channels; keep the original instantaneous channel separate.
+#define QUIETNODE_LAEQ_SENSOR_ID ""
+#define QUIETNODE_LMAX_SENSOR_ID ""
+#define QUIETNODE_EVENTS_SENSOR_ID ""
