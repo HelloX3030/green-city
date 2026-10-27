@@ -46,15 +46,15 @@ reading**, not a minute LAeq. Its first-upload firmware sent one value per
 boot. The new periodic firmware uses separate minute channels and leaves this
 original channel untouched. Do not treat its last value as a live feed.
 
-## Periodic channels (registration and hardware verification pending)
+## Periodic channels (live and hardware-verified)
 
-| Channel | Unit | Meaning |
-|---|---|---|
-| LAeq_1min | dB(A) | Approximate energy average of a complete minute of 125 ms samples |
-| Lmax_1min | dB(A) | Maximum sampled level in that minute; not certified peak SPL |
-| EventCount_1min | count | Onsets >=80 dBA, rearmed <=75 dBA, counted once across boundaries |
+| Channel | Sensor ID | Unit | Meaning |
+|---|---|---|---|
+| LAeq_1min | `6ae1349f00df8f00089ecc14` | dB(A) | Approximate energy average of a complete minute of 125 ms samples |
+| Lmax_1min | `6ae1349f00df8f00089ecc16` | dB(A) | Maximum sampled level in that minute; not certified peak SPL |
+| EventCount_1min | `6ae1349f00df8f00089ecc18` | count | Onsets >=80 dBA, rearmed <=75 dBA, counted once across boundaries |
 
-Their public IDs will be filled in after registration. All three readings in
+Use the latest/history endpoint patterns above with the IDs in this table. All three readings in
 a request share a UTC timestamp labelling the end of the window. Normal cadence
 is one upload per minute after NTP establishes time. Only complete windows with
 480 valid samples are published. The first minute after boot is usually omitted.
@@ -63,10 +63,30 @@ in RAM; overflow drops the newest and resets lose the queue. Consumers should
 identify records using sensor ID plus timestamp. Sampling diagnostics remain
 on Serial. See README.md for exact eligibility rules and recovery policy.
 
-The periodic implementation compiles and its native policy tests pass; it has
-not yet been flashed or verified against the new channels. The previously
-verified instantaneous upload above remains evidence of Wi-Fi/HTTPS operation,
-not evidence that periodic uploads have been tested.
+The periodic firmware was flashed and verified on 28 October 2026. Two
+consecutive windows were accepted with HTTP 201 and retrieved from the public
+history endpoint for all three channels:
+
+| Window end (UTC) | LAeq_1min | Lmax_1min | EventCount_1min |
+|---|---|---|---|
+| 2026-10-27T23:34:46Z | 63.9 | 66.9 | 0 |
+| 2026-10-27T23:35:46Z | 66.3 | 89.6 | 1 |
+
+These correspond to 00:34:46 and 00:35:46 CET on 28 October. Both windows
+contained 480/480 valid samples, with no invalid readings; maximum sample gaps
+were 130 ms and 125 ms. The RAM queue returned to zero after each upload.
+Normal periodic operation is verified. Prolonged outage/reconnection, queue
+capacity exhaustion and overnight operation have not yet been hardware-tested.
+
+Example live LAeq history query:
+
+```sh
+curl 'https://api.opensensemap.org/boxes/6ae0d7aa4bc0370008dba0f7/data/6ae1349f00df8f00089ecc14?format=json&download=false'
+```
+
+For Lmax and events, substitute their IDs from the table. The default history
+query covers the last 48 hours. Use explicit UTC from-date/to-date parameters
+for a fixed period, as in the earlier historical example.
 
 The complete measurement system has not been reference-calibrated. Readings
 are unsuitable for certified or legally enforceable noise assessments. No
