@@ -47,7 +47,12 @@ def cluster(reports: list[dict]) -> list[dict]:
                 "latest": max(r["created_at"] for r in members),
                 "report_ids": [r["id"] for r in members],
                 "status": None,
+                "reason": None,
             }
         )
     out.sort(key=lambda c: c["count"], reverse=True)
     return out
+
+
+def dominant_type(c: dict) -> str:
+    return max(c["types"].items(), key=lambda kv: kv[1])[0]

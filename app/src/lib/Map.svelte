@@ -14,18 +14,22 @@
 	// Vite bundles MapLibre so its default worker path is wrong; point it at a bundled worker.
 	setWorkerUrl(workerUrl);
 	import { onMount } from 'svelte';
-	import { TYPES, dominantType, type Cluster } from './api';
+	import { TYPES, STATUS, SENSOR_COLOR, dominantType, isLive, type Cluster, type Sensor } from './api';
 
 	let {
 		clusters = [],
+		sensors = [],
 		picking = false,
 		onpick,
-		onselect
+		onselect,
+		onselectsensor
 	}: {
 		clusters?: Cluster[];
+		sensors?: Sensor[];
 		picking?: boolean;
 		onpick?: (c: { lat: number; lon: number }) => void;
 		onselect?: (c: Cluster | null) => void;
+		onselectsensor?: (s: Sensor) => void;
 	} = $props();
 
 	let el: HTMLDivElement;
@@ -48,7 +52,22 @@
 			'top-right'
 		);
 
+		if (import.meta.env.DEV) (window as any).__map = map;
+
 		map.on('load', () => {
+			map.addSource('sensors', { type: 'geojson', data: sensorsGeoJSON(sensors) });
+			map.addLayer({
+				id: 'sensor-dot',
+				type: 'circle',
+				source: 'sensors',
+				paint: {
+					'circle-color': ['get', 'color'],
+					'circle-opacity': ['case', ['get', 'live'], 0.9, 0.35],
+					'circle-radius': ['case', ['get', 'team'], 7, 5],
+					'circle-stroke-color': '#111',
+					'circle-stroke-width': 1.5
+				}
+			});
 			map.addSource('clusters', { type: 'geojson', data: toGeoJSON(clusters) });
 			map.addLayer({
 				id: 'cluster-glow',
@@ -69,8 +88,8 @@
 					'circle-color': ['get', 'color'],
 					'circle-opacity': 0.85,
 					'circle-radius': ['+', 8, ['*', 3, ['sqrt', ['get', 'count']]]],
-					'circle-stroke-color': '#fff',
-					'circle-stroke-width': 1.5
+					'circle-stroke-color': ['get', 'stroke'],
+					'circle-stroke-width': 2.5
 				}
 			});
 			map.addLayer({
@@ -89,11 +108,20 @@
 				const id = e.features?.[0]?.properties?.id;
 				onselect?.(clusters.find((c) => c.id === id) ?? null);
 			});
-			map.on('click', (e: MapMouseEvent) => {
-				if (!map.queryRenderedFeatures(e.point, { layers: ['cluster-dot'] }).length) onselect?.(null);
+			map.on('click', 'sensor-dot', (e: MapMouseEvent & { features?: any[] }) => {
+				if (map.queryRenderedFeatures(e.point, { layers: ['cluster-dot'] }).length) return;
+				const id = e.features?.[0]?.properties?.id;
+				const s = sensors.find((s) => s.id === id);
+				if (s) onselectsensor?.(s);
 			});
-			map.on('mouseenter', 'cluster-dot', () => (map.getCanvas().style.cursor = 'pointer'));
-			map.on('mouseleave', 'cluster-dot', () => (map.getCanvas().style.cursor = ''));
+			map.on('click', (e: MapMouseEvent) => {
+				if (!map.queryRenderedFeatures(e.point, { layers: ['cluster-dot', 'sensor-dot'] }).length)
+					onselect?.(null);
+			});
+			for (const l of ['cluster-dot', 'sensor-dot']) {
+				map.on('mouseenter', l, () => (map.getCanvas().style.cursor = 'pointer'));
+				map.on('mouseleave', l, () => (map.getCanvas().style.cursor = ''));
+			}
 			map.on('moveend', () => {
 				if (picking) {
 					const c = map.getCenter();
@@ -108,6 +136,11 @@
 	$effect(() => {
 		if (!ready) return;
 		(map.getSource('clusters') as GeoJSONSource).setData(toGeoJSON(clusters));
+	});
+
+	$effect(() => {
+		if (!ready) return;
+		(map.getSource('sensors') as GeoJSONSource).setData(sensorsGeoJSON(sensors));
 	});
 
 	$effect(() => {
@@ -126,8 +159,20 @@
 				properties: {
 					id: c.id,
 					count: c.count,
-					color: TYPES.find((t) => t.id === dominantType(c))?.color
+					color: TYPES.find((t) => t.id === dominantType(c))?.color,
+					stroke: c.status ? STATUS[c.status].color : '#fff'
 				}
+			}))
+		};
+	}
+
+	function sensorsGeoJSON(ss: Sensor[]): FeatureCollection {
+		return {
+			type: 'FeatureCollection',
+			features: ss.map((s) => ({
+				type: 'Feature',
+				geometry: { type: 'Point', coordinates: [s.lon, s.lat] },
+				properties: { id: s.id, color: SENSOR_COLOR[s.kind], live: isLive(s), team: s.team }
 			}))
 		};
 	}

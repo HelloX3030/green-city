@@ -1,3 +1,4 @@
+import asyncio
 import json
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -8,7 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 import db
-from clustering import cluster
+import history
+import sensors
+import status
+from clustering import cluster, dominant_type
 
 CLUSTER_WINDOW_DAYS = 14
 
@@ -37,7 +41,10 @@ class Report(ReportIn):
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     db.init()
+    history.load()
+    task = asyncio.create_task(history.refresh_loop())
     yield
+    task.cancel()
 
 
 app = FastAPI(title="green-city reports", lifespan=lifespan)
@@ -76,4 +83,12 @@ def list_reports(since: datetime | None = Query(default=None)) -> list[dict]:
 @app.get("/clusters")
 def list_clusters(days: int = Query(default=CLUSTER_WINDOW_DAYS, ge=1, le=365)) -> list[dict]:
     since = datetime.now(timezone.utc) - timedelta(days=days)
-    return cluster(fetch_reports(since))
+    clusters = cluster(fetch_reports(since))
+    for c in clusters:
+        c["status"], c["reason"] = status.assess(c["lat"], c["lon"], dominant_type(c))
+    return clusters
+
+
+@app.get("/sensors")
+async def list_sensors() -> list[dict]:
+    return await sensors.get_sensors()

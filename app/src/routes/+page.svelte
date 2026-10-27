@@ -3,10 +3,13 @@
 	import Map from '#lib/Map.svelte';
 	import ReportSheet from '#lib/ReportSheet.svelte';
 	import ClusterCard from '#lib/ClusterCard.svelte';
-	import { getClusters, type Cluster, type Report } from '#lib/api.ts';
+	import SensorCard from '#lib/SensorCard.svelte';
+	import { getClusters, getSensors, type Cluster, type Report, type Sensor } from '#lib/api.ts';
 
 	let clusters = $state<Cluster[]>([]);
+	let sensors = $state<Sensor[]>([]);
 	let selected = $state<Cluster | null>(null);
+	let sensor = $state<Sensor | null>(null);
 	let mine = $state(false);
 	let reporting = $state(false);
 	let pick = $state<{ lat: number; lon: number } | null>(null);
@@ -22,14 +25,27 @@
 		}
 	}
 
+	async function refreshSensors() {
+		try {
+			sensors = await getSensors();
+			if (sensor) sensor = sensors.find((s) => s.id === sensor!.id) ?? sensor;
+		} catch {}
+	}
+
 	onMount(() => {
 		refresh();
+		refreshSensors();
 		const t = setInterval(refresh, 5000);
-		return () => clearInterval(t);
+		const u = setInterval(refreshSensors, 30000);
+		return () => {
+			clearInterval(t);
+			clearInterval(u);
+		};
 	});
 
 	function startReport() {
 		selected = null;
+		sensor = null;
 		reporting = true;
 		navigator.geolocation?.getCurrentPosition(
 			(p) => map.flyTo(p.coords.latitude, p.coords.longitude),
@@ -51,11 +67,17 @@
 <Map
 	bind:this={map}
 	{clusters}
+	{sensors}
 	picking={reporting}
 	onpick={(p) => (pick = p)}
 	onselect={(c) => {
 		selected = c;
+		sensor = null;
 		mine = false;
+	}}
+	onselectsensor={(s) => {
+		sensor = s;
+		selected = null;
 	}}
 />
 
@@ -68,6 +90,8 @@
 	<ReportSheet location={pick} onclose={() => (reporting = false)} onsent={sent} />
 {:else if selected}
 	<ClusterCard cluster={selected} {mine} onclose={() => (selected = null)} />
+{:else if sensor}
+	<SensorCard {sensor} onclose={() => (sensor = null)} />
 {:else}
 	<button class="fab" onclick={startReport}>Melden</button>
 {/if}

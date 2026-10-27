@@ -28,7 +28,54 @@ export interface Cluster {
 	types: Record<string, number>;
 	latest: string;
 	report_ids: number[];
-	status: string | null;
+	status: Status | null;
+	reason: string | null;
+}
+
+export type Status = 'confirmed' | 'unconfirmed' | 'no_data';
+
+export const STATUS: Record<Status, { label: string; color: string }> = {
+	confirmed: { label: 'Bestätigt', color: '#4ade80' },
+	unconfirmed: { label: 'Nicht bestätigt', color: '#facc15' },
+	no_data: { label: 'Keine Daten', color: '#f87171' }
+};
+
+export interface SensorValue {
+	key: string;
+	label: string;
+	value: number;
+	unit: string;
+	time: string;
+}
+
+export interface Sensor {
+	id: string;
+	name: string;
+	lat: number;
+	lon: number;
+	source: 'opensensemap' | 'uba';
+	kind: 'env' | 'air' | 'noise';
+	team: boolean;
+	values: SensorValue[];
+	last: string | null;
+}
+
+export const SENSOR_COLOR: Record<Sensor['kind'], string> = {
+	env: '#38bdf8',
+	air: '#9ca3af',
+	noise: '#facc15'
+};
+
+export const isLive = (s: Sensor) => !!s.last && Date.now() - new Date(s.last).getTime() < 2 * 3600e3;
+
+export function timeAgo(iso: string | null) {
+	if (!iso) return 'noch nie';
+	const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+	if (m < 1) return 'gerade eben';
+	if (m < 60) return `vor ${m} min`;
+	const h = Math.round(m / 60);
+	if (h < 48) return `vor ${h} h`;
+	return `vor ${Math.round(h / 24)} Tagen`;
 }
 
 const base =
@@ -39,6 +86,9 @@ export const getClusters = async (): Promise<Cluster[]> =>
 
 export const getReports = async (): Promise<Report[]> =>
 	(await fetch(`${base}/reports`)).json();
+
+export const getSensors = async (): Promise<Sensor[]> =>
+	(await fetch(`${base}/sensors`)).json();
 
 export async function postReport(body: {
 	lat: number;

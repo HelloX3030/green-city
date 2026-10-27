@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { typeInfo, type Cluster } from './api';
+	import { typeInfo, timeAgo, STATUS, type Cluster } from './api';
 
 	let {
 		cluster,
@@ -9,15 +9,6 @@
 
 	const others = $derived(mine ? cluster.count - 1 : cluster.count);
 	const ago = $derived(timeAgo(cluster.latest));
-
-	function timeAgo(iso: string) {
-		const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-		if (m < 1) return 'gerade eben';
-		if (m < 60) return `vor ${m} min`;
-		const h = Math.round(m / 60);
-		if (h < 48) return `vor ${h} h`;
-		return `vor ${Math.round(h / 24)} Tagen`;
-	}
 </script>
 
 <div class="card">
@@ -36,7 +27,12 @@
 		{/each}
 	</div>
 	<p class="meta">Letzte Meldung {ago}</p>
-	<p class="status">Sensordaten: noch nicht geprüft</p>
+	{#if cluster.status}
+		<p class="status">
+			<span class="badge" style="--c: {STATUS[cluster.status].color}">{STATUS[cluster.status].label}</span>
+			{cluster.reason}
+		</p>
+	{/if}
 </div>
 
 <style>
@@ -88,8 +84,18 @@
 		margin: 0 0 4px;
 	}
 	.status {
-		color: #bbb;
+		color: #ddd;
 		font-size: 14px;
 		margin: 0;
+		line-height: 1.4;
+	}
+	.badge {
+		background: var(--c);
+		color: #111;
+		border-radius: 6px;
+		padding: 1px 7px;
+		font-size: 12px;
+		font-weight: 700;
+		margin-right: 4px;
 	}
 </style>
