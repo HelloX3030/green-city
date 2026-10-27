@@ -13,6 +13,13 @@ Green City Hackathon Heilbronn, 27–29 Oct 2026. https://hackathon.greencity.hn
 5. No data? A sensor pack goes to a volunteer in that area. It streams live into the same map.
 6. Joe opens the map again and sees: the city listened, and now it measures.
 
+## Run
+
+```
+make setup   # once
+make dev     # backend :8000 + app :5173, phone on same wifi: http://<laptop-ip>:5173
+```
+
 ## Repo
 
 - `app/` – the web app (branch `app`)

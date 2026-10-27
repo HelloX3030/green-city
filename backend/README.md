@@ -2,10 +2,7 @@
 
 FastAPI + SQLite. Stores reports, returns clusters.
 
-```
-uv sync
-uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
+`make backend` from the repo root, or `uv run uvicorn main:app --reload --port 8000` here.
 
 - `POST /reports` `{lat, lon, types: ["noise"|"heat"|"air"|"no_shade"|"other"], message?, author?}`
 - `GET /reports?since=<iso>`
