@@ -39,8 +39,8 @@ def assess(lat: float, lon: float, type_: str) -> tuple[str | None, str | None]:
         n = _days(daily, lambda v: v >= HOT_DAY_C)
         where = f"{box['name']} ({_dist(d)})"
         if n >= HOT_DAYS_MIN:
-            return "confirmed", f"{where}: {n} heiße Tage über {HOT_DAY_C} °C seit März."
-        return "unconfirmed", f"{where}: nur {n} heiße Tage über {HOT_DAY_C} °C seit März."
+            return "confirmed", f"{where}: an {n} Tagen über {HOT_DAY_C} °C gemessen seit März."
+        return "unconfirmed", f"{where}: nur an {n} Tagen über {HOT_DAY_C} °C gemessen seit März."
 
     if type_ == "air":
         box, d = _nearest(lat, lon, "pm25")

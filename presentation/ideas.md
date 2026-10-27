@@ -11,3 +11,4 @@
 - Bike data is fresh: 29 bikes, ~10 rides/day, last ride yesterday. "A bike passed here yesterday and measured X" beats "a station 2 km away".
 - Our map could become a tile in the Green City Dashboard => feasibility, it lives on after the hackathon.
 - City said "Poser"/Gewerbelärm are outside the EU directive => nobody measures them => we do.
+- senseBox temperatures are sensor-in-the-sun values, not air temperature: Innenstadt max 49.8 °C and 112 days over 30 °C since March, Neckargartach max 36 °C and 7 days. Say "measured at this spot", not "hot days". The gap between the two boxes is the sealed-city story.
