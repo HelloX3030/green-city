@@ -1,4 +1,4 @@
-# QuietNode: first openSenseMap upload
+# QuietNode: offline monitoring and first openSenseMap upload
 
 This firmware reads the DFRobot SEN0232 on **IO6 / GPIO6 (A6)** and displays
 its approximate A-weighted level using the onboard NeoPixel on GPIO1.
@@ -20,7 +20,8 @@ The existing conversion is `dBA = analogReadMilliVolts(A6) / 20.0`.
    access token, not your account password or account JWT.
 
 `quietnode_config.h` is gitignored. Do not paste secrets into tracked files.
-Without configuration the sensor and LED still work; cloud upload is disabled.
+Leave the Wi-Fi SSID empty to run offline. Sensor readings, LED feedback and
+minute summaries work without a network; cloud upload is disabled.
 
 ## Build and demonstrate
 
@@ -35,7 +36,7 @@ pio device monitor --port /dev/ttyACM0 --baud 115200
 
 Replace `/dev/ttyACM0` with the detected USB serial device.
 
-The firmware connects to Wi-Fi, synchronises UTC using NTP and captures the
+When configured, the firmware connects to Wi-Fi, synchronises UTC using NTP and captures the
 first in-range reading (30–130 dBA) after time is available. It uploads that
 **one measurement per boot**, including its original UTC timestamp. A 2xx
 response logs `One-shot test complete`; sampling and LED feedback continue.
@@ -80,11 +81,49 @@ Never use `setInsecure()`. Trust anchors may need updating if the service
 changes its certificate authority.
 
 Networking runs in a separate FreeRTOS task with connection/read timeouts.
-The main loop schedules the existing 250 ms readings using `millis()` and
-yields between readings. Wi-Fi and TLS still share the ESP32-S2's CPU, so
-this is not a guarantee of exact sampling intervals. No statistics assume
-uniform sampling in this first upload test.
+The main loop schedules 125 ms readings using `millis()` and yields between
+readings. Wi-Fi and TLS still share the ESP32-S2's CPU, so this is not a
+guarantee of exact sampling intervals. No audio is recorded or sent.
 
-Next steps after a confirmed real upload: 125 ms acquisition, LED smoothing,
-minute-level energy-based LAeq / sampled maximum / distinct event counts,
-and bounded buffering for periodic uploads. No audio is recorded or sent.
+## Offline demonstration
+
+No Wi-Fi is required. Every valid sample updates the LED through an exponential
+smoother (alpha 0.25); the original readings feed the statistics and Serial.
+The illustrative LED ranges are green below 50, yellow from 50 to below 65,
+orange from 65 through 80, and red above 80 dBA. Invalid sensor voltages turn
+the LED off and are excluded from statistics.
+
+Every approximately 60 seconds, Serial prints a `[minute]` summary:
+
+- `approx_LAeq`: `10 * log10(mean(10^(Li/10)))` over valid scheduled readings.
+- `sampled_Lmax`: maximum valid sampled level, not certified acoustic peak.
+- `events`: distinct onsets at or above 80 dBA; another event requires a
+  reading at or below 75 dBA first. A sustained event crossing a window
+  boundary is counted only in the window where it started. Invalid samples
+  cannot rearm the event detector.
+- Valid, invalid and expected sample counts, actual window duration, maximum
+  gap between sampled readings, and uptime in milliseconds.
+
+Thresholds are configurable using `EVENT_THRESHOLD_DBA` and `EVENT_REARM_DBA`
+in `src/main.cpp`. LED smoothing never changes the event or LAeq input.
+
+LAeq uses an equal-sample energy average, approximating uniform 125 ms
+sampling. Compare valid/invalid/expected counts and maximum gaps before
+interpreting a window. Gaps and invalid samples reduce coverage; they are
+never replaced with zeros. The reported result is for available samples,
+not an estimate of the missing interval. A long stall produces an extended
+window with its actual duration, not invented empty minute records. Empty
+windows report unavailable levels and events. These are prototype metrics.
+
+Without NTP, windows have **uptime**, not trustworthy calendar timestamps.
+Offline summaries are currently Serial-only; they are not queued for later
+cloud upload. The network integration remains a one-shot instantaneous
+reading test. After a real upload is verified, periodic minute uploads will
+need separate sensor channels and a bounded queue.
+
+Native calculation checks (from this folder):
+
+```sh
+g++ -std=c++11 -Wall -Wextra -Werror -I include test/native/noise_aggregator_test.cpp -o /tmp/quietnode-aggregator-test
+/tmp/quietnode-aggregator-test
+```
