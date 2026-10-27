@@ -8,6 +8,7 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+import bikes
 import db
 import history
 import sensors
@@ -42,9 +43,10 @@ class Report(ReportIn):
 async def lifespan(_: FastAPI):
     db.init()
     history.load()
-    task = asyncio.create_task(history.refresh_loop())
+    tasks = [asyncio.create_task(history.refresh_loop()), asyncio.create_task(bikes.get_rides())]
     yield
-    task.cancel()
+    for t in tasks:
+        t.cancel()
 
 
 app = FastAPI(title="green-city reports", lifespan=lifespan)
@@ -87,6 +89,11 @@ def list_clusters(days: int = Query(default=CLUSTER_WINDOW_DAYS, ge=1, le=365)) 
     for c in clusters:
         c["status"], c["reason"] = status.assess(c["lat"], c["lon"], dominant_type(c))
     return clusters
+
+
+@app.get("/bikes")
+async def list_bikes() -> dict:
+    return await bikes.get_rides()
 
 
 @app.get("/sensors")

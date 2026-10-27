@@ -1,3 +1,5 @@
+import type { FeatureCollection, LineString } from 'geojson';
+
 export type ReportType = 'noise' | 'heat' | 'air' | 'no_shade' | 'other';
 
 export const TYPES: { id: ReportType; label: string; color: string }[] = [
@@ -25,7 +27,9 @@ export interface Cluster {
 	lat: number;
 	lon: number;
 	count: number;
+	weight: number; // count with decay, halves every 7 days
 	types: Record<string, number>;
+	dominant: ReportType; // by decayed weight
 	latest: string;
 	report_ids: number[];
 	status: Status | null;
@@ -90,6 +94,40 @@ export const getReports = async (): Promise<Report[]> =>
 export const getSensors = async (): Promise<Sensor[]> =>
 	(await fetch(`${base}/sensors`)).json();
 
+export interface Ride {
+	id: string;
+	box: string;
+	start: string;
+	end: string;
+	km: number;
+	pm25: number;
+	pm25_max: number;
+	points: number;
+}
+
+export const getBikes = async (): Promise<FeatureCollection<LineString, Ride>> =>
+	(await fetch(`${base}/bikes`)).json();
+
+export type LayerId = 'noise' | 'trees' | 'bikes';
+
+export const LAYERS: { id: LayerId; label: string; color: string; hint: string }[] = [
+	{ id: 'noise', label: 'Lärmkarte 2022', color: '#cd463e', hint: 'Straßenlärm Lden, UBA' },
+	{ id: 'trees', label: 'Bäume', color: '#22c55e', hint: 'Baumkataster Stadt Heilbronn' },
+	{ id: 'bikes', label: 'Messräder 7 Tage', color: '#f472b6', hint: 'senseBox:bike, PM2,5 je Fahrt' }
+];
+
+export const NOISE_LEGEND = [
+	['55', '#e2f2bf'],
+	['60', '#f3c683'],
+	['65', '#cd463e'],
+	['70', '#75085c'],
+	['>75', '#430a4a']
+];
+
+// PM2.5 colour for a ride mean, WHO daily limit is 15
+export const pmColor = (v: number) =>
+	v < 10 ? '#4ade80' : v < 15 ? '#facc15' : v < 25 ? '#fb923c' : '#f87171';
+
 export async function postReport(body: {
 	lat: number;
 	lon: number;
@@ -118,5 +156,4 @@ export function authorId(): string {
 	}
 }
 
-export const dominantType = (c: Cluster): ReportType =>
-	(Object.entries(c.types).sort((a, b) => b[1] - a[1])[0]?.[0] as ReportType) ?? 'other';
+export const dominantType = (c: Cluster): ReportType => c.dominant ?? 'other';

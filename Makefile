@@ -1,4 +1,4 @@
-.PHONY: setup dev backend app build check
+.PHONY: setup dev backend app build check trees
 
 setup:            ## install everything (uv + npm)
 	cd backend && uv sync
@@ -19,3 +19,6 @@ build:            ## static app into app/build
 
 check:            ## type-check the app
 	cd app && npm run check
+
+trees:            ## rebuild app/static/trees.json from the city tree register
+	python3 research/trees.py

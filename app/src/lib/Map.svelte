@@ -3,22 +3,37 @@
 		Map as MLMap,
 		NavigationControl,
 		GeolocateControl,
+		Popup,
 		setWorkerUrl,
 		type GeoJSONSource,
 		type MapMouseEvent
 	} from 'maplibre-gl';
 	import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-	import type { FeatureCollection } from 'geojson';
+	import type { FeatureCollection, LineString } from 'geojson';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 
 	// Vite bundles MapLibre so its default worker path is wrong; point it at a bundled worker.
 	setWorkerUrl(workerUrl);
 	import { onMount } from 'svelte';
-	import { TYPES, STATUS, SENSOR_COLOR, dominantType, isLive, type Cluster, type Sensor } from './api';
+	import {
+		TYPES,
+		STATUS,
+		SENSOR_COLOR,
+		NOISE_LEGEND,
+		dominantType,
+		isLive,
+		pmColor,
+		type Cluster,
+		type LayerId,
+		type Ride,
+		type Sensor
+	} from './api';
 
 	let {
 		clusters = [],
 		sensors = [],
+		bikes = null,
+		layers = new Set<LayerId>(),
 		picking = false,
 		onpick,
 		onselect,
@@ -26,6 +41,8 @@
 	}: {
 		clusters?: Cluster[];
 		sensors?: Sensor[];
+		bikes?: FeatureCollection<LineString, Ride> | null;
+		layers?: Set<LayerId>;
 		picking?: boolean;
 		onpick?: (c: { lat: number; lon: number }) => void;
 		onselect?: (c: Cluster | null) => void;
@@ -37,6 +54,11 @@
 	let ready = $state(false);
 
 	const HEILBRONN: [number, number] = [9.2185, 49.1427];
+	const NOISE_TILES =
+		'https://datahub.uba.de/server/rest/services/VeLa/LK/MapServer/export?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&layers=show:4210&format=png32&transparent=true&f=image';
+	const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
+	let treesLoaded = false;
+	const popup = new Popup({ closeButton: false, offset: 8, maxWidth: '260px' });
 
 	onMount(() => {
 		map = new MLMap({
@@ -55,6 +77,43 @@
 		if (import.meta.env.DEV) (window as any).__map = map;
 
 		map.on('load', () => {
+			// context layers, all hidden until toggled
+			map.addSource('noise', { type: 'raster', tiles: [NOISE_TILES], tileSize: 256, maxzoom: 17 });
+			map.addLayer({
+				id: 'noise',
+				type: 'raster',
+				source: 'noise',
+				layout: { visibility: 'none' },
+				paint: { 'raster-opacity': 0.55 }
+			});
+			map.addSource('trees', { type: 'geojson', data: EMPTY });
+			map.addLayer({
+				id: 'trees',
+				type: 'circle',
+				source: 'trees',
+				layout: { visibility: 'none' },
+				paint: {
+					'circle-color': '#22c55e',
+					'circle-opacity': 0.5,
+					'circle-radius': [
+						'interpolate',
+						['exponential', 2],
+						['zoom'],
+						12,
+						0.8,
+						19,
+						['*', 1.6, ['max', 2, ['get', 'dm']]]
+					]
+				}
+			});
+			map.addSource('bikes', { type: 'geojson', data: EMPTY });
+			map.addLayer({
+				id: 'bikes',
+				type: 'line',
+				source: 'bikes',
+				layout: { visibility: 'none', 'line-cap': 'round', 'line-join': 'round' },
+				paint: { 'line-color': ['get', 'color'], 'line-width': 3, 'line-opacity': 0.8 }
+			});
 			map.addSource('sensors', { type: 'geojson', data: sensorsGeoJSON(sensors) });
 			map.addLayer({
 				id: 'sensor-dot',
@@ -76,7 +135,7 @@
 				paint: {
 					'circle-color': ['get', 'color'],
 					'circle-opacity': 0.25,
-					'circle-radius': ['+', 18, ['*', 6, ['sqrt', ['get', 'count']]]],
+					'circle-radius': ['+', 18, ['*', 6, ['sqrt', ['get', 'weight']]]],
 					'circle-blur': 0.6
 				}
 			});
@@ -87,7 +146,7 @@
 				paint: {
 					'circle-color': ['get', 'color'],
 					'circle-opacity': 0.85,
-					'circle-radius': ['+', 8, ['*', 3, ['sqrt', ['get', 'count']]]],
+					'circle-radius': ['+', 8, ['*', 3, ['sqrt', ['get', 'weight']]]],
 					'circle-stroke-color': ['get', 'stroke'],
 					'circle-stroke-width': 2.5
 				}
@@ -115,10 +174,31 @@
 				if (s) onselectsensor?.(s);
 			});
 			map.on('click', (e: MapMouseEvent) => {
-				if (!map.queryRenderedFeatures(e.point, { layers: ['cluster-dot', 'sensor-dot'] }).length)
-					onselect?.(null);
+				popup.remove();
+				const hit = map.queryRenderedFeatures(e.point, { layers: ['cluster-dot', 'sensor-dot'] });
+				if (hit.length) return;
+				onselect?.(null);
+				const ride = map.queryRenderedFeatures(e.point, { layers: ['bikes'] })[0]?.properties as Ride;
+				if (ride) {
+					const d = new Date(ride.start);
+					const when = d.toLocaleString('de-DE', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+					popup
+						.setLngLat(e.lngLat)
+						.setHTML(
+							`<b>Messrad ${ride.box}</b><br>${when} · ${fmt(ride.km)} km<br>PM2,5 Ø ${fmt(ride.pm25)} µg/m³, max ${fmt(ride.pm25_max)}`
+						)
+						.addTo(map);
+					return;
+				}
+				const tree = map.queryRenderedFeatures(e.point, { layers: ['trees'] })[0]?.properties;
+				if (tree) {
+					popup
+						.setLngLat(e.lngLat)
+						.setHTML(`<b>${tree.name || 'Baum'}</b><br>Krone ${fmt(tree.dm)} m`)
+						.addTo(map);
+				}
 			});
-			for (const l of ['cluster-dot', 'sensor-dot']) {
+			for (const l of ['cluster-dot', 'sensor-dot', 'bikes']) {
 				map.on('mouseenter', l, () => (map.getCanvas().style.cursor = 'pointer'));
 				map.on('mouseleave', l, () => (map.getCanvas().style.cursor = ''));
 			}
@@ -144,6 +224,43 @@
 	});
 
 	$effect(() => {
+		if (!ready || !bikes) return;
+		(map.getSource('bikes') as GeoJSONSource).setData({
+			...bikes,
+			features: bikes.features.map((f) => ({
+				...f,
+				properties: { ...f.properties, color: pmColor(f.properties.pm25) }
+			}))
+		});
+	});
+
+	$effect(() => {
+		if (!ready) return;
+		for (const id of ['noise', 'trees', 'bikes'] as LayerId[]) {
+			map.setLayoutProperty(id, 'visibility', layers.has(id) ? 'visible' : 'none');
+		}
+		if (layers.has('trees') && !treesLoaded) {
+			treesLoaded = true;
+			fetch('/trees.json')
+				.then((r) => r.json())
+				.then((rows: [number, number, number, string][]) =>
+					(map.getSource('trees') as GeoJSONSource).setData({
+						type: 'FeatureCollection',
+						features: rows.map(([lon, lat, dm, name]) => ({
+							type: 'Feature',
+							geometry: { type: 'Point', coordinates: [lon, lat] },
+							properties: { dm, name }
+						}))
+					})
+				)
+				.catch(() => (treesLoaded = false));
+		}
+		if (!layers.size) popup.remove();
+	});
+
+	const fmt = (v: number) => v.toLocaleString('de-DE', { maximumFractionDigits: 1 });
+
+	$effect(() => {
 		if (ready && picking) {
 			const c = map.getCenter();
 			onpick?.({ lat: c.lat, lon: c.lng });
@@ -159,6 +276,7 @@
 				properties: {
 					id: c.id,
 					count: c.count,
+					weight: c.weight,
 					color: TYPES.find((t) => t.id === dominantType(c))?.color,
 					stroke: c.status ? STATUS[c.status].color : '#fff'
 				}
@@ -186,8 +304,53 @@
 {#if picking}
 	<div class="crosshair" aria-hidden="true"></div>
 {/if}
+{#if layers.has('noise')}
+	<div class="legend">
+		{#each NOISE_LEGEND as [db, color]}
+			<span><i style="background: {color}"></i>{db}</span>
+		{/each}
+		<span class="unit">dB(A) Lden</span>
+	</div>
+{/if}
 
 <style>
+	.legend {
+		position: absolute;
+		left: 12px;
+		bottom: calc(96px + env(safe-area-inset-bottom));
+		display: flex;
+		gap: 6px;
+		align-items: center;
+		background: var(--bg);
+		color: var(--fg);
+		border-radius: 999px;
+		padding: 4px 10px;
+		font-size: 11px;
+		pointer-events: none;
+	}
+	.legend i {
+		display: inline-block;
+		width: 10px;
+		height: 10px;
+		border-radius: 2px;
+		margin-right: 3px;
+		vertical-align: -1px;
+	}
+	.legend .unit {
+		color: #999;
+	}
+	:global(.maplibregl-popup-content) {
+		background: var(--bg);
+		color: var(--fg);
+		border-radius: 10px;
+		padding: 8px 12px;
+		font-size: 13px;
+		line-height: 1.4;
+	}
+	:global(.maplibregl-popup-tip) {
+		border-top-color: var(--bg) !important;
+		border-bottom-color: var(--bg) !important;
+	}
 	.map {
 		position: absolute;
 		inset: 0;

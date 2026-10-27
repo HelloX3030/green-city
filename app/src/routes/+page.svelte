@@ -4,12 +4,23 @@
 	import ReportSheet from '#lib/ReportSheet.svelte';
 	import ClusterCard from '#lib/ClusterCard.svelte';
 	import SensorCard from '#lib/SensorCard.svelte';
-	import { getClusters, getSensors, type Cluster, type Report, type Sensor } from '#lib/api.ts';
+	import {
+		getBikes,
+		getClusters,
+		getSensors,
+		LAYERS,
+		type Cluster,
+		type LayerId,
+		type Report,
+		type Sensor
+	} from '#lib/api.ts';
 
 	let clusters = $state<Cluster[]>([]);
 	let sensors = $state<Sensor[]>([]);
 	let selected = $state<Cluster | null>(null);
 	let sensor = $state<Sensor | null>(null);
+	let layers = $state(new Set<LayerId>());
+	let bikes = $state<Awaited<ReturnType<typeof getBikes>> | null>(null);
 	let mine = $state(false);
 	let reporting = $state(false);
 	let pick = $state<{ lat: number; lon: number } | null>(null);
@@ -32,14 +43,30 @@
 		} catch {}
 	}
 
+	async function refreshBikes() {
+		if (!layers.has('bikes')) return;
+		try {
+			bikes = await getBikes();
+		} catch {}
+	}
+
+	function toggle(id: LayerId) {
+		const next = new Set(layers);
+		next.has(id) ? next.delete(id) : next.add(id);
+		layers = next;
+		if (id === 'bikes' && !bikes) refreshBikes();
+	}
+
 	onMount(() => {
 		refresh();
 		refreshSensors();
 		const t = setInterval(refresh, 5000);
 		const u = setInterval(refreshSensors, 30000);
+		const v = setInterval(refreshBikes, 300000);
 		return () => {
 			clearInterval(t);
 			clearInterval(u);
+			clearInterval(v);
 		};
 	});
 
@@ -68,6 +95,8 @@
 	bind:this={map}
 	{clusters}
 	{sensors}
+	{bikes}
+	{layers}
 	picking={reporting}
 	onpick={(p) => (pick = p)}
 	onselect={(c) => {
@@ -85,6 +114,20 @@
 	<span class="logo">Heilbronn meldet</span>
 	{#if offline}<span class="off">Backend nicht erreichbar</span>{/if}
 </header>
+
+{#if !reporting}
+	<div class="layers">
+		{#each LAYERS as l}
+			<button
+				class="chip"
+				class:on={layers.has(l.id)}
+				style="--c: {l.color}"
+				title={l.hint}
+				onclick={() => toggle(l.id)}>{l.label}</button
+			>
+		{/each}
+	</div>
+{/if}
 
 {#if reporting}
 	<ReportSheet location={pick} onclose={() => (reporting = false)} onsent={sent} />
@@ -114,6 +157,29 @@
 		border-radius: 999px;
 		font-weight: 600;
 		font-size: 14px;
+	}
+	.layers {
+		z-index: 3;
+		position: absolute;
+		top: 48px;
+		left: 12px;
+		display: flex;
+		gap: 6px;
+		flex-wrap: wrap;
+		max-width: calc(100% - 70px);
+	}
+	.chip {
+		background: var(--bg);
+		color: #bbb;
+		border: 1.5px solid #444;
+		border-radius: 999px;
+		padding: 5px 10px;
+		font-size: 12px;
+	}
+	.chip.on {
+		color: var(--fg);
+		border-color: var(--c);
+		box-shadow: inset 0 0 0 1px var(--c);
 	}
 	.off {
 		background: #7f1d1d;
