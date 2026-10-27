@@ -25,3 +25,14 @@ https://hackathon.greencity.hn/
 ## QuietCity
 ### NoiseNode --> Expansion of sensebox
 ### 
+
+
+Resources:
+https://opensensemap.org/
+
+https://docs.opensensemap.org/#api-Measurements-getLatestMeasurements
+
+senseboxID bekommst du von der opensensemap, wenn du dort ein neues device registrierst
+
+sowie eine sensorID, für jedes phänomen dass eine sensebox misst. dann kannst du auch einzelne sensoren direkt abfragen
+
