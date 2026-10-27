@@ -13,3 +13,10 @@
 
 ## Potential Issues (technical issues for future concideration)
 ### Bots (Rate limiting, Human verification of some kind on the reports, we validate high report areas with historical data and then the sensor we send would most definitely verify it).
+
+### Further Ideas
+## Voice controlled app for reports.
+## Live streaming the data from the sensor to the same map the reports are pinned (also the reports can be observed on the map and you can select them to see what was reported).
+## 3D printed boxes for the sensors.
+## Sensors are either given to a reliable person in the targeted area or placed somewhere safe. Perhaps also track the sensor geographically in case of theft.
+## You can report one or multiple issues. Each issue is basically any stat that can be measured via the Sensor box. We can expand it as needed.
