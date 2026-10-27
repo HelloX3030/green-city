@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Adafruit_NeoPixel.h>
+#include "CloudUpload.h"
 
 // DFRobot Gravity analog sound level meter (SEN0232):
 // A/signal -> senseBox IO6 (GPIO6), + -> 3.3V, - -> GND.
@@ -41,9 +42,17 @@ void setup() {
     // Allow USB serial and the sensor to start without waiting indefinitely.
     delay(1000);
     Serial.println("Sound level meter ready (signal: GPIO6, 115200 baud)");
+    beginCloudUpload();
 }
 
 void loop() {
+    static unsigned long lastReading = millis() - READING_INTERVAL_MS;
+    const unsigned long now = millis();
+    if (now - lastReading < READING_INTERVAL_MS) {
+        delay(1); // Yield to the network worker between sensor readings.
+        return;
+    }
+    lastReading = now;
     // Use the ESP32 voltage conversion rather than assuming a linear 3.3V ADC.
     const uint32_t millivolts = analogReadMilliVolts(SOUND_PIN);
     const float voltage = millivolts / 1000.0f;
@@ -52,6 +61,7 @@ void loop() {
     // Manufacturer's conversion: 0.6-2.6V corresponds to 30-130 dBA.
     const float decibels = voltage * 50.0f;
     updateNoiseLed(decibels);
+    offerCloudMeasurement(decibels);
 
     Serial.print(decibels, 1);
     Serial.print(" dBA | ");
@@ -61,5 +71,4 @@ void loop() {
         Serial.print(" | outside sensor range (check wiring/power)");
     }
     Serial.println();
-    delay(READING_INTERVAL_MS);
 }
