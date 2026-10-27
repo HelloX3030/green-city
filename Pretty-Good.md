@@ -10,3 +10,6 @@
 ### Once fully verified and validated, we send a Sensor pack to a volunteer in the targeted area.
 ### They then keep the sensor and use it (and are also held liable for its use), and the idea is to "verify the claims in real-time".
 ### The whole purpose of it is to prove that the "Green City Heilbronn" initiative is actually working by involving the citizens, but also collecting more data because data = Mmmmmmm.
+
+## Potential Issues (technical issues for future concideration)
+### Bots (Rate limiting, Human verification of some kind on the reports, we validate high report areas with historical data and then the sensor we send would most definitely verify it).
