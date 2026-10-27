@@ -1,1 +1,13 @@
 - We do have the data, but we don't have what people actually care about + which places there actually care about...
+- We want a live demo, where we like rly show the journey, how it goes, end to end... But we also like want to have hardcoded/easy fallbacks, so if anything breaks during presentation, it still workes/we don't have any issues.
+- => use [[complaints]] to prove why our solution is actually important. => heat, noise, air are all rly important, but especially noise doesn't get tracked, while the others already have some coverage, even with like the new laws, and things. 
+- One number: Heilbronn is 54 % sealed, worst heat score in Baden-Württemberg. 40,100 people live above 55 dB. The city's reporting tool has no button for either.
+- Noise, heat, air are close in the surveys (32 % not quiet, 26 % not heat protected, 24 % air not clean, UBA 2024). Don't oversell noise as "the biggest", sell it as "the one nobody measures".
+- Mängelmelder Heilbronn: ~9000 reports in 3 years, categories: trash, streets... no noise, no heat, no air. Lärmaktionsplan consultation: 36 answers in 2 rounds. => people report what the form offers.
+- People whose first report gets a response are 57 % more likely to report again (FixMyStreet study). => the answer card after reporting is the feature.
+- Demo flow: QR on slide -> audience reports "too loud" here -> cluster forms live -> status "no data" -> NoiseNode on the table shows up as live pin -> zoom out, "too hot" cluster in Innenstadt confirmed by senseBox data -> ask for the next 10 sensors.
+- Fallback: seeded reports (noise hotspots from the city plan, heat zone Hauptbahnhof-Allee), a recorded run of the demo, and the app on a second phone.
+- "Runs on a Raspberry Pi in Heilbronn" is a nice line.
+- Bike data is fresh: 29 bikes, ~10 rides/day, last ride yesterday. "A bike passed here yesterday and measured X" beats "a station 2 km away".
+- Our map could become a tile in the Green City Dashboard => feasibility, it lives on after the hackathon.
+- City said "Poser"/Gewerbelärm are outside the EU directive => nobody measures them => we do.

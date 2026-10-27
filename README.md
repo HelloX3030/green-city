@@ -28,6 +28,7 @@ Green City Hackathon Heilbronn, 27–29 Oct 2026. https://hackathon.greencity.hn
 - openSenseMap: https://opensensemap.org/ – API: https://docs.opensensemap.org/#api-Measurements-getLatestMeasurements
   - senseboxID bekommst du von der opensensemap, wenn du dort ein neues device registrierst
   - sowie eine sensorID, für jedes phänomen dass eine sensebox misst. dann kannst du auch einzelne sensoren direkt abfragen
+  - Beispiel: https://opensensemap.org/explore/69bd6ceb867a8a00078d3c3f – letzte Messwerte als JSON: https://api.opensensemap.org/boxes/69bd6ceb867a8a00078d3c3f
 - Heilbronn open data (trees, districts): https://opendata.heilbronn.de
 - Noise maps (Lärmkartierung, modelled LDEN/LNight): `resources/103-101-16-B_*.pdf` – Anlage 1 road, 2 and 3 rail/other, Kartierungsergebnisse = summary
 - Air quality station Heilbronn (LUBW/UBA): station DEBW015
