@@ -175,6 +175,37 @@ railes_limpios = railes_completos.common(cavidad) # Mantiene solo la parte inter
 cuerpo = cuerpo.fuse(railes_limpios)
 
 # ============================================================
+# 2b. MONTAJE Y DRENAJE (intemperie)
+# ============================================================
+# Ojales de cerradura (keyhole) atravesando la base: la caja se cuelga de
+# tres tornillos de pared (cabeza <= Ø7) y se desliza hacia abajo para
+# bloquearse. Orientación de montaje: punta de la hoja hacia abajo (+y
+# arriba), por eso las ranuras salen de cada círculo hacia +y. La cabeza
+# del tornillo queda dentro, apoyada contra el suelo de la caja; las tres
+# posiciones quedan fuera de la sombra de la placa MCU.
+puntos_keyhole = [(-20.0, -35.0), (20.0, -35.0), (0.0, 54.0)]
+for kx, ky in puntos_keyhole:
+    circulo = Part.makeCylinder(3.6, grosor_base + 2.0, App.Vector(kx, ky, -1.0))
+    ranura = Part.makeBox(4.2, 8.0, grosor_base + 2.0, App.Vector(kx - 2.1, ky, -1.0))
+    fin_ranura = Part.makeCylinder(2.1, grosor_base + 2.0, App.Vector(kx, ky + 8.0, -1.0))
+    cuerpo = cuerpo.cut(circulo).cut(ranura).cut(fin_ranura)
+
+# Ranuras para bridas (montaje en poste/farola): la brida entra por una
+# ranura, rodea el poste por fuera y vuelve por su pareja; la hebilla queda
+# plana contra el suelo interior. Dimensionadas para brida de 5 x 1.5 mm.
+ranuras_brida = [(-12.0, -45.0), (12.0, -45.0), (-12.0, 48.0), (12.0, 48.0)]
+for bx, by in ranuras_brida:
+    cuerpo = cuerpo.cut(Part.makeBox(2.6, 7.0, grosor_base + 2.0,
+                                     App.Vector(bx - 1.3, by - 3.5, -1.0)))
+
+# Agujeros de drenaje Ø2 en el punto bajo (hacia la punta de la hoja): la
+# condensación sale en vez de acumularse, tanto colgada en vertical como
+# tumbada en horizontal.
+for wx in (-6.0, 6.0):
+    cuerpo = cuerpo.cut(Part.makeCylinder(1.0, grosor_base + 2.0,
+                                          App.Vector(wx, -52.0, -1.0)))
+
+# ============================================================
 # 3. TAPA CON REGISTRO DE MICRÓFONO
 # ============================================================
 perfiles = [
@@ -243,6 +274,57 @@ for idx in (1, 3, 9, 11):  # dos resaltes por lado, en vértices del contorno
     tapa = tapa.fuse(resalte)
     cuerpo = cuerpo.cut(hueco)
 
+# ---- Capucha del micrófono (intemperie) ----
+# Chimenea sobre el orificio del mic con sombrerete cónico: la lluvia
+# vertical cae sobre el cono y escurre fuera del tubo; el sonido entra por
+# la boca lateral, orientada hacia fuera (-x) y a cubierto bajo el alero del
+# sombrerete. El fondo del tubo queda 0.8 mm por debajo de la boca (umbral
+# anti-salpicaduras). Recomendado en montaje real: pegar una malla acústica
+# hidrófuga (p. ej. Saati Acoustex, Gore) bajo el sombrerete o sobre el
+# orificio para sellar contra insectos y agua pulverizada.
+tubo_mic = Part.makeCylinder(5.5, 5.0, App.Vector(pos_mic_x, pos_mic_y, altura_carcasa + 4.0))
+tubo_mic = tubo_mic.cut(Part.makeCylinder(3.8, 5.0, App.Vector(pos_mic_x, pos_mic_y, altura_carcasa + 4.0)))
+sombrerete = Part.makeCone(6.5, 1.5, 4.2, App.Vector(pos_mic_x, pos_mic_y, altura_carcasa + 8.5))
+tapa = tapa.fuse(tubo_mic).fuse(sombrerete)
+boca_capucha = Part.makeBox(10.2, 6.0, 2.5,
+                            App.Vector(pos_mic_x - 12.0, pos_mic_y - 3.0, altura_carcasa + 5.8))
+tapa = tapa.cut(boca_capucha)
+
+# ---- Alero perimetral (goterón) ----
+# El borde de la tapa vuela ~1.5 mm sobre la pared en todo el perímetro: el
+# agua que escurre por el domo gotea fuera de la junta tapa-cuerpo en vez de
+# entrar por capilaridad. Banda vertical de 0.6 mm y chaflán que remata
+# contra la superficie del domo (el domo solo escala en x, por eso el perfil
+# superior usa factores x/y distintos para enterrarse justo bajo él).
+def wire_xy(fx, fy, z):
+    pts = [App.Vector(x * fx, y * fy, z) for x, y in contorno]
+    pts.append(pts[0])
+    return Part.Wire(Part.makePolygon(pts).Edges)
+
+f_alero = 1.0 + 1.5 / 55.0  # ~1.5 mm de vuelo radial (distancia mínima del contorno ~55)
+alero = Part.makeLoft([wire_xy(f_alero, f_alero, altura_carcasa),
+                       wire_xy(f_alero, f_alero, altura_carcasa + 0.6),
+                       wire_xy(0.89, 0.995, altura_carcasa + 1.7)], True)
+tapa = tapa.fuse(alero)
+# el loft del alero es un sólido de sección completa, no un anillo: se vuelve
+# a restar el vaciado para que no rellene el domo hueco ni tape el mic
+tapa = tapa.cut(vaciado)
+
+# ============================================================
+# 3b. TAPÓN USB-C IMPRIMIBLE (pieza suelta)
+# ============================================================
+# Tapón a fricción para la boca USB cuando no hay cable conectado: cono con
+# la misma conicidad que la boca abocinada menos 0.3 mm de holgura por lado,
+# espiga que sigue el túnel de 13 x 8 y placa-tirador exterior para sacarlo.
+# Se imprime aparte; aquí se modela ya asentado en su posición.
+tapon = Part.makeLoft([rect_wire_x(-W/2 - 2.5, usb_centro_y, usb_cz, 17.15, 12.15),
+                       rect_wire_x(-W/2 + 6.5, usb_centro_y, usb_cz, 12.65, 7.65)], True)
+espiga = Part.makeBox(10.0, 12.4, 7.4,
+                      App.Vector(-W/2 + 6.0, usb_centro_y - 6.2, usb_cz - 3.7))
+tirador = Part.makeBox(1.7, 10.0, 14.0,
+                       App.Vector(-W/2 - 4.2, usb_centro_y - 5.0, usb_cz - 7.0))
+tapon = tapon.fuse(espiga).fuse(tirador)
+
 # ============================================================
 # 4. COMPONENTES VIRTUALES DE REFERENCIA
 # ============================================================
@@ -261,6 +343,7 @@ ref_dfrobot = Part.makeBox(
 # ============================================================
 crear_objeto("Caja_Base_Ampliada", cuerpo, (0.18, 0.48, 0.20))
 crear_objeto("Tapa_Hoja_Ampliada", tapa, (0.28, 0.62, 0.25), transparencia=45)
+crear_objeto("Tapon_USB", tapon, (0.80, 0.60, 0.20))
 
 crear_objeto("REF_senseBox_MCU", ref_sensebox, (0.25, 0.25, 0.25))
 crear_objeto("REF_DFRobot_SoundMeter", ref_dfrobot, (0.10, 0.40, 0.80))
