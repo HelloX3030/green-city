@@ -326,6 +326,48 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		expect(await page.has('.legend'), 'no legend');
 	});
 
+	await scenario(`${size}: sensor card shows the history, Alles and 7 Tage switch the chart, a touch reads a value`, async () => {
+		// a sensor the server has hourly and daily values for, whose pin is on screen after a jump
+		// to it (the map stops at the city limit, a box outside it stays off screen)
+		const withHistory = [];
+		for (const s of await (await fetch(`${API}/sensors`)).json()) {
+			const h = Object.values(await (await fetch(`${API}/sensors/${s.id}/history`)).json());
+			if (h.length && h.every((x) => x.hourly.length > 2 && x.daily.length > 2)) withHistory.push(s);
+		}
+		expect(withHistory.length, 'no sensor with history on the server');
+		await page.goto();
+		expect(await page.until('.pin.sensor', 10000), 'no sensor pins');
+		let sensor, pin;
+		for (sensor of withHistory) {
+			await page.setView(sensor.lon, sensor.lat, 16);
+			await wait(600);
+			pin = await page.eval(`(() => { const p = window.__map.project([${sensor.lon}, ${sensor.lat}]); const box = document.querySelector('.map').getBoundingClientRect(); let best, bd = 1e9; for (const el of document.querySelectorAll('.pin.sensor')) { const r = el.getBoundingClientRect(); const d = Math.hypot(r.left + r.width / 2 - box.left - p.x, r.top + r.height / 2 - box.top - p.y); if (d < bd) (best = [r.left + r.width / 2, r.top + r.height / 2]), (bd = d); } return best; })()`);
+			if (pin && pin[0] > 0 && pin[0] < page.w && pin[1] > 0 && pin[1] < page.h * 0.7) break; // above the sheet
+			pin = null;
+		}
+		expect(pin, `none of ${withHistory.map((s) => s.name).join(', ')} comes on screen`);
+		await page.tap(...pin);
+		expect(await page.sheetHas(sensor.name), `the tap did not open ${sensor.name}`);
+		expect(await page.until('.history .read b', 6000), 'no history readout');
+		const read = () => page.eval(`document.querySelector('.history .read').innerText`);
+		const line = () => page.eval(`document.querySelector('.history path.line')?.getAttribute('d')`);
+		const week = await line();
+		expect(week, 'no line for 7 Tage');
+		await page.clickText('Alles');
+		await wait(200);
+		const all = await line();
+		expect(all && all !== week, 'Alles draws the same line as 7 Tage');
+		await page.clickText('7 Tage');
+		await wait(200);
+		const latest = await read();
+		const svg = await page.eval(`JSON.stringify(document.querySelector('.history svg').getBoundingClientRect())`).then(JSON.parse);
+		await page.tap(svg.x + svg.width * 0.3, svg.y + svg.height / 2);
+		await wait(200);
+		const under = await read();
+		expect(under !== latest && (await page.has('.history .cursor')), `the touch reads "${under}", before it "${latest}"`);
+		await page.shot(`${size}-sensor-history`);
+	});
+
 	await scenario(`${size}: about sheet opens and closes`, async () => {
 		await page.goto();
 		await page.click('.title');

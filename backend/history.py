@@ -1,4 +1,5 @@
-"""Daily statistics per sensor since March, from openSenseMap and UBA. Slow to fetch (1 min+ per call), so cached on disk."""
+"""Daily statistics per sensor since March and hourly ones of the last days, from openSenseMap and UBA.
+The daily ones are slow to fetch (1 min+ per call), so everything is cached on disk."""
 import asyncio
 import json
 import logging
@@ -18,6 +19,9 @@ NOISENODE = "6ae0d7aa4bc0370008dba0f7"
 UBA_STATION = {"id": "DEBW015", "name": "Messstation Heilbronn (UBA)", "lat": 49.1655, "lon": 9.2248}
 FROM = "2026-03-01T00:00:00Z"
 MAX_AGE = timedelta(hours=24)
+HOURLY_DAYS = 7
+HOURLY_MAX_AGE = timedelta(minutes=50)  # the refresh loop is hourly
+UTC_PLUS_1 = timezone(timedelta(hours=1))  # UBA times are CET all year
 
 # phenomenon key -> (title regex, daily operation)
 PHENOMENA = {
@@ -77,10 +81,31 @@ def get() -> dict:
     return load()
 
 
-def _stale(entry: dict | None) -> bool:
-    if not entry or "fetched" not in entry:
+def _stale(entry: dict | None, field: str = "fetched", max_age: timedelta = MAX_AGE) -> bool:
+    if not entry or field not in entry:
         return True
-    return datetime.now(timezone.utc) - datetime.fromisoformat(entry["fetched"]) > MAX_AGE
+    return datetime.now(timezone.utc) - datetime.fromisoformat(entry[field]) > max_age
+
+
+def _hourly_from() -> datetime:
+    return datetime.now(timezone.utc) - timedelta(days=HOURLY_DAYS)
+
+
+def _rows(values: dict | None) -> list[list]:
+    return sorted([t, v] for t, v in (values or {}).items() if v is not None)
+
+
+def series(sensor_id: str) -> dict[str, dict] | None:
+    """Per phenomenon the daily values since March and the hourly ones of the last days, each as a
+    sorted list of [time, value]. None for a sensor we do not know."""
+    cache = get()
+    if sensor_id == UBA_STATION["id"]:
+        phenomena = cache["uba"]
+    elif sensor_id in cache["boxes"]:
+        phenomena = cache["boxes"][sensor_id].get("phenomena", {})
+    else:
+        return None
+    return {key: {"daily": _rows(p.get("daily")), "hourly": _rows(p.get("hourly"))} for key, p in phenomena.items()}
 
 
 def _now() -> str:
@@ -107,50 +132,73 @@ async def live_boxes(client: httpx.AsyncClient) -> list[dict]:
     return out
 
 
+async def _descriptive(client: httpx.AsyncClient, box_id: str, title: str, from_: str, window: str, op: str) -> dict:
+    """time -> value for one sensor, one value per window"""
+    r = await client.get(
+        f"{OSEM}/statistics/descriptive",
+        params={"boxId": box_id, "phenomenon": title, "from-date": from_, "to-date": _api_now(),
+                "window": window, "operation": op, "format": "json"},
+        timeout=300,
+    )
+    r.raise_for_status()
+    rows = r.json()
+    return {k: v for k, v in rows[0].items() if k != "sensorId"} if rows else {}
+
+
 async def refresh_box(client: httpx.AsyncClient, box: dict):
     lon, lat = box["currentLocation"]["coordinates"][:2]
     entry = _cache["boxes"].setdefault(box["_id"], {})
     entry.update({"name": box["name"], "lat": lat, "lon": lon, "phenomena": entry.get("phenomena", {})})
     for key, s in best_sensors(box["sensors"]).items():
         cached = entry["phenomena"].get(key)
-        if cached and cached.get("sensor_id") == s["_id"] and not _stale(cached):
-            continue
+        if cached and cached.get("sensor_id") != s["_id"]:
+            cached = None
         op = PHENOMENA[key][1]
         try:
-            r = await client.get(
-                f"{OSEM}/statistics/descriptive",
-                params={"boxId": box["_id"], "phenomenon": s["title"], "from-date": FROM,
-                        "to-date": _api_now(), "window": "1d", "operation": op, "format": "json"},
-                timeout=300,
-            )
-            r.raise_for_status()
-            rows = r.json()
-            daily = {k[:10]: v for k, v in rows[0].items() if k != "sensorId"} if rows else {}
+            if _stale(cached):
+                rows = await _descriptive(client, box["_id"], s["title"], FROM, "1d", op)
+                cached = {"title": s["title"], "sensor_id": s["_id"], "fetched": _now(),
+                          "daily": {k[:10]: v for k, v in rows.items()}, "hourly": {}}
+                entry["phenomena"][key] = cached
+                log.info("history %s %s: %d days", box["name"], key, len(rows))
+            if _stale(cached, "hourly_fetched", HOURLY_MAX_AGE):
+                rows = await _descriptive(client, box["_id"], s["title"], _hourly_from().strftime("%Y-%m-%dT%H:%M:%SZ"), "1h", op)
+                cached.update({"hourly_fetched": _now(), "hourly": {k[:16] + "Z": v for k, v in rows.items()}})
         except Exception as e:  # noqa: BLE001
             log.warning("history %s %s: %s", box["name"], s["title"], e)
             continue
-        entry["phenomena"][key] = {"title": s["title"], "sensor_id": s["_id"], "fetched": _now(), "daily": daily}
-        log.info("history %s %s: %d days", box["name"], key, len(daily))
         save()
 
 
+async def _uba_measures(client: httpx.AsyncClient, from_: str, scope: int) -> dict:
+    """start time (CET, as UBA gives it) -> PM2.5; scope 1 is the daily mean, 2 the hourly"""
+    r = await client.get(
+        f"{UBA}/measures/json",
+        params={"date_from": from_, "time_from": 1, "date_to": _api_now()[:10], "time_to": 24,
+                "station": UBA_STATION["id"], "component": 9, "scope": scope},
+        timeout=60,
+    )
+    r.raise_for_status()
+    data = next(iter(r.json()["data"].values()), {})
+    return {k: row[2] for k, row in data.items() if row[2] is not None}
+
+
+def _uba_hour(cet: str) -> str:
+    return datetime.fromisoformat(cet).replace(tzinfo=UTC_PLUS_1).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+
+
 async def refresh_uba(client: httpx.AsyncClient):
-    if not _stale(_cache["uba"].get("pm25")):
-        return
+    entry = _cache["uba"].get("pm25")
     try:
-        r = await client.get(
-            f"{UBA}/measures/json",
-            params={"date_from": FROM[:10], "time_from": 1, "date_to": _api_now()[:10], "time_to": 24,
-                    "station": UBA_STATION["id"], "component": 9, "scope": 1},
-            timeout=60,
-        )
-        r.raise_for_status()
-        data = next(iter(r.json()["data"].values()), {})
-        daily = {k[:10]: row[2] for k, row in data.items() if row[2] is not None}
+        if _stale(entry):
+            daily = await _uba_measures(client, FROM[:10], 1)
+            entry = _cache["uba"]["pm25"] = {"fetched": _now(), "daily": {k[:10]: v for k, v in daily.items()}, "hourly": {}}
+        if _stale(entry, "hourly_fetched", HOURLY_MAX_AGE):
+            hourly = await _uba_measures(client, _hourly_from().strftime("%Y-%m-%d"), 2)
+            entry.update({"hourly_fetched": _now(), "hourly": {_uba_hour(k): v for k, v in hourly.items()}})
     except Exception as e:  # noqa: BLE001
         log.warning("history uba: %s", e)
         return
-    _cache["uba"]["pm25"] = {"fetched": _now(), "daily": daily}
     save()
 
 

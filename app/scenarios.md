@@ -12,6 +12,7 @@ Per size
 - Meine Meldungen from the home sheet: the sent report is listed with type, time, bubble size and status, a Zurückziehen button; tap on it from zoom 12 flies to its bubble at 16 with the card
 - layers: Lärmkarte, Messräder, Feinstaub on at zoom 11 and 16, legend shows
 - filters in the Ebenen sheet: only "Zu laut" leaves the bubbles with noise reports, numbered by them; "mindestens 3" drops the small ones; "die letzten 30 Tage" refetches with that window; "Nur Bestätigte"; while set the layers button has a dot and the home sheet shows the filter line with an ×; "Zurücksetzen" or the × brings everything back, the choice survives a reload
+- sensor card on a sensor the API has history for: the chart with the readout (latest value and time), "Alles" draws another line than "7 Tage", a touch on the chart reads the value under the finger with a cursor line
 - about sheet via the title pill, open and close
 
 Phone only
@@ -33,7 +34,7 @@ Phone only
 Not covered, check by hand on a phone
 - pinch zoom and rotation lock
 - real GPS accuracy and the time until the position comes
-- the sensor card for the NoiseNode (needs the live box)
+- the sensor card for the NoiseNode (needs the live box), its chart once it has a few days
 - dark mode, once it exists
 
 New feature: add its flows here and to `e2e/run.mjs` in the same commit.

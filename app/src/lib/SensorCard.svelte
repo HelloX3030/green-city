@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from './Icon.svelte';
+	import SensorHistory from './SensorHistory.svelte';
 	import { SENSOR_KIND, isLive, timeAgo, type Sensor } from './api';
 
 	let { sensor, onclose }: { sensor: Sensor; onclose: () => void } = $props();
@@ -30,6 +31,7 @@
 {:else}
 	<p class="empty">Sendet noch keine Daten.</p>
 {/if}
+<SensorHistory {sensor} />
 
 <style>
 	.head {

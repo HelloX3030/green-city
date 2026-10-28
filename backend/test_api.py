@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 import db
+import history
 import main
 
 A = {"x-device": "a" * 32}
@@ -19,6 +20,8 @@ class Api(unittest.TestCase):
         db.DB_PATH = Path(self.tmp.name) / "t.db"
         db.init()
         self.c = TestClient(main.app)  # no lifespan: no sensor history, no bike fetch
+        history.CACHE_PATH = Path(self.tmp.name) / "none.json"  # the cache is whatever a test puts in
+        history._cache = {"boxes": {}, "uba": {}}
 
     def tearDown(self):
         self.tmp.cleanup()
@@ -105,3 +108,20 @@ class Api(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    def test_sensor_history_sorted_without_gaps_404_for_unknown(self):
+        history._cache = {
+            "boxes": {"box1": {"name": "x", "lat": 49.1, "lon": 9.2, "phenomena": {
+                "temp": {"daily": {"2026-03-02": 7.5, "2026-03-01": 3, "2026-03-03": None},
+                         "hourly": {"2026-10-28T10:00Z": 12.0, "2026-10-28T09:00Z": 11.0}},
+                "pm25": {"daily": {}},
+            }}},
+            "uba": {"pm25": {"daily": {"2026-03-01": 6}, "hourly": {"2026-10-27T23:00Z": 9}}},
+        }
+        h = self.c.get("/sensors/box1/history").json()
+        self.assertEqual(h["temp"]["daily"], [["2026-03-01", 3], ["2026-03-02", 7.5]])
+        self.assertEqual(h["temp"]["hourly"], [["2026-10-28T09:00Z", 11.0], ["2026-10-28T10:00Z", 12.0]])
+        self.assertEqual(h["pm25"], {"daily": [], "hourly": []})
+        self.assertEqual(self.c.get("/sensors/DEBW015/history").json(), {"pm25": {"daily": [["2026-03-01", 6]], "hourly": [["2026-10-27T23:00Z", 9]]}})
+        self.assertEqual(self.c.get("/sensors/nope/history").status_code, 404)
+        self.assertEqual(history._uba_hour("2026-10-28 00:00:00"), "2026-10-27T23:00Z")

@@ -152,6 +152,17 @@ export async function deleteReport(id: number): Promise<void> {
 export const getSensors = async (): Promise<Sensor[]> =>
 	(await req('/sensors')).json();
 
+export interface Series {
+	daily: [string, number][]; // since March, one per day
+	hourly: [string, number][]; // the last 7 days, one per hour
+}
+
+// per phenomenon (temp, pm25, noise) the history of one sensor; {} for one the server has none for
+export async function getSensorHistory(id: string): Promise<Record<string, Series>> {
+	const r = await req(`/sensors/${id}/history`);
+	return r.ok ? r.json() : {};
+}
+
 export interface Ride {
 	id: string;
 	box: string;

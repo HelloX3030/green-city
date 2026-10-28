@@ -258,3 +258,12 @@ async def list_bikes() -> dict:
 @app.get("/sensors")
 async def list_sensors() -> list[dict]:
     return await sensors.get_sensors()
+
+
+@app.get("/sensors/{sid}/history")
+def sensor_history(sid: str) -> dict:
+    """per phenomenon: daily values since March and hourly ones of the last 7 days, [time, value] sorted"""
+    s = history.series(sid)
+    if s is None:
+        raise HTTPException(404, "unknown sensor")
+    return s
