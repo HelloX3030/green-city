@@ -1,0 +1,44 @@
+name: Deploy
+
+on:
+  push:
+    branches: [app]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-pi
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, greencity]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and start the stack
+        run: docker compose -p greencity up -d --build --remove-orphans
+
+      - name: Wait for the web container
+        run: |
+          for _ in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:8081/healthz >/dev/null && exit 0
+            sleep 2
+          done
+          docker compose -p greencity ps
+          docker compose -p greencity logs --tail=80
+          exit 1
+
+      - name: Smoke test the API through nginx
+        run: |
+          for _ in $(seq 1 15); do
+            curl -fsS http://127.0.0.1:8081/clusters >/dev/null && exit 0
+            sleep 2
+          done
+          docker compose -p greencity logs --tail=80 api
+          exit 1
+
+      - name: Prune old images
+        run: docker image prune -f

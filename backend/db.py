@@ -1,8 +1,9 @@
 import json
+import os
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "reports.db"
+DB_PATH = Path(os.environ.get("GREENCITY_DB_PATH", Path(__file__).parent / "reports.db"))
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS reports (

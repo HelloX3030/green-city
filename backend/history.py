@@ -2,6 +2,7 @@
 import asyncio
 import json
 import logging
+import os
 import re
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -9,7 +10,7 @@ from pathlib import Path
 import httpx
 
 log = logging.getLogger("history")
-CACHE_PATH = Path(__file__).parent / "history.json"
+CACHE_PATH = Path(os.environ.get("GREENCITY_HISTORY_PATH", Path(__file__).parent / "history.json"))
 OSEM = "https://api.opensensemap.org"
 UBA = "https://luftdaten.umweltbundesamt.de/api/air-data/v3"
 BBOX = "9.1,49.1,9.3,49.2"
