@@ -55,6 +55,11 @@ def device(x_device: str | None = Header(default=None)) -> str:
     return x_device
 
 
+def device_or_none(x_device: str | None = Header(default=None)) -> str | None:
+    """Reads work without the header, they just don't know what is yours."""
+    return device(x_device) if x_device else None
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     db.init()
@@ -69,15 +74,16 @@ app = FastAPI(title="green-city reports", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
-def fetch_reports(since: datetime | None) -> list[dict]:
-    sql = "SELECT * FROM reports"
-    args: tuple = ()
+def fetch_reports(con, since: datetime | None = None, user_id: int | None = None) -> list[dict]:
+    where, args = [], []
     if since is not None:
-        sql += " WHERE created_at >= ?"
-        args = (since.astimezone(timezone.utc).isoformat(),)
-    sql += " ORDER BY created_at DESC"
-    with db.connect() as con:
-        return [db.row_to_report(r) for r in con.execute(sql, args)]
+        where.append("created_at >= ?")
+        args.append(since.astimezone(timezone.utc).isoformat())
+    if user_id is not None:
+        where.append("user_id = ?")
+        args.append(user_id)
+    sql = "SELECT * FROM reports" + (" WHERE " + " AND ".join(where) if where else "") + " ORDER BY created_at DESC"
+    return [db.row_to_report(r) for r in con.execute(sql, args)]
 
 
 @app.get("/me", response_model=Me)
@@ -102,13 +108,23 @@ def create_report(rep: ReportIn, token: str = Depends(device)) -> dict:
 
 @app.get("/reports", response_model=list[Report])
 def list_reports(since: datetime | None = Query(default=None)) -> list[dict]:
-    return fetch_reports(since)
+    with db.connect() as con:
+        return fetch_reports(con, since)
+
+
+@app.get("/reports/mine", response_model=list[Report])
+def my_reports(token: str = Depends(device)) -> list[dict]:
+    with db.connect() as con:
+        return fetch_reports(con, user_id=db.user_for(con, token))
 
 
 @app.get("/clusters")
-def list_clusters(days: int = Query(default=CLUSTER_WINDOW_DAYS, ge=1, le=365)) -> list[dict]:
+def list_clusters(
+    days: int = Query(default=CLUSTER_WINDOW_DAYS, ge=1, le=365), token: str | None = Depends(device_or_none)
+) -> list[dict]:
     since = datetime.now(timezone.utc) - timedelta(days=days)
-    clusters = cluster(fetch_reports(since))
+    with db.connect() as con:
+        clusters = cluster(fetch_reports(con, since), me=db.user_of(con, token))
     for c in clusters:
         c["status"], c["reason"] = status.assess(c["lat"], c["lon"], dominant_type(c))
     return clusters

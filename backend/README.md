@@ -4,16 +4,17 @@ FastAPI + SQLite. Stores reports, returns clusters with a sensor-data verdict, p
 
 `make backend` from the repo root, or `uv run uvicorn main:app --reload --port 8000` here.
 
-Every request may carry `X-Device: <32-64 chars>`, the app's random token. `users` is a row per person, `devices` maps tokens to users, created on first contact. Writes need the header, reads ignore it for now. Old reports with an `author` id are mapped to a user on start, the id works as a token.
+Every request may carry `X-Device: <32-64 chars>`, the app's random token. `users` is a row per person, `devices` maps tokens to users, created on first contact. Writes and `/reports/mine` need the header, `/clusters` uses it for `mine` if present. Old reports with an `author` id are mapped to a user on start, the id works as a token.
 
 - `GET /me` – `{id, name, created_at}` of the caller
 - `POST /reports` `{lat, lon, types: ["noise"|"heat"|"air"|"no_shade"|"other"], message?}`, needs `X-Device`
 - `GET /reports?since=<iso>`
-- `GET /clusters?days=14` – reports grouped: the oldest report anchors a cluster, later reports within 100 m of an anchor join it, anchors never move, `id` is the anchor's report id; `points` the member positions `[lat, lon, type]`; `count` raw, `recent` of the last 7 days, `weight` with decay (a report halves every 7 days), `dominant` type by weight, `status` confirmed / unconfirmed / no_data for it, `reason` one line in German
+- `GET /reports/mine` – the caller's reports, newest first, needs `X-Device`
+- `GET /clusters?days=14` – reports grouped: the oldest report anchors a cluster, later reports within 100 m of an anchor join it, anchors never move, `id` is the anchor's report id; `points` the member positions `[lat, lon, type]`; `count` raw, `recent` of the last 7 days, `mine` from the caller's device (0 without `X-Device`), `weight` with decay (a report halves every 7 days), `dominant` type by weight, `status` confirmed / unconfirmed / no_data for it, `reason` one line in German
 - `GET /sensors` – live values of the outdoor openSenseMap boxes in Heilbronn (incl. our NoiseNode) and UBA station DEBW015, cached 60 s
 - `GET /bikes` – GeoJSON lines of the senseBox:bike rides (grouptag heilbronn) in the last 7 days with mean PM2.5 per ride, cached 10 min. Points outside the city bbox are dropped.
 
-Docs at http://localhost:8000/docs. `make test` runs the clustering unit tests.
+Docs at http://localhost:8000/docs. `make test` runs the unit tests (clustering, db, api).
 
 ## Status rules (status.py)
 

@@ -7,8 +7,8 @@ What `node e2e/run.mjs` drives through headless Chrome, with the position emulat
 Per size
 - first open: home sheet with Melden, NoiseNode pin on the map
 - zoomed out to 11, Melden: flies to my position at zoom 16, circle green, Melden enabled
-- send a report (Zu laut): "Gemeldet" card, close, home sheet back
-- tap a bubble at zoom 15: cluster card ("n Meldungen", no "diese Woche" when all are fresh), bubble highlighted, its 100 m disc drawn, the faint discs of the others only from zoom 15
+- send a report (Zu laut): "Gemeldet" card with "Du …", the bubble gets the green dot, close, home sheet back
+- tap a bubble at zoom 15: cluster card ("n Meldungen", "Du und …" since one is mine, no "diese Woche" when all are fresh), bubble highlighted, its 100 m disc drawn, the faint discs of the others only from zoom 15
 - layers: Lärmkarte, Messräder, Feinstaub on at zoom 11 and 16, legend shows
 - about sheet via the title pill, open and close
 
@@ -20,7 +20,7 @@ Phone only
 - zoom out in report mode: circle grey, hint "Näher ranzoomen", Melden disabled, enabled again after zooming in
 - drag past the city edge six times: centre stays inside the city limit, no jump after release
 - jump far outside at zoom 8: centre snaps to the city limit, zoom is the min zoom, the whole city is on screen
-- device token: 32 chars in localStorage, same token and same user after a reload, a cleared storage is a new user, a report without the header is refused
+- device token: with it `/clusters` marks my bubbles (`mine`) and `/reports/mine` lists my reports, without it nothing is mine and `/reports/mine` is refused; 32 chars in localStorage, same token and same user after a reload, a cleared storage is a new user with no marked bubbles, a report without the header is refused
 - backend unreachable: "Server nicht erreichbar" after the next poll, gone when it is back
 
 Not covered, check by hand on a phone

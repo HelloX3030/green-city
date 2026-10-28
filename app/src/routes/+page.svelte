@@ -26,7 +26,7 @@
 	let layersOpen = $state(false);
 	let aboutOpen = $state(false);
 	let bikes = $state<Awaited<ReturnType<typeof getBikes>> | null>(null);
-	let mine = $state(false);
+	let sent = $state(false); // the card right after sending says Gemeldet
 	let reporting = $state(false);
 	let pick = $state<{ lat: number; lon: number } | null>(null);
 	let offline = $state(false);
@@ -145,17 +145,17 @@
 		);
 	}
 
-	async function sent(r: Report) {
+	async function onsent(r: Report) {
 		reporting = false;
 		await refresh();
 		selected = clusters.find((c) => c.report_ids.includes(r.id)) ?? null;
-		mine = true;
+		sent = true;
 	}
 
 	function select(c: Cluster | null) {
 		selected = c;
 		sensor = null;
-		mine = false;
+		sent = false;
 		if (c) layersOpen = aboutOpen = false;
 	}
 
@@ -209,9 +209,9 @@
 <div class="sheet glass" bind:clientHeight={sheetHeight}>
 	<div class="grab"></div>
 	{#if reporting}
-		<ReportSheet location={pick} onclose={() => (reporting = false)} onsent={sent} />
+		<ReportSheet location={pick} onclose={() => (reporting = false)} onsent={onsent} />
 	{:else if selected}
-		<ClusterCard cluster={selected} {mine} onclose={() => (selected = null)} onreport={() => startReport(selected!)} />
+		<ClusterCard cluster={selected} {sent} onclose={() => (selected = null)} onreport={() => startReport(selected!)} />
 	{:else if sensor}
 		<SensorCard {sensor} onclose={() => (sensor = null)} />
 	{:else if layersOpen}

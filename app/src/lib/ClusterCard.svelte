@@ -4,31 +4,35 @@
 
 	let {
 		cluster,
-		mine = false,
+		sent = false,
 		onclose,
 		onreport
-	}: { cluster: Cluster; mine?: boolean; onclose: () => void; onreport: () => void } = $props();
+	}: { cluster: Cluster; sent?: boolean; onclose: () => void; onreport: () => void } = $props();
 
-	const others = $derived(mine ? cluster.count - 1 : cluster.count);
+	const mine = $derived(cluster.mine > 0); // one of the reports here is from this device
+	const others = $derived(cluster.count - cluster.mine);
+	const you = $derived(
+		others === 0
+			? cluster.mine === 1
+				? 'Du bist hier der Erste'
+				: 'Alle von dir'
+			: `Du und ${others} ${others === 1 ? 'andere Person' : 'andere'} in der Nähe`
+	);
 	const main = $derived(typeInfo(dominantType(cluster)));
 </script>
 
 <div class="head">
-	<div class="badge" style="background: {mine ? 'var(--accent)' : main.color}">
-		<Icon name={mine ? 'check' : main.icon} size={20} />
+	<div class="badge" style="background: {sent ? 'var(--accent)' : main.color}">
+		<Icon name={sent ? 'check' : main.icon} size={20} />
 	</div>
 	<div>
-		{#if mine}
+		{#if sent}
 			<h2>Gemeldet</h2>
-			<p>
-				{others === 0
-					? 'Du bist hier der Erste.'
-					: `Du und ${others} ${others === 1 ? 'andere Person' : 'andere'} in der Nähe.`}
-			</p>
+			<p>{you}.</p>
 		{:else}
 			<h2>{cluster.count} {cluster.count === 1 ? 'Meldung' : 'Meldungen'}</h2>
 			<p>
-				{main.label}
+				{#if mine}{you}{:else}{main.label}{/if}
 				{#if cluster.recent < cluster.count}· {cluster.recent === 0 ? 'keine' : cluster.recent} davon diese Woche{/if}
 				· letzte {timeAgo(cluster.latest)}
 			</p>
@@ -45,7 +49,7 @@
 		<span class="chip"><i style="background: {typeInfo(t).color}"></i>{typeInfo(t).label} {n}</span>
 	{/each}
 </div>
-{#if !mine}
+{#if !sent}
 	<button class="ghost" onclick={onreport}>Hier auch melden</button>
 {/if}
 

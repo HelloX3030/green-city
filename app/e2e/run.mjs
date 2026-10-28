@@ -163,6 +163,8 @@ for (const size of Object.keys(SIZES)) {
 		await page.until('.sheet .badge', 6000); // post, then the clusters poll with the new report
 		const sheet = await page.sheet();
 		expect(sheet.includes('Gemeldet'), `no Gemeldet card, sheet says "${sheet.split('\n')[0]}", Melden ${(await page.eval(`document.querySelector('.sheet .primary')?.disabled`)) ? 'disabled' : 'enabled'}, zoom ${(await page.zoom()).toFixed(3)}`);
+		expect(/^Du /m.test(sheet), 'card does not say Du');
+		expect(await page.has('.pin.cluster.sel.mine'), 'my bubble has no mine mark');
 		await page.click('[aria-label="Schließen"]');
 		await wait(300);
 		expect((await page.sheet()).includes('Melden'), 'home sheet not back');
@@ -180,6 +182,7 @@ for (const size of Object.keys(SIZES)) {
 		await wait(800);
 		const sheet = await page.sheet();
 		expect(/^\d+ Meldung/m.test(sheet), 'no cluster card');
+		expect(/^Du /m.test(sheet), 'card of the bubble with my report does not say Du');
 		expect(!sheet.includes('diese Woche'), 'card says "diese Woche" though every report is fresh');
 		expect(await page.has('.pin.cluster.sel'), 'bubble not highlighted');
 		const drawn = (layer) => page.eval(`window.__map.queryRenderedFeatures({layers: ['${layer}']}).length`);
@@ -332,9 +335,19 @@ await scenario('phone: jump far outside, centre snaps to the city limit, zoom-ou
 
 await scenario('phone: the device token stays over reloads and makes one user, a cleared device is a new one', async () => {
 	await page.goto();
+	const token = () => page.eval(`localStorage.getItem('device')`);
+	// this profile sent the reports above: the server knows which bubbles are mine, and only with the header
+	const t0 = await token();
+	const mine = async (headers) => (await fetch(`${API}/clusters`, { headers }).then((r) => r.json())).reduce((n, c) => n + c.mine, 0);
+	expect((await mine({ 'x-device': t0 })) >= 1, 'no bubble is mine with my token');
+	expect((await mine({})) === 0, 'a bubble is mine without a token');
+	const list = await fetch(`${API}/reports/mine`, { headers: { 'x-device': t0 } }).then((r) => r.json());
+	expect(list.length >= 1 && !('user_id' in list[0]), `/reports/mine: ${JSON.stringify(list[0])}`);
+	expect((await fetch(`${API}/reports/mine`)).status === 400, '/reports/mine without a token did not refuse');
+	expect(await page.has('.pin.cluster.mine'), 'no bubble on the map is marked as mine');
 	await page.eval(`localStorage.clear(); 0`);
 	await page.goto();
-	const token = () => page.eval(`localStorage.getItem('device')`);
+	expect(!(await page.has('.pin.cluster.mine')), 'a cleared device still sees its bubbles as mine');
 	const me = async () => (await fetch(`${API}/me`, { headers: { 'x-device': await token() } }).then((r) => r.json())).id;
 	const t1 = await token();
 	expect(t1 && t1.length === 32, `token is ${t1}`);

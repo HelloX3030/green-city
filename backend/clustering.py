@@ -28,7 +28,8 @@ def distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * r * math.asin(math.sqrt(a))
 
 
-def cluster(reports: list[dict]) -> list[dict]:
+def cluster(reports: list[dict], me: int | None = None) -> list[dict]:
+    """me: the caller's user id, counted per cluster as `mine`."""
     clusters: list[dict] = []
     for rep in sorted(reports, key=lambda r: r["created_at"]):
         best, best_d = None, RADIUS_M
@@ -58,6 +59,7 @@ def cluster(reports: list[dict]) -> list[dict]:
                 "lon": c["lon"],
                 "count": len(members),
                 "recent": sum(1 for r in members if weights[r["id"]] >= 0.5),  # the last HALF_LIFE_DAYS
+                "mine": sum(1 for r in members if me is not None and r.get("user_id") == me),
                 "weight": round(sum(weights.values()), 2),
                 "types": dict(types.most_common()),
                 "dominant": weighted.most_common(1)[0][0],

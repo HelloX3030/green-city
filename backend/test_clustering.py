@@ -5,9 +5,9 @@ from datetime import datetime, timedelta, timezone
 from clustering import cluster
 
 
-def rep(id_, days_ago, lat=49.15, lon=9.22):
+def rep(id_, days_ago, lat=49.15, lon=9.22, user=1):
     at = datetime.now(timezone.utc) - timedelta(days=days_ago)
-    return {"id": id_, "lat": lat, "lon": lon, "types": ["noise"], "created_at": at.isoformat()}
+    return {"id": id_, "lat": lat, "lon": lon, "types": ["noise"], "created_at": at.isoformat(), "user_id": user}
 
 
 class Clustering(unittest.TestCase):
@@ -15,6 +15,12 @@ class Clustering(unittest.TestCase):
         (c,) = cluster([rep(1, 10), rep(2, 8), rep(3, 1), rep(4, 0)])
         self.assertEqual((c["count"], c["recent"]), (4, 2))
         self.assertEqual(c["id"], 1)  # the oldest anchors
+
+    def test_mine_counts_the_callers_reports(self):
+        reports = [rep(1, 1, user=7), rep(2, 1, user=8), rep(3, 0, user=7)]
+        self.assertEqual(cluster(reports, me=7)[0]["mine"], 2)
+        self.assertEqual(cluster(reports, me=9)[0]["mine"], 0)
+        self.assertEqual(cluster(reports)[0]["mine"], 0)  # no header, nothing is yours
 
     def test_far_report_opens_a_new_bubble(self):
         a, b = cluster([rep(1, 1), rep(2, 0, lon=9.22 + 0.0021)])  # ~150 m east

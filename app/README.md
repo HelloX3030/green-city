@@ -10,7 +10,7 @@ Title pill top left opens a short about sheet (three steps, status colours). Lay
 
 Reporting: Melden flies to the phone's position at zoom 16 if it comes within 2 s, else zooms to 15 where you are. Below zoom 15 the circle is grey and Melden disabled. The bubble the report would join gets a green ring and the hint says so, computed in the app with the backend's rule. Position denied or outside Heilbronn shows a toast. The map padding waits for a running animation, setPadding would cancel it.
 
-Identity: no login. The app keeps a random token in localStorage (`deviceToken` in `api.ts`) and sends it as `X-Device` on every request, the backend turns it into a user on first contact. Clearing site data means a new user.
+Identity: no login. The app keeps a random token in localStorage (`deviceToken` in `api.ts`) and sends it as `X-Device` on every request, the backend turns it into a user on first contact. Clearing site data means a new user. The server says per bubble how many reports are mine: those bubbles get a green dot and the card says "Du und N andere". Right after sending the card says "Gemeldet" instead.
 
 Testing: `make e2e` runs `e2e/run.mjs`, headless Chrome through the flows in `scenarios.md` at three screen sizes with emulated positions. Screenshots in `e2e/out/`. Run it before a commit, add flows for new features.
 

@@ -370,6 +370,7 @@
 			div.style.setProperty('--s', `${size}px`);
 			div.textContent = String(c.count);
 			div.classList.toggle('sel', c.id === selId);
+			div.classList.toggle('mine', c.mine > 0);
 		}
 		for (const [id, m] of clusterMarkers) {
 			if (!seen.has(id)) {
@@ -705,6 +706,18 @@
 	}
 	:global(.pin.cluster.sel) {
 		box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--c), 0 4px 12px rgba(0, 0, 0, 0.25);
+	}
+	/* a green dot top right: one of the reports here is yours */
+	:global(.pin.cluster.mine::after) {
+		content: '';
+		position: absolute;
+		top: -3px;
+		right: -3px;
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		background: var(--accent);
+		border: 2px solid #fff;
 	}
 	:global(.pin.me) {
 		width: 16px;

@@ -32,6 +32,7 @@ export interface Cluster {
 	lon: number;
 	count: number;
 	recent: number; // of the last 7 days
+	mine: number; // sent from this device (0 without a token)
 	weight: number; // count with decay, halves every 7 days
 	types: Record<string, number>;
 	dominant: ReportType; // by decayed weight
@@ -113,6 +114,8 @@ const req = (path: string, init: RequestInit = {}) =>
 export const getClusters = async (): Promise<Cluster[]> => (await req('/clusters')).json();
 
 export const getReports = async (): Promise<Report[]> => (await req('/reports')).json();
+
+export const getMine = async (): Promise<Report[]> => (await req('/reports/mine')).json();
 
 export const getSensors = async (): Promise<Sensor[]> =>
 	(await req('/sensors')).json();

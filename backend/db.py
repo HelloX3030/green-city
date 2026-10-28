@@ -53,18 +53,24 @@ def init() -> None:
 
 def user_for(con: sqlite3.Connection, token: str) -> int:
     """The user behind a device token, created on first contact."""
-    row = con.execute("SELECT user_id FROM devices WHERE token = ?", (token,)).fetchone()
-    if row:
-        return row["user_id"]
+    uid = user_of(con, token)
+    if uid is not None:
+        return uid
     now = datetime.now(timezone.utc).isoformat()
     uid = con.execute("INSERT INTO users (created_at) VALUES (?)", (now,)).lastrowid
     con.execute("INSERT INTO devices (token, user_id, created_at) VALUES (?,?,?)", (token, uid, now))
     return uid
 
 
+def user_of(con: sqlite3.Connection, token: str | None) -> int | None:
+    """The user behind a device token, None for an unknown or missing one."""
+    row = token and con.execute("SELECT user_id FROM devices WHERE token = ?", (token,)).fetchone()
+    return row["user_id"] if row else None
+
+
 def row_to_report(row: sqlite3.Row) -> dict:
+    """user_id stays for clustering, the Report model drops it from responses."""
     d = dict(row)
     d["types"] = json.loads(d["types"])
     d.pop("author", None)
-    d.pop("user_id", None)
     return d

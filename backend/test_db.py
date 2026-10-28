@@ -20,6 +20,9 @@ class Db(unittest.TestCase):
             a = db.user_for(con, "a" * 32)
             self.assertEqual(db.user_for(con, "a" * 32), a)
             self.assertNotEqual(db.user_for(con, "b" * 32), a)
+            self.assertEqual(db.user_of(con, "a" * 32), a)
+            self.assertIsNone(db.user_of(con, "c" * 32))  # a look-up does not create
+            self.assertIsNone(db.user_of(con, None))
 
     def test_old_reports_get_a_user_from_their_author(self):
         with db.connect() as con:
