@@ -2,11 +2,13 @@
 
 SvelteKit + MapLibre. One page: map, one bottom sheet (report, cluster card, sensor card, layers).
 
-Look: CARTO Positron basemap, glass surfaces, one green for actions. Colours and icons per report type, sensor kind and layer live in `src/lib/api.ts`, the icon paths in `src/lib/icons.ts`. Sensors and clusters are DOM markers (`.pin` styles in `Map.svelte`), trees, bike rides and the 100 m discs of the bubbles are map layers. A bubble's disc is faint from zoom 15 up, the selected one has a line and shows the single reports from 15.5.
+Look: CARTO Positron basemap, glass surfaces, one green for actions. Colours and icons per report type, sensor kind and layer live in `src/lib/api.ts`, the icon paths in `src/lib/icons.ts`. Sensors and clusters are DOM markers (`.pin` styles in `Map.svelte`), trees, bike rides and the bubble discs are map layers.
+
+One radius: 100 m (`CLUSTER_RADIUS_M` in `api.ts`, `RADIUS_M` in the backend) is the only circle in the app, always in metres on the ground. The report circle is it, every bubble's disc is it (faint from zoom 15, the selected one with a line and the single reports from 15.5), and the join rule is it: a report goes to the nearest bubble whose anchor is within 100 m, else it opens a new one. Anchors are the oldest report and never move, so bubbles stay put. Bubble size is the weight (halves every 7 days), the number is the count, the card says how many are from this week.
 
 Title pill top left opens a short about sheet (three steps, status colours). Layout: one bottom sheet on phones, a 400 px card bottom-left from 600 px width, the map centre shifts away from it.
 
-Reporting: Melden flies to the phone's position at zoom 16 if it comes within 2 s, else zooms to 15 where you are. The circle is the 100 m cluster radius on the ground (`CLUSTER_RADIUS_M`, same as the backend), it grows with the zoom. Below zoom 15 the circle is grey and Melden disabled. The bubble a report would join (nearest within 100 m, the backend rule) gets a green ring and the hint says so. Position denied or outside Heilbronn shows a toast. The map padding waits for a running animation, setPadding would cancel it.
+Reporting: Melden flies to the phone's position at zoom 16 if it comes within 2 s, else zooms to 15 where you are. Below zoom 15 the circle is grey and Melden disabled. The bubble the report would join gets a green ring and the hint says so, computed in the app with the backend's rule. Position denied or outside Heilbronn shows a toast. The map padding waits for a running animation, setPadding would cancel it.
 
 Testing: `make e2e` runs `e2e/run.mjs`, headless Chrome through the flows in `scenarios.md` at three screen sizes with emulated positions. Screenshots in `e2e/out/`. Run it before a commit, add flows for new features.
 

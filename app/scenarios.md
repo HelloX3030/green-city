@@ -1,5 +1,7 @@
 # Scenarios
 
+The one radius (100 m, report circle, bubble discs, join rule) and its zoom floor 15 are what most report-mode checks below assert.
+
 What `node e2e/run.mjs` drives through headless Chrome, with the position emulated (in the city, in Stuttgart, denied) and three screen sizes (360×640, 768×1024, 1440×900). Run it before every commit that touches the app, needs the dev server and the backend running. Screenshots land in `e2e/out/`, look at them, the checks only catch what they assert.
 
 Per size
