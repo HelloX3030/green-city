@@ -108,9 +108,7 @@
 		{/each}
 	</ul>
 {/if}
-{#if !sent}
-	<button class="ghost" onclick={onreport}>{today ? 'Nochmal melden' : 'Hier auch melden'}</button>
-{/if}
+<button class="ghost" onclick={onreport}>{today ? 'Nochmal melden' : 'Hier auch melden'}</button>
 
 <style>
 	.head {

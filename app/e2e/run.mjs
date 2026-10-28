@@ -190,6 +190,7 @@ for (const size of Object.keys(SIZES)) {
 		expect(ringed.some((l) => l.startsWith('Zu laut') && l.endsWith('von dir')), `my type is not ringed: ${JSON.stringify(ringed)}`);
 		const todays = await page.eval(`[...document.querySelectorAll('.sheet .voices li.me')].length`);
 		expect(todays < 2 || sheet.includes('Meldung hier heute'), `${todays} of mine, but the card does not count them`);
+		expect(sheet.includes('Nochmal melden'), 'the sent card has no Nochmal melden button');
 		await page.shot(`${size}-sent`);
 		await page.click('[aria-label="Schließen"]');
 		await wait(300);
