@@ -233,6 +233,20 @@
 		border-radius: var(--radius) var(--radius) 0 0;
 		box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.05), 0 -10px 30px rgba(0, 0, 0, 0.08);
 	}
+	@media (min-width: 600px) {
+		.sheet {
+			right: auto;
+			left: 14px;
+			bottom: 14px;
+			width: 400px;
+			padding: 18px;
+			border-radius: var(--radius);
+			box-shadow: var(--shadow);
+		}
+		.grab {
+			display: none;
+		}
+	}
 	.grab {
 		width: 36px;
 		height: 5px;

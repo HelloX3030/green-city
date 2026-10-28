@@ -248,10 +248,20 @@
 		return () => map.remove();
 	});
 
-	// the sheet covers the bottom, so the map's centre moves up with it
+	// the sheet covers the bottom (phone) or the left (wide screens), the map's centre moves away from it
+	let wide = $state(false);
+	$effect(() => {
+		const mq = window.matchMedia('(min-width: 600px)');
+		const set = () => (wide = mq.matches);
+		set();
+		mq.addEventListener('change', set);
+		return () => mq.removeEventListener('change', set);
+	});
+	const padBottom = $derived(wide ? 0 : sheetHeight);
+	const padLeft = $derived(wide ? 414 : 0);
 	$effect(() => {
 		if (!ready) return;
-		map.setPadding({ top: 0, left: 0, right: 0, bottom: sheetHeight });
+		map.setPadding({ top: 0, left: padLeft, right: 0, bottom: padBottom });
 	});
 
 	$effect(() => {
@@ -421,11 +431,11 @@
 <div class="map" bind:this={el}></div>
 {#if picking}
 	<div class="dim" aria-hidden="true"></div>
-	<div class="crosshair" style="--bottom: {sheetHeight}px" aria-hidden="true">
+	<div class="crosshair" style="--bottom: {padBottom}px; --left: {padLeft}px" aria-hidden="true">
 		<span class="hint">Karte schieben, bis der Kreis passt</span>
 	</div>
 {/if}
-<div class="legends" style="--bottom: {sheetHeight}px">
+<div class="legends" style="--bottom: {padBottom}px; --left: {padLeft}px">
 	{#if layers.has('bikes') || layers.has('pm')}
 		<div class="legend glass">
 			{#each PM_LEGEND as [v, color]}
@@ -457,7 +467,7 @@
 	}
 	.crosshair {
 		position: absolute;
-		left: 50%;
+		left: calc((100% + var(--left)) / 2);
 		top: calc((100% - var(--bottom)) / 2);
 		width: 84px;
 		height: 84px;
@@ -493,7 +503,7 @@
 	}
 	.legends {
 		position: absolute;
-		left: 14px;
+		left: calc(var(--left) + 14px);
 		bottom: calc(var(--bottom) + 12px);
 		display: flex;
 		flex-direction: column;
