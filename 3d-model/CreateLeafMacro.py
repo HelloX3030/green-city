@@ -55,11 +55,18 @@ contorno = [
     (-W*0.22,-L*0.36),
 ]
 
+# Contorno suave: B-spline periódica que pasa por los 12 puntos del contorno.
+# Como la interpolación conmuta con escalados afines, todas las curvas
+# escaladas (cavidad, falda, perfiles del domo) siguen siendo homotéticas y
+# las holguras calculadas en los vértices se conservan exactamente.
+def wire_contorno(puntos, z, fx=1.0, fy=1.0):
+    pts = [App.Vector(x * fx, y * fy, z) for x, y in puntos]
+    curva = Part.BSplineCurve()
+    curva.interpolate(Points=pts, PeriodicFlag=True)
+    return Part.Wire([curva.toShape()])
+
 def crear_prisma(puntos, z, altura):
-    vertices = [App.Vector(x, y, z) for x, y in puntos]
-    vertices.append(vertices[0])
-    wire = Part.makePolygon(vertices)
-    return Part.Face(wire).extrude(App.Vector(0, 0, altura))
+    return Part.Face(wire_contorno(puntos, z)).extrude(App.Vector(0, 0, altura))
 
 def crear_objeto(nombre, forma, color, transparencia=0):
     obj = doc.addObject("Part::Feature", nombre)
@@ -69,9 +76,7 @@ def crear_objeto(nombre, forma, color, transparencia=0):
     return obj
 
 def crear_wire_perfil(puntos, factor_x, z):
-    vertices = [App.Vector(x * factor_x, y, z) for x, y in puntos]
-    vertices.append(vertices[0])
-    return Part.Wire(Part.makePolygon(vertices).Edges)
+    return wire_contorno(puntos, z, fx=factor_x)
 
 def altura_superficie(x):
     u = min(abs(x) / (W * 0.5), 1.0)
@@ -205,6 +210,14 @@ for wx in (-6.0, 6.0):
     cuerpo = cuerpo.cut(Part.makeCylinder(1.0, grosor_base + 2.0,
                                           App.Vector(wx, -52.0, -1.0)))
 
+# ---- Peciolo (rabillo de la hoja) ----
+# Cono tumbado que sale de la punta estrecha y remata en esfera: puramente
+# estético, pero asienta en la cama (z 0..9) y se imprime sin soportes.
+peciolo = Part.makeCone(4.5, 2.8, 20.0,
+                        App.Vector(0, -L/2 + 4.0, 4.5), App.Vector(0, -1, 0))
+punta_peciolo = Part.makeSphere(2.8, App.Vector(0, -L/2 - 16.0, 4.5))
+cuerpo = cuerpo.fuse(peciolo).fuse(punta_peciolo)
+
 # ============================================================
 # 3. TAPA CON REGISTRO DE MICRÓFONO
 # ============================================================
@@ -297,9 +310,7 @@ tapa = tapa.cut(boca_capucha)
 # contra la superficie del domo (el domo solo escala en x, por eso el perfil
 # superior usa factores x/y distintos para enterrarse justo bajo él).
 def wire_xy(fx, fy, z):
-    pts = [App.Vector(x * fx, y * fy, z) for x, y in contorno]
-    pts.append(pts[0])
-    return Part.Wire(Part.makePolygon(pts).Edges)
+    return wire_contorno(contorno, z, fx=fx, fy=fy)
 
 f_alero = 1.0 + 1.5 / 55.0  # ~1.5 mm de vuelo radial (distancia mínima del contorno ~55)
 alero = Part.makeLoft([wire_xy(f_alero, f_alero, altura_carcasa),
@@ -309,6 +320,40 @@ tapa = tapa.fuse(alero)
 # el loft del alero es un sólido de sección completa, no un anillo: se vuelve
 # a restar el vaciado para que no rellene el domo hueco ni tape el mic
 tapa = tapa.cut(vaciado)
+
+# ---- Nervaduras grabadas (surcos de 0.8 mm) ----
+# Nervio central partido en dos tramos (deja libre la zona del rebaje QR) y
+# cinco pares de nervios laterales a 35° hacia el ápice, como una hoja real.
+# Cada lámina fina se recorta a la franja de 0.8 mm bajo la superficie
+# (tapa menos tapa desplazada -0.8 en z), de modo que el surco sigue el domo
+# con profundidad constante y se desvanece solo al llegar a las paredes
+# verticales. Posiciones elegidas para no tocar la capucha del mic.
+nervios = [Part.makeBox(1.2, 69.0, 11.0, App.Vector(-0.6, -64.0, 29.0)),
+           Part.makeBox(1.2, 29.0, 11.0, App.Vector(-0.6, 35.0, 29.0))]
+for y_nervio, largo_nervio in [(-50.0, 38.0), (-30.0, 42.0), (-6.0, 45.0),
+                               (38.0, 35.0), (50.0, 18.0)]:
+    for ang in (35.0, 145.0):
+        lamina = Part.makeBox(largo_nervio, 1.2, 11.0,
+                              App.Vector(0, y_nervio - 0.6, 29.0))
+        lamina.rotate(App.Vector(0, y_nervio, 0), App.Vector(0, 0, 1), ang)
+        nervios.append(lamina)
+laminas = nervios[0]
+for n in nervios[1:]:
+    laminas = laminas.fuse(n)
+tapa_bajada = tapa.copy()
+tapa_bajada.translate(App.Vector(0, 0, -0.8))
+surcos = laminas.common(tapa).cut(tapa_bajada)
+tapa = tapa.cut(surcos)
+
+# ---- Rebaje QR (flujo de despliegue de la app) ----
+# Cajeado de 25 x 25 x 0.6 en la meseta plana del domo para una pegatina QR
+# laminada (la que escanea la app al desplegar el sensor): el rebaje la
+# protege del roce y la deja enrasada. Para impresión a dos colores: pausa /
+# cambio de filamento en z = 34.9 y las nervaduras + el marco del QR quedan
+# en color contraste.
+rebaje_qr = Part.makeBox(25.0, 25.0, 2.0,
+                         App.Vector(-12.5, 7.5, altura_carcasa + altura_domo - 0.6))
+tapa = tapa.cut(rebaje_qr)
 
 # ============================================================
 # 3b. TAPÓN USB-C IMPRIMIBLE (pieza suelta)
