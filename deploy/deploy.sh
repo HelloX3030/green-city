@@ -21,6 +21,11 @@ if [ -n "$(git status --porcelain)" ]; then
 	exit 1
 fi
 
+if [ "$(git rev-parse HEAD)" != "$(git rev-parse "origin/$BRANCH")" ]; then
+	echo "==> local $BRANCH is not at origin/$BRANCH; push or pull before deploying" >&2
+	exit 1
+fi
+
 COMMIT="$(git rev-parse --short HEAD)"
 echo "==> deploying $COMMIT"
 
