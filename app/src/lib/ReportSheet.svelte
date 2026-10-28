@@ -54,7 +54,7 @@
 		</button>
 	{/each}
 </div>
-<input class="msg" placeholder="Ein Satz dazu, optional" maxlength="500" bind:value={message} />
+<input class="msg" placeholder="Ein Satz dazu, optional, öffentlich" maxlength="500" bind:value={message} />
 {#if error}<p class="err">{error}</p>{/if}
 <div class="row">
 	<button class="ghost" onclick={onclose}>Abbrechen</button>

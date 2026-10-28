@@ -35,8 +35,8 @@ export interface Cluster {
 	recent: number; // of the last 7 days
 	mine: number; // sent from this device (0 without a token)
 	weight: number; // one voice per person and day, halves every 7 days: the bubble size
-	types: Record<string, number>;
-	dominant: ReportType; // by decayed weight
+	types: Record<string, number>; // people per type, the dominant first
+	dominant: ReportType; // the type most people name
 	latest: string;
 	report_ids: number[];
 	points: [number, number, string][]; // lat, lon, first type of each report
@@ -221,3 +221,9 @@ export async function postReport(body: {
 }
 
 export const dominantType = (c: Cluster): ReportType => c.dominant ?? 'other';
+
+// the reports of one bubble, newest first, no author
+export async function clusterReports(id: number): Promise<Report[]> {
+	const res = await req(`/clusters/${id}/reports`);
+	return res.ok ? res.json() : [];
+}

@@ -2,9 +2,10 @@
 every later report within RADIUS_M of an anchor joins that cluster, otherwise it
 anchors a new one. Anchors never move and the cluster id is the anchor's report id,
 so bubbles stay put and ids stay stable while reports come in. Per person and day
-only the latest report carries weight, so one phone cannot grow a bubble alone.
-That weight halves every HALF_LIFE_DAYS, so old reports fade out of the cluster
-size and the dominant type."""
+there is one voice, so one phone cannot grow a bubble alone; every type that
+person reported that day gets the voice once, so the dominant type is the one
+most people name, not the last tap. A voice halves every HALF_LIFE_DAYS, so old
+reports fade out of the cluster size and the dominant type."""
 
 import math
 from collections import Counter
@@ -47,21 +48,25 @@ def cluster(reports: list[dict], me: int | None = None) -> list[dict]:
     now = datetime.now(timezone.utc)
     for c in clusters:
         members = c["members"]
-        # one voice per person and day: the latest report of a (person, day) pair has the weight, the rest 0
-        latest: dict[tuple, dict] = {}
+        # one voice per person and day, dated by that person's latest report of the day,
+        # given once to every type they named that day
+        voices: dict[tuple, dict] = {}  # (person, day) -> {"at": latest created_at, "types": set}
         for r in members:
-            key = (r.get("user_id") or ("anon", r["id"]), r["created_at"][:10])
-            if key not in latest or r["created_at"] > latest[key]["created_at"]:
-                latest[key] = r
-        counted = {r["id"] for r in latest.values()}
-        weights = {r["id"]: weight(r["created_at"], now) if r["id"] in counted else 0.0 for r in members}
-        people = len({k[0] for k in latest})
+            who = r.get("user_id") or ("anon", r["id"])
+            v = voices.setdefault((who, r["created_at"][:10]), {"at": r["created_at"], "types": set()})
+            v["at"] = max(v["at"], r["created_at"])
+            v["types"].update(r["types"])
+        people = len({who for who, _ in voices})
         week = now - timedelta(days=HALF_LIFE_DAYS)
-        types = Counter(t for r in members for t in r["types"])
-        weighted = Counter()
-        for r in members:
-            for t in r["types"]:
-                weighted[t] += weights[r["id"]]
+        # types: people per type (not decayed), ordered by decayed voices, the first is the dominant
+        by_type = Counter()
+        heads: dict[str, set] = {}
+        for (who, _), v in voices.items():
+            w = weight(v["at"], now)
+            for t in v["types"]:
+                by_type[t] += w
+                heads.setdefault(t, set()).add(who)
+        types = {t: len(heads[t]) for t, _ in by_type.most_common()}
         out.append(
             {
                 "id": members[0]["id"],
@@ -71,9 +76,9 @@ def cluster(reports: list[dict], me: int | None = None) -> list[dict]:
                 "people": people,
                 "recent": sum(1 for r in members if datetime.fromisoformat(r["created_at"]) >= week),
                 "mine": sum(1 for r in members if me is not None and r.get("user_id") == me),
-                "weight": round(sum(weights.values()), 2),
-                "types": dict(types.most_common()),
-                "dominant": weighted.most_common(1)[0][0],
+                "weight": round(sum(weight(v["at"], now) for v in voices.values()), 2),
+                "types": types,
+                "dominant": next(iter(types)),
                 "latest": max(r["created_at"] for r in members),
                 "report_ids": [r["id"] for r in members],
                 "points": [[r["lat"], r["lon"], r["types"][0]] for r in members],

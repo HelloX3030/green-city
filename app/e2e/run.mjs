@@ -138,6 +138,8 @@ async function scenario(name, fn) {
 }
 
 const melden = () => page.clickText('Melden');
+// set an input's value the way a keyboard would, Svelte sees the input event
+const type = (sel, text) => page.eval(`(() => { const i = document.querySelector(${JSON.stringify(sel)}); i.value = ${JSON.stringify(text)}; i.dispatchEvent(new Event('input', { bubbles: true })); })(); 0`);
 const nearlyZoom = async (z) => expect((await page.zoom()) >= z - 0.01, `zoom ${(await page.zoom()).toFixed(2)} < ${z}`);
 
 for (const size of Object.keys(SIZES)) {
@@ -170,12 +172,14 @@ for (const size of Object.keys(SIZES)) {
 		await page.settled();
 		await wait(300);
 		await page.clickText('Zu laut');
+		await type('.sheet .msg', `Baustelle ab 6 Uhr (${size})`);
 		await page.clickText('Melden');
 		await page.until('.sheet .badge', 6000); // post, then the clusters poll with the new report
 		const sheet = await page.sheet();
 		expect(sheet.includes('Gemeldet'), `no Gemeldet card, sheet says "${sheet.split('\n')[0]}", Melden ${(await page.eval(`document.querySelector('.sheet .primary')?.disabled`)) ? 'disabled' : 'enabled'}, zoom ${(await page.zoom()).toFixed(3)}`);
 		expect(/^Du /m.test(sheet), 'card does not say Du');
 		expect(await page.has('.pin.cluster.sel.mine'), 'my bubble has no mine mark');
+		expect(await page.sheetHas(`Baustelle ab 6 Uhr (${size})`), 'my text is not on the card');
 		await page.click('[aria-label="Schließen"]');
 		await wait(300);
 		expect((await page.sheet()).includes('Melden'), 'home sheet not back');
@@ -197,7 +201,22 @@ for (const size of Object.keys(SIZES)) {
 		const n = await page.eval(`document.querySelector('.pin.cluster.sel')?.textContent`);
 		const api = (await fetch(`${API}/clusters`).then((r) => r.json())).find((c) => String(c.people) === n && c.count >= +n);
 		expect(api, `bubble says ${n}, no cluster has that many people`);
-		if (api && api.people > 1) expect(sheet.includes(`Du und ${api.people - 1} andere`), `card counts "${sheet.split('\n')[1]}", people ${api.people}`);
+		if (api && api.people > 1) expect(sheet.includes(`Du und ${api.people - 1} andere`), `card counts "${sheet.split('\n')[0]}", people ${api.people}`);
+		// the type chips: icon and people per type, only when there is more than one type; a tap filters the texts
+		const types = api ? Object.keys(api.types) : [];
+		const chips = await page.eval(`[...document.querySelectorAll('.sheet .type')].map((b) => b.textContent.trim())`);
+		expect(chips.length === (types.length > 1 ? types.length : 0), `${chips.length} chips for ${types.length} types`);
+		if (chips.length) {
+			await page.click('.sheet .type');
+			await wait(300);
+			const picked = await page.eval(`document.querySelector('.sheet .picked')?.textContent`);
+			expect(picked && picked.includes(`${api.types[types[0]]} Person`), `filter line says "${picked}"`);
+			const texts = await page.eval(`[...document.querySelectorAll('.sheet .voices li')].length`);
+			const expected = (await fetch(`${API}/clusters/${api.id}/reports`).then((r) => r.json())).filter((r) => r.message && r.types.includes(types[0])).length;
+			expect(texts === Math.min(expected, 5), `${texts} texts for ${types[0]}, api has ${expected}`);
+			await page.shot(`${size}-card-filter`);
+			await page.click('.sheet .type');
+		}
 		expect(!sheet.includes('diese Woche'), 'card says "diese Woche" though every report is fresh');
 		expect(await page.has('.pin.cluster.sel'), 'bubble not highlighted');
 		const drawn = (layer) => page.eval(`window.__map.queryRenderedFeatures({layers: ['${layer}']}).length`);
@@ -389,7 +408,6 @@ await scenario('phone: a name, and a second device linked by code brings its rep
 	await page.goto();
 	const token = await page.eval(`localStorage.getItem('device')`);
 	const api = (path, init = {}, t = token) => fetch(`${API}${path}`, { ...init, headers: { 'x-device': t, 'content-type': 'application/json', ...init.headers } });
-	const type = (sel, text) => page.eval(`(() => { const i = document.querySelector(${JSON.stringify(sel)}); i.value = ${JSON.stringify(text)}; i.dispatchEvent(new Event('input', { bubbles: true })); })(); 0`);
 	await page.clickText('Meine Meldungen');
 	await wait(500);
 	await page.clickText('Name angeben');

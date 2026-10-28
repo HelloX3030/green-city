@@ -1,6 +1,6 @@
 <script lang="ts">
 	import Icon from './Icon.svelte';
-	import { typeInfo, timeAgo, STATUS, dominantType, type Cluster } from './api';
+	import { typeInfo, timeAgo, STATUS, dominantType, clusterReports, type Cluster, type Report, type ReportType } from './api';
 
 	let {
 		cluster,
@@ -11,6 +11,7 @@
 
 	const mine = $derived(cluster.mine > 0); // one of the reports here is from this device
 	const others = $derived(cluster.people - 1); // other people, not other reports
+	const persons = (n: number) => `${n} ${n === 1 ? 'Person' : 'Personen'}`;
 	const you = $derived(
 		others === 0
 			? cluster.mine === 1
@@ -21,7 +22,7 @@
 	const main = $derived(typeInfo(dominantType(cluster)));
 	const sub = $derived(
 		[
-			mine ? you : cluster.count > 1 ? `von ${cluster.people} ${cluster.people === 1 ? 'Person' : 'Personen'}` : null,
+			`${cluster.count} ${cluster.count === 1 ? 'Meldung' : 'Meldungen'}`,
 			main.label,
 			cluster.recent < cluster.count ? `${cluster.recent === 0 ? 'keine' : cluster.recent} davon diese Woche` : null,
 			`letzte ${timeAgo(cluster.latest)}`
@@ -29,6 +30,30 @@
 			.filter(Boolean)
 			.join(' · ')
 	);
+
+	// the single reports, for the texts; a tap on a type keeps only that type
+	let reports = $state<Report[]>([]);
+	let filter = $state<ReportType | null>(null);
+	let all = $state(false);
+	const SHOWN = 5;
+	$effect(() => {
+		const id = cluster.id;
+		void cluster.count; // again when the poll brings a new report
+		clusterReports(id).then((r) => {
+			if (id === cluster.id) reports = r;
+		});
+	});
+	$effect(() => {
+		void cluster.id;
+		filter = null;
+		all = false;
+	});
+	const voices = $derived(reports.filter((r) => r.message && (!filter || r.types.includes(filter))));
+	const shown = $derived(all ? voices : voices.slice(0, SHOWN));
+	function pick(t: string) {
+		filter = filter === t ? null : (t as ReportType);
+		all = false;
+	}
 </script>
 
 <div class="head">
@@ -40,21 +65,52 @@
 			<h2>Gemeldet</h2>
 			<p>{you}.</p>
 		{:else}
-			<h2>{cluster.count} {cluster.count === 1 ? 'Meldung' : 'Meldungen'}</h2>
+			<h2>{mine ? you : persons(cluster.people)}</h2>
 			<p>{sub}</p>
 		{/if}
 	</div>
 	<button class="x" onclick={onclose} aria-label="Schließen"><Icon name="x" size={16} /></button>
 </div>
+{#if sent && cluster.mine > 1}
+	<p class="hint">Zählt einmal pro Tag, egal wie oft du meldest.</p>
+{/if}
 {#if cluster.status}
 	<span class="status" style="background: {STATUS[cluster.status].color}">{STATUS[cluster.status].label}</span>
 	<p class="reason">{cluster.reason}</p>
 {/if}
+{#if Object.keys(cluster.types).length > 1}
 <div class="types">
 	{#each Object.entries(cluster.types) as [t, n]}
-		<span class="chip"><i style="background: {typeInfo(t).color}"></i>{typeInfo(t).label} {n}</span>
+		<button
+			class="type"
+			class:on={filter === t}
+			style="--c: {typeInfo(t).color}"
+			aria-label="{typeInfo(t).label}, {persons(n)}"
+			aria-pressed={filter === t}
+			onclick={() => pick(t)}
+		>
+			<Icon name={typeInfo(t).icon} size={16} />{n}
+		</button>
 	{/each}
+	{#if filter}
+		<span class="picked">{typeInfo(filter).label} · {persons(cluster.types[filter])}</span>
+	{/if}
 </div>
+{/if}
+{#if shown.length}
+	<ul class="voices">
+		{#each shown as r (r.id)}
+			<li>
+				<i style="background: {typeInfo(filter ?? r.types[0]).color}"></i>
+				<span class="when">{timeAgo(r.created_at)}</span>
+				<span class="text">{r.message}</span>
+			</li>
+		{/each}
+	</ul>
+	{#if voices.length > SHOWN && !all}
+		<button class="more" onclick={() => (all = true)}>alle {voices.length} Texte</button>
+	{/if}
+{/if}
 {#if !sent}
 	<button class="ghost" onclick={onreport}>Hier auch melden</button>
 {/if}
@@ -86,6 +142,11 @@
 		font-size: 12px;
 		color: var(--ink2);
 	}
+	.hint {
+		margin: -4px 0 10px;
+		font-size: 12px;
+		color: var(--ink2);
+	}
 	.x {
 		margin-left: auto;
 		width: 30px;
@@ -111,24 +172,69 @@
 	}
 	.types {
 		display: flex;
-		gap: 8px;
+		gap: 6px;
 		margin-top: 12px;
 		flex-wrap: wrap;
+		align-items: center;
 	}
-	.chip {
+	.type {
 		display: inline-flex;
 		align-items: center;
-		gap: 6px;
-		padding: 5px 10px;
+		gap: 5px;
+		height: 30px;
+		padding: 0 10px 0 8px;
 		border-radius: 999px;
 		background: var(--fill);
-		font-size: 12px;
-		font-weight: 500;
+		color: var(--c);
+		font-size: 13px;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
 	}
-	.chip i {
+	.type.on {
+		background: var(--c);
+		color: #fff;
+	}
+	.picked {
+		font-size: 12px;
+		color: var(--ink2);
+		margin-left: 2px;
+	}
+	.voices {
+		list-style: none;
+		margin: 10px 0 0;
+		padding: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+	}
+	.voices li {
+		display: flex;
+		align-items: baseline;
+		gap: 8px;
+		font-size: 13.5px;
+		line-height: 1.35;
+	}
+	.voices i {
+		flex: none;
 		width: 8px;
 		height: 8px;
 		border-radius: 50%;
+		align-self: center;
+	}
+	.when {
+		flex: none;
+		font-size: 12px;
+		color: var(--ink2);
+		min-width: 52px;
+	}
+	.text {
+		overflow-wrap: anywhere;
+	}
+	.more {
+		margin-top: 6px;
+		font-size: 13px;
+		color: var(--accent);
+		font-weight: 500;
 	}
 	.ghost {
 		display: block;

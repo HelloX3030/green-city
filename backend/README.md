@@ -12,8 +12,9 @@ Every request may carry `X-Device: <32-64 chars>`, the app's random token. `user
 - `GET /reports?since=<iso>`
 - `GET /reports/mine` – the caller's reports, newest first, needs `X-Device`
 - `DELETE /reports/{id}` – withdraw one of the caller's reports, 404 for anyone else's
-- `GET /clusters?days=14` – reports grouped: the oldest report anchors a cluster, later reports within 100 m of an anchor join it, anchors never move, `id` is the anchor's report id; `points` the member positions `[lat, lon, type]`; `count` raw, `people` distinct users, `recent` of the last 7 days, `mine` from the caller's device (0 without `X-Device`), `weight` with decay: per person and day only the latest report counts, and it halves every 7 days, `dominant` type by weight, `status` confirmed / unconfirmed / no_data for it, `reason` one line in German
+- `GET /clusters?days=14` – reports grouped: the oldest report anchors a cluster, later reports within 100 m of an anchor join it, anchors never move, `id` is the anchor's report id; `points` the member positions `[lat, lon, type]`; `count` raw, `people` distinct users, `recent` of the last 7 days, `mine` from the caller's device (0 without `X-Device`), `weight` with decay: one voice per person and day, halving every 7 days, `types` people per type with the dominant first (a person naming two types in a day is one voice for each), `dominant` the type most people name, `status` confirmed / unconfirmed / no_data for it, `reason` one line in German
 - `GET /sensors` – live values of the outdoor openSenseMap boxes in Heilbronn (incl. our NoiseNode) and UBA station DEBW015, cached 60 s
+- `GET /clusters/{id}/reports?days=14` – the reports of one bubble, newest first, no author
 - `GET /bikes` – GeoJSON lines of the senseBox:bike rides (grouptag heilbronn) in the last 7 days with mean PM2.5 per ride, cached 10 min. Points outside the city bbox are dropped.
 
 Docs at http://localhost:8000/docs. `make test` runs the unit tests (clustering, db, api).

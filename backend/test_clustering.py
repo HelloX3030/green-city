@@ -24,14 +24,25 @@ class Clustering(unittest.TestCase):
         self.assertEqual(c["people"], 2)
         self.assertAlmostEqual(c["weight"], 2.9, places=1)  # yesterday counts again, 0.9 + 1 + 1
 
-    def test_dominant_type_is_by_voice_not_by_tap(self):
-        reps = [rep(1, 0, user=7), rep(2, 0, user=7), rep(3, 0, user=8)]
-        reps[0]["types"] = reps[1]["types"] = ["heat"]
+    def test_dominant_type_is_by_people_not_by_tap(self):
+        # user 7 taps heat twice, then noise; user 8 says heat: heat is what most people name
+        reps = [rep(1, 0.02, user=7), rep(2, 0.01, user=7), rep(3, 0, user=7), rep(4, 0.03, user=8)]
+        reps[0]["types"] = reps[1]["types"] = reps[3]["types"] = ["heat"]
         reps[2]["types"] = ["noise"]
-        reps[2]["created_at"] = rep(3, 0.01)["created_at"]  # a bit older, so 2 is the latest of user 7
         c = cluster(reps)[0]
-        self.assertEqual(c["types"], {"heat": 2, "noise": 1})  # raw counts stay
-        self.assertEqual(c["weight"], round(weight(reps[1]["created_at"]) + weight(reps[2]["created_at"]), 2))
+        self.assertEqual(c["dominant"], "heat")
+        self.assertEqual(c["types"], {"heat": 2, "noise": 1})  # people per type, dominant first
+        self.assertEqual(c["count"], 4)
+        self.assertAlmostEqual(c["weight"], 2.0, places=1)  # two voices, whatever the types
+
+    def test_a_person_naming_two_types_is_one_voice_for_each(self):
+        reps = [rep(1, 0, user=7), rep(2, 0, user=8), rep(3, 0, user=8)]
+        reps[0]["types"] = ["heat", "noise"]
+        reps[1]["types"] = ["air"]
+        reps[2]["types"] = ["noise"]  # user 8's later tap, noise now leads with 2 people
+        c = cluster(reps)[0]
+        self.assertEqual(c["dominant"], "noise")
+        self.assertEqual(c["types"], {"noise": 2, "heat": 1, "air": 1})
 
     def test_mine_counts_the_callers_reports(self):
         reports = [rep(1, 1, user=7), rep(2, 1, user=8), rep(3, 0, user=7)]

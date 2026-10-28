@@ -179,6 +179,19 @@ def list_clusters(
     return clusters
 
 
+@app.get("/clusters/{cid}/reports", response_model=list[Report])
+def cluster_reports(cid: int, days: int = Query(default=CLUSTER_WINDOW_DAYS, ge=1, le=365)) -> list[dict]:
+    """The reports of one bubble, newest first, without who sent them."""
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    with db.connect() as con:
+        reports = fetch_reports(con, since)
+    for c in cluster(reports):
+        if c["id"] == cid:
+            ids = set(c["report_ids"])
+            return [r for r in reports if r["id"] in ids]
+    raise HTTPException(404, "no such bubble")
+
+
 @app.get("/bikes")
 async def list_bikes() -> dict:
     return await bikes.get_rides()
