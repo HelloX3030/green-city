@@ -83,12 +83,17 @@ cavidad = crear_prisma(contorno_interior, grosor_base, altura_carcasa)
 cuerpo = exterior.cut(cavidad)
 
 # Orificio para puerto USB-C: el puerto está en el lado corto (72 mm) de la placa,
-# con la abertura a 36 mm de una esquina y 26 mm de la otra, 10 mm de ancho
-# (ver 3d-model/measurements). El túnel atraviesa toda la pared izquierda.
-usb_ancho = 10.0
-usb_alto = 7.0
-usb_y0 = -sb_ancho/2 + desfase_y_mcu + 36.0   # 36 mm desde la esquina de la placa
-usb_z0 = grosor_base + 4.0    # la placa apoya sobre torretas de 4 mm
+# con la abertura a 36 mm de una esquina y 26 mm de la otra (ver 3d-model/measurements).
+# Como la hoja se estrecha ahí, la placa queda ~19 mm por detrás de la pared, así que
+# el conector completo (sobremoldeado típico ~12 x 6.5 mm) debe PASAR por la abertura:
+# 13 x 8 mm centrados en la posición de la spec (centro a 36 + 10/2 = 41 mm de la
+# esquina), con boca abocinada por fuera para guiar el enchufe hasta el puerto.
+usb_ancho = 13.0
+usb_alto = 8.0
+usb_centro_y = -sb_ancho/2 + desfase_y_mcu + 41.0
+usb_y0 = usb_centro_y - usb_ancho/2
+usb_z0 = grosor_base + 3.5    # la placa apoya sobre torretas de 4 mm
+usb_cz = usb_z0 + usb_alto/2
 
 tunel_usbc = Part.makeBox(
     35.0, usb_ancho, usb_alto,
@@ -96,6 +101,19 @@ tunel_usbc = Part.makeBox(
 )
 
 cuerpo = cuerpo.cut(tunel_usbc)
+
+# Boca abocinada: tronco de pirámide de 18 x 13 (fuera) a 13 x 8 (dentro)
+def rect_wire_x(x, cy, cz, ancho, alto):
+    pts = [App.Vector(x, cy - ancho/2, cz - alto/2),
+           App.Vector(x, cy + ancho/2, cz - alto/2),
+           App.Vector(x, cy + ancho/2, cz + alto/2),
+           App.Vector(x, cy - ancho/2, cz + alto/2)]
+    pts.append(pts[0])
+    return Part.Wire(Part.makePolygon(pts).Edges)
+
+boca_usbc = Part.makeLoft([rect_wire_x(-W/2 - 3.0, usb_centro_y, usb_cz, 18.0, 13.0),
+                           rect_wire_x(-W/2 + 7.0, usb_centro_y, usb_cz, usb_ancho, usb_alto)], True)
+cuerpo = cuerpo.cut(boca_usbc)
 
 # Standoffs base (Fijación M3) para senseBox MCU
 puntos_m3_sb = [
