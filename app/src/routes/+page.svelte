@@ -9,6 +9,7 @@
 	import AboutSheet from '#lib/AboutSheet.svelte';
 	import MySheet from '#lib/MySheet.svelte';
 	import { inCity } from '#lib/city.ts';
+	import { applyFilter, loadFilter, saveFilter, type Filter } from '#lib/filter.ts';
 	import {
 		deleteReport,
 		getBikes,
@@ -29,6 +30,8 @@
 	let selected = $state<Cluster | null>(null);
 	let sensor = $state<Sensor | null>(null);
 	let layers = $state(new Set<LayerId>());
+	let filter = $state<Filter>(loadFilter());
+	const shown = $derived(applyFilter(clusters, filter)); // the bubbles on the map
 	let layersOpen = $state(false);
 	let aboutOpen = $state(false);
 	let mine = $state<Report[]>([]);
@@ -52,13 +55,13 @@
 		const n = ++polls;
 		let next: Cluster[] | null = null;
 		try {
-			next = await getClusters();
+			next = await getClusters(filter.days);
 		} catch {}
 		if (n <= done) return;
 		done = n;
 		if (!next) return (offline = true);
 		clusters = next;
-		if (selected) selected = clusters.find((c) => c.id === selected!.id) ?? null;
+		if (selected) selected = shown.find((c) => c.id === selected!.id) ?? null;
 		offline = false;
 	}
 
@@ -85,6 +88,14 @@
 	function linked() {
 		refreshMine();
 		refresh();
+	}
+
+	function setFilter(f: Filter) {
+		const days = f.days !== filter.days;
+		filter = f;
+		saveFilter(f);
+		if (selected) selected = shown.find((c) => c.id === selected!.id) ?? null;
+		if (days) refresh();
 	}
 
 	function toggle(id: LayerId) {
@@ -192,7 +203,7 @@
 	async function onsent(r: Report) {
 		reporting = false;
 		await refresh();
-		selected = clusters.find((c) => c.report_ids.includes(r.id)) ?? null;
+		selected = shown.find((c) => c.report_ids.includes(r.id)) ?? null;
 		sent = true;
 		refreshMine();
 	}
@@ -246,7 +257,7 @@
 
 <Map
 	bind:this={map}
-	{clusters}
+	clusters={shown}
 	{sensors}
 	{bikes}
 	{layers}
@@ -285,11 +296,11 @@
 	{#if reporting}
 		<ReportSheet location={pick} onclose={() => (reporting = false)} onsent={onsent} />
 	{:else if selected}
-		<ClusterCard cluster={selected} {sent} onclose={() => (selected = null)} onreport={() => startReport(selected!)} />
+		<ClusterCard cluster={selected} days={filter.days} {sent} onclose={() => (selected = null)} onreport={() => startReport(selected!)} />
 	{:else if sensor}
 		<SensorCard {sensor} onclose={() => (sensor = null)} />
 	{:else if layersOpen}
-		<LayerSheet {layers} ontoggle={toggle} onclose={() => (layersOpen = false)} />
+		<LayerSheet {layers} {filter} ontoggle={toggle} onfilter={setFilter} onclose={() => (layersOpen = false)} />
 	{:else if aboutOpen}
 		<AboutSheet onclose={() => (aboutOpen = false)} />
 	{:else if mineOpen}

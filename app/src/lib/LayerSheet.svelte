@@ -1,18 +1,72 @@
 <script lang="ts">
 	import Icon from './Icon.svelte';
-	import { LAYERS, type LayerId } from './api';
+	import { LAYERS, TYPES, typeInfo, type LayerId, type ReportType } from './api';
+	import { DAYS, DEFAULT, MINS, isDefault, type Filter } from './filter';
 
 	let {
 		layers,
+		filter,
 		ontoggle,
+		onfilter,
 		onclose
-	}: { layers: Set<LayerId>; ontoggle: (id: LayerId) => void; onclose: () => void } = $props();
+	}: {
+		layers: Set<LayerId>;
+		filter: Filter;
+		ontoggle: (id: LayerId) => void;
+		onfilter: (f: Filter) => void;
+		onclose: () => void;
+	} = $props();
+
+	const set = (part: Partial<Filter>) => onfilter({ ...filter, ...part });
+	function toggleType(t: ReportType) {
+		set({ types: filter.types.includes(t) ? filter.types.filter((x) => x !== t) : [...filter.types, t] });
+	}
+	const which = $derived(filter.types.length ? `nur ${filter.types.map((t) => typeInfo(t).label).join(', ')}` : 'alle Arten');
 </script>
 
 <div class="head">
 	<h2>Ebenen</h2>
 	<button class="x" onclick={onclose} aria-label="Schließen"><Icon name="x" size={16} /></button>
 </div>
+<!-- what the map shows of the reports; nothing set is everything -->
+<h3>Meldungen <small>{which}</small></h3>
+<div class="chips">
+	{#each TYPES as t}
+		<button
+			class="type"
+			class:on={filter.types.includes(t.id)}
+			style="--c: {t.color}"
+			aria-pressed={filter.types.includes(t.id)}
+			onclick={() => toggleType(t.id)}><Icon name={t.icon} size={16} />{t.label}</button
+		>
+	{/each}
+</div>
+<div class="row">
+	<span>mindestens</span>
+	<span class="seg">
+		{#each MINS as m}
+			<button class:on={filter.min === m} aria-pressed={filter.min === m} onclick={() => set({ min: m })}>{m}</button>
+		{/each}
+	</span>
+	<span>{filter.min === 1 ? 'Meldung' : 'Meldungen'}</span>
+</div>
+<div class="row">
+	<span>die letzten</span>
+	<span class="seg">
+		{#each DAYS as d}
+			<button class:on={filter.days === d} aria-pressed={filter.days === d} onclick={() => set({ days: d })}>{d}</button>
+		{/each}
+	</span>
+	<span>Tage</span>
+</div>
+<button class="opt" onclick={() => set({ confirmed: !filter.confirmed })} aria-pressed={filter.confirmed}>
+	<span class="text"><b>Nur Bestätigte</b><small>Stellen, die ein Sensor bestätigt</small></span>
+	<span class="tog" class:on={filter.confirmed}></span>
+</button>
+{#if !isDefault(filter)}
+	<button class="reset" onclick={() => onfilter(DEFAULT)}>Zurücksetzen</button>
+{/if}
+<h3>Hintergrund</h3>
 {#each LAYERS as l}
 	<button class="layer" onclick={() => ontoggle(l.id)} aria-pressed={layers.has(l.id)}>
 		<span class="thumb">
@@ -55,8 +109,82 @@
 		border-top: 1px solid var(--line);
 		text-align: left;
 	}
-	.layer:first-of-type {
-		border-top: 0;
+	.opt {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		width: 100%;
+		padding: 6px 0 2px;
+		text-align: left;
+	}
+	h3 {
+		margin: 12px 0 6px;
+		font-size: 13px;
+		font-weight: 700;
+		color: var(--ink2);
+		text-transform: uppercase;
+		letter-spacing: 0.04em;
+	}
+	h3 small {
+		font-weight: 500;
+		text-transform: none;
+		letter-spacing: 0;
+		margin-left: 6px;
+	}
+	.chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 6px;
+	}
+	.type {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		height: 30px;
+		padding: 0 10px 0 8px;
+		border-radius: 999px;
+		background: var(--fill);
+		color: var(--c);
+		font-size: 13px;
+		font-weight: 600;
+	}
+	.type.on {
+		background: var(--c);
+		color: #fff;
+	}
+	.row {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-top: 8px;
+		font-size: 13px;
+		color: var(--ink2);
+	}
+	.seg {
+		display: inline-flex;
+		background: var(--fill);
+		border-radius: 999px;
+		padding: 2px;
+	}
+	.seg button {
+		min-width: 36px;
+		height: 26px;
+		border-radius: 999px;
+		font-size: 13px;
+		font-weight: 600;
+		font-variant-numeric: tabular-nums;
+		color: var(--ink2);
+	}
+	.seg button.on {
+		background: var(--accent);
+		color: var(--on-accent);
+	}
+	.reset {
+		display: block;
+		margin-top: 6px;
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--accent);
 	}
 	.thumb {
 		position: relative;

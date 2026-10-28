@@ -4,10 +4,11 @@
 
 	let {
 		cluster,
+		days = 14,
 		sent = false,
 		onclose,
 		onreport
-	}: { cluster: Cluster; sent?: boolean; onclose: () => void; onreport: () => void } = $props();
+	}: { cluster: Cluster; days?: number; sent?: boolean; onclose: () => void; onreport: () => void } = $props();
 
 	const mine = $derived(cluster.mine > 0); // one of the reports here is from this device
 	const others = $derived(cluster.people - 1); // other people, not other reports
@@ -38,7 +39,7 @@
 	$effect(() => {
 		const id = cluster.id;
 		void cluster.count; // again when the poll brings a new report
-		clusterReports(id).then((r) => {
+		clusterReports(id, days).then((r) => {
 			if (id === cluster.id) reports = r;
 		});
 	});
@@ -46,7 +47,8 @@
 		void cluster.id;
 		filter = null;
 	});
-	const voices = $derived(reports.filter((r) => r.message && (!filter || r.types.includes(filter))));
+	// with a type filter on the map the bubble carries only those types, the texts follow
+	const voices = $derived(reports.filter((r) => r.message && (filter ? r.types.includes(filter) : r.types.some((t) => t in cluster.types))));
 	// mine from today: the button says Nochmal melden, the sent card counts them
 	const myToday = $derived(reports.filter((r) => r.mine && r.created_at.slice(0, 10) === new Date().toISOString().slice(0, 10)).length);
 	const today = $derived(myToday > 0);

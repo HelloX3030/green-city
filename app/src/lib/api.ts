@@ -113,7 +113,7 @@ export function deviceToken(): string {
 const req = (path: string, init: RequestInit = {}) =>
 	fetch(`${base}${path}`, { ...init, headers: { ...init.headers, 'x-device': deviceToken() } });
 
-export const getClusters = async (): Promise<Cluster[]> => (await req('/clusters')).json();
+export const getClusters = async (days = 14): Promise<Cluster[]> => (await req(`/clusters?days=${days}`)).json();
 
 export const getReports = async (): Promise<Report[]> => (await req('/reports')).json();
 
@@ -254,7 +254,7 @@ export function subscribe(on: (kind: string) => void, live: (up: boolean) => voi
 }
 
 // the reports of one bubble, mine first, then newest first, no author
-export async function clusterReports(id: number): Promise<Report[]> {
-	const res = await req(`/clusters/${id}/reports`);
+export async function clusterReports(id: number, days = 14): Promise<Report[]> {
+	const res = await req(`/clusters/${id}/reports?days=${days}`);
 	return res.ok ? res.json() : [];
 }
