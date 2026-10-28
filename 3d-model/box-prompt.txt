@@ -1,0 +1,9 @@
+Fixes for the version:
+	- USB-C hole needs to be at least 0.8cm tall, for width 1.2cm should be a safe estimate.
+	- Lid: Slides around, since it isnt locked into place in any way with the box. Perhaps have the lid 
+	have a border facing down that outlines the entire rim of the lid, so that if can "slide" into the box when 
+	placed on top and therefore is fixed into place.
+	- Rails for the microphone board: Make the rails extend into the walls, then leave divits in the walls for the rails to slide into from above.
+	The idea is to print the rails as ONE SEPERATE piece that can be inserted from above (so slid) into the box, so that the divits fix it into place 
+	in the box.
+	- Get rid of the stem, get rid of the holes in the bottom of the box, so the random holes with no intended purpose.

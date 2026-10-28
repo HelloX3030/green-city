@@ -3,7 +3,7 @@ import Part
 import math
 
 # ============================================================
-# CARCASA HOJA - RAÍLES EXTENDIDOS DE PARED A PARED
+# CARCASA HOJA - CARRO DE RAÍLES SUELTO ENCAJADO EN LA PARED
 # ============================================================
 
 if App.ActiveDocument:
@@ -169,33 +169,57 @@ for px, py in puntos_apoyo_sb:
     cuerpo = cuerpo.fuse(Part.makeCylinder(3.5, alto_torreta, App.Vector(px, py, grosor_base)))
 
 # ============================================================
-# 2. RAÍLES GUÍA CONTINUOS (DE PARED A PARED)
+# 2. CARRO DE RAÍLES (pieza suelta que entra desde arriba)
 # ============================================================
+# Los raíles ya no van fusionados a la caja: son UNA pieza aparte (los dos
+# raíles unidos por los topes delantero y trasero, fondo plano: se imprime
+# sin soportes) que se desliza en la caja desde arriba. Los extremos de los
+# raíles se prolongan 2 mm dentro de la pared, y la pared lleva cuatro
+# ranuras verticales (divots) desde el borde superior hasta z_rail que los
+# reciben: el fondo de cada ranura soporta el carro a su altura y los
+# flancos lo fijan en planta.
 rail_ancho = 4.0
-rail_largo_total = W * 0.85 # Atraviesa toda la longitud interna en X
 rail_alto = 3.5
 z_rail = grosor_base + z_separacion
 sep_y = df_ancho / 2.0 - 2.0  # la placa del sensor solapa 2 mm sobre cada raíl para apoyarse
 
-# Raíles continuos a todo lo largo
-rail_1 = Part.makeBox(rail_largo_total, rail_ancho, rail_alto, App.Vector(-rail_largo_total/2,  sep_y, z_rail))
-rail_2 = Part.makeBox(rail_largo_total, rail_ancho, rail_alto, App.Vector(-rail_largo_total/2, -sep_y - rail_ancho, z_rail))
+prof_divot = 2.0     # prolongación del extremo del raíl dentro de la pared
+holgura_divot = 0.3  # holgura por cara raíl-ranura para que deslice
 
-# Tope trasero para que la placa del sensor quede encajada exactamente en su sitio
+# Factores homotéticos: fin del raíl y fondo de la ranura, medidos desde la
+# pared interior (factor_interior) hacia fuera
+f_fin_rail = factor_interior + prof_divot / dist_min_contorno
+f_divot = factor_interior + (prof_divot + holgura_divot) / dist_min_contorno
+
+largo_barra = W + 20.0  # sobra por ambos lados; el common() lo recorta
+
+rail_1 = Part.makeBox(largo_barra, rail_ancho, rail_alto, App.Vector(-largo_barra/2,  sep_y, z_rail))
+rail_2 = Part.makeBox(largo_barra, rail_ancho, rail_alto, App.Vector(-largo_barra/2, -sep_y - rail_ancho, z_rail))
+
+# Topes trasero y delantero: fijan el sensor en x (drop-in con 0.3 mm de
+# juego) y a la vez son los travesaños que unen los dos raíles en una pieza
 tope_pos_x = df_largo / 2.0
 tope = Part.makeBox(3.0, df_ancho + 2*rail_ancho, rail_alto + 4.0, App.Vector(tope_pos_x, -sep_y - rail_ancho, z_rail))
-
-# Tope delantero espejado: el sensor entra desde arriba (drop-in) y queda
-# cautivo entre ambos topes con 0.3 mm de juego; sin él podía deslizarse
-# hacia -x y salirse de los raíles
 tope_delantero = Part.makeBox(3.0, df_ancho + 2*rail_ancho, rail_alto + 4.0,
                               App.Vector(-df_largo/2.0 - 0.3 - 3.0, -sep_y - rail_ancho, z_rail))
 
-# Recorte de la unión para que solo se fusionen con las paredes internas
-railes_completos = rail_1.fuse(rail_2).fuse(tope).fuse(tope_delantero)
-railes_limpios = railes_completos.common(cavidad) # Mantiene solo la parte interna
+carro = rail_1.fuse(rail_2).fuse(tope).fuse(tope_delantero)
+# Recorte en planta: los extremos acaban prof_divot por dentro de la pared
+carro = carro.common(crear_prisma([(x * f_fin_rail, y * f_fin_rail) for x, y in contorno],
+                                  grosor_base, altura_carcasa))
 
-cuerpo = cuerpo.fuse(railes_limpios)
+# Ranuras verticales en la pared, del borde superior al fondo en z_rail. El
+# cortador es la barra completa (holgada) limitada a la planta del divot:
+# fuera de la pared solo atraviesa el aire de la cavidad. En z no toca nada
+# más (la boca USB acaba en z=16.5, los huecos del cierre quedan a >5 mm en
+# planta de las bandas de los raíles).
+contorno_divot = [(x * f_divot, y * f_divot) for x, y in contorno]
+for y0 in (sep_y, -sep_y - rail_ancho):
+    barra = Part.makeBox(largo_barra, rail_ancho + 2*holgura_divot,
+                         altura_carcasa - z_rail + 2.0,
+                         App.Vector(-largo_barra/2, y0 - holgura_divot, z_rail))
+    cuerpo = cuerpo.cut(barra.common(crear_prisma(contorno_divot, z_rail,
+                                                  altura_carcasa - z_rail + 2.0)))
 
 # ============================================================
 # 2a. REFUERZOS (media caña interior y chaflán inferior)
@@ -229,46 +253,8 @@ chaflan_nucleo = Part.makeLoft(
      wire_contorno(contorno, chaflan_inferior, 1.001, 1.001)], True, False)
 cuerpo = cuerpo.cut(chaflan_molde.cut(chaflan_nucleo))
 
-# ============================================================
-# 2b. MONTAJE Y DRENAJE (intemperie)
-# ============================================================
-# Ojales de cerradura (keyhole) atravesando la base: la caja se cuelga de
-# tres tornillos de pared (cabeza <= Ø7) y se desliza hacia abajo para
-# bloquearse. Orientación de montaje: punta de la hoja hacia abajo (+y
-# arriba), por eso las ranuras salen de cada círculo hacia +y. La cabeza
-# del tornillo queda dentro, apoyada contra el suelo de la caja; las tres
-# posiciones quedan fuera de la sombra de la placa MCU.
-# (el ojal superior va en y=52: con la media caña pared-suelo, la cabeza del
-# tornillo en el extremo de la ranura necesita quedar a >3 mm de la pared)
-puntos_keyhole = [(-20.0, -35.0), (20.0, -35.0), (0.0, 52.0)]
-for kx, ky in puntos_keyhole:
-    circulo = Part.makeCylinder(3.6, grosor_base + 2.0, App.Vector(kx, ky, -1.0))
-    ranura = Part.makeBox(4.2, 8.0, grosor_base + 2.0, App.Vector(kx - 2.1, ky, -1.0))
-    fin_ranura = Part.makeCylinder(2.1, grosor_base + 2.0, App.Vector(kx, ky + 8.0, -1.0))
-    cuerpo = cuerpo.cut(circulo).cut(ranura).cut(fin_ranura)
-
-# Ranuras para bridas (montaje en poste/farola): la brida entra por una
-# ranura, rodea el poste por fuera y vuelve por su pareja; la hebilla queda
-# plana contra el suelo interior. Dimensionadas para brida de 5 x 1.5 mm.
-ranuras_brida = [(-12.0, -45.0), (12.0, -45.0), (-12.0, 48.0), (12.0, 48.0)]
-for bx, by in ranuras_brida:
-    cuerpo = cuerpo.cut(Part.makeBox(2.6, 7.0, grosor_base + 2.0,
-                                     App.Vector(bx - 1.3, by - 3.5, -1.0)))
-
-# Agujeros de drenaje Ø2 en el punto bajo (hacia la punta de la hoja): la
-# condensación sale en vez de acumularse, tanto colgada en vertical como
-# tumbada en horizontal.
-for wx in (-6.0, 6.0):
-    cuerpo = cuerpo.cut(Part.makeCylinder(1.0, grosor_base + 2.0,
-                                          App.Vector(wx, -52.0, -1.0)))
-
-# ---- Peciolo (rabillo de la hoja) ----
-# Cono tumbado que sale de la punta estrecha y remata en esfera: puramente
-# estético, pero asienta en la cama (z 0..9) y se imprime sin soportes.
-peciolo = Part.makeCone(4.5, 2.8, 20.0,
-                        App.Vector(0, -L/2 + 4.0, 4.5), App.Vector(0, -1, 0))
-punta_peciolo = Part.makeSphere(2.8, App.Vector(0, -L/2 - 16.0, 4.5))
-cuerpo = cuerpo.fuse(peciolo).fuse(punta_peciolo)
+# (v2, feedback del impreso: fuera el peciolo y fuera los agujeros del
+# suelo — ojales keyhole, ranuras de brida y drenajes. La base queda ciega.)
 
 # ============================================================
 # 3. TAPA CON REGISTRO DE MICRÓFONO
@@ -440,6 +426,7 @@ ref_dfrobot = Part.makeBox(
 # ============================================================
 crear_objeto("Caja_Base_Ampliada", cuerpo, (0.18, 0.48, 0.20))
 crear_objeto("Tapa_Hoja_Ampliada", tapa, (0.28, 0.62, 0.25), transparencia=45)
+crear_objeto("Carro_Railes", carro, (0.85, 0.75, 0.30))
 crear_objeto("Tapon_USB", tapon, (0.80, 0.60, 0.20))
 
 crear_objeto("REF_senseBox_MCU", ref_sensebox, (0.25, 0.25, 0.25))

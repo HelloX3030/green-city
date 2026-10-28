@@ -5,10 +5,10 @@ Uso (necesita FreeCAD sin GUI; p. ej. el env conda "freecad"):
     cd 3d-model
     conda run -n freecad freecadcmd verify_model.py
 
-Ejecuta el macro, comprueba 56 condiciones geométricas (colisiones con las
-placas, encaje y cierre de la tapa, tapón USB, capucha del mic, alero,
-nervaduras, QR, refuerzos, insertos, montaje y drenaje) y exporta los STL
-más el FCStd reconstruido a ./build/ (carpeta no versionada).
+Ejecuta el macro, comprueba las condiciones geométricas (colisiones con las
+placas, encaje y cierre de la tapa, carro de raíles suelto y sus ranuras,
+tapón USB, capucha del mic, alero, nervaduras, QR, refuerzos, insertos) y
+exporta los STL más el FCStd reconstruido a ./build/ (carpeta no versionada).
 
 Variables opcionales: LEAF_MACRO (ruta al macro), LEAF_OUT (carpeta salida).
 Código de salida 0 si todo pasa, 1 si algo falla.
@@ -39,6 +39,7 @@ lid = objs["Tapa_Hoja_Ampliada"].Shape
 mcu = objs["REF_senseBox_MCU"].Shape
 sensor = objs["REF_DFRobot_SoundMeter"].Shape
 plug = objs["Tapon_USB"].Shape
+carro = objs["Carro_Railes"].Shape
 
 failures = []
 def check(name, ok, detail=""):
@@ -51,6 +52,8 @@ check("body valid solid", body.isValid() and len(body.Solids) >= 1,
       f"solids={len(body.Solids)}")
 check("lid valid solid", lid.isValid() and len(lid.Solids) >= 1,
       f"solids={len(lid.Solids)}")
+check("rail sled valid single solid", carro.isValid() and len(carro.Solids) == 1,
+      f"solids={len(carro.Solids)}")
 
 def overlap(a, b):
     return a.common(b).Volume
@@ -75,21 +78,42 @@ for nm, s in (("MCU", mcu), ("sensor", sensor)):
     check(f"{nm} inside body footprint", inside,
           f"{nm} bb=({bb.XMin:.1f},{bb.YMin:.1f},{bb.ZMin:.1f})-({bb.XMax:.1f},{bb.YMax:.1f},{bb.ZMax:.1f})")
 
-# --- sensor support: does the sensor actually rest on the rails? ---
+# --- sensor support: does the sensor actually rest on the sled's rails? ---
 sensor_drop = sensor.copy()
 sensor_drop.translate(App.Vector(0, 0, -0.5))
-support = overlap(body, sensor_drop)
-check("sensor is supported by rails (drop test)", support > 1.0,
+support = overlap(carro, sensor_drop)
+check("sensor is supported by sled rails (drop test)", support > 1.0,
       f"contact volume when lowered 0.5mm = {support:.2f} mm^3")
 
-# --- sensor is captive on the rails: stops fore and aft, free drop-in from above ---
+# --- sensor is captive on the sled: stops fore and aft, free drop-in from above ---
 for dx, nm in ((2.0, "+x"), (-2.0, "-x")):
     s = sensor.copy(); s.translate(App.Vector(dx, 0, 0))
-    check(f"stop blocks sensor sliding {nm}", overlap(body, s) > 1.0,
-          f"contact when slid {nm} 2mm = {overlap(body, s):.1f} mm^3")
+    check(f"sled stop blocks sensor sliding {nm}", overlap(carro, s) > 1.0,
+          f"contact when slid {nm} 2mm = {overlap(carro, s):.1f} mm^3")
 s_up = sensor.copy(); s_up.translate(App.Vector(0, 0, 5.0))
-check("sensor drop-in path from above is clear", overlap(body, s_up) < 1e-6,
-      f"overlap when raised 5mm = {overlap(body, s_up):.3f} mm^3")
+check("sensor drop-in path from above is clear",
+      overlap(body, s_up) < 1e-6 and overlap(carro, s_up) < 1e-6,
+      f"overlap when raised 5mm = body {overlap(body, s_up):.3f} + sled {overlap(carro, s_up):.3f} mm^3")
+
+# --- rail sled: seats with no interference, locked in XY by the wall divots,
+# --- supported by the divot floors, and slides out freely upward ---
+check("sled seats without interference", overlap(body, carro) < 1e-3,
+      f"body/sled overlap = {overlap(body, carro):.4f} mm^3")
+check("sled clears the lid", overlap(lid, carro) < 1e-3,
+      f"lid/sled overlap = {overlap(lid, carro):.4f} mm^3")
+check("sled clears the MCU", overlap(carro, mcu) < 1e-6,
+      f"sled/MCU overlap = {overlap(carro, mcu):.2f} mm^3")
+for dv, nm in ((App.Vector(2, 0, 0), "+x"), (App.Vector(-2, 0, 0), "-x"),
+               (App.Vector(0, 1, 0), "+y"), (App.Vector(0, -1, 0), "-y")):
+    c = carro.copy(); c.translate(dv)
+    check(f"divots lock sled {nm}", overlap(body, c) > 0.5,
+          f"contact when shifted {nm} = {overlap(body, c):.1f} mm^3")
+c_dn = carro.copy(); c_dn.translate(App.Vector(0, 0, -0.5))
+check("divot floors support sled (drop test)", overlap(body, c_dn) > 0.5,
+      f"contact when lowered 0.5mm = {overlap(body, c_dn):.1f} mm^3")
+c_up = carro.copy(); c_up.translate(App.Vector(0, 0, 5.0))
+check("sled slides out freely upward", overlap(body, c_up) < 1e-3,
+      f"contact when raised 5mm = {overlap(body, c_up):.4f} mm^3")
 check("headroom between sensor and lid underside >= 0.3mm",
       g["altura_carcasa"] - sensor.BoundBox.ZMax >= 0.3 - 1e-9,
       f"gap = {g['altura_carcasa'] - sensor.BoundBox.ZMax:.2f} mm")
@@ -148,12 +172,12 @@ p_y = Part.makeBox(3.0, 1.3, 0.4, App.Vector(-1.5, -g["L"]/2 - 1.5, h + 0.1))
 check("drip edge overhangs wall at tip", overlap(lid, p_y) > 0.1 and overlap(body, p_y) < 1e-6,
       f"alero material outside wall = {overlap(lid, p_y):.2f} mm^3")
 
-# --- leaf aesthetics: smooth spline outline, stem, veins, QR recess ---
+# --- leaf aesthetics: smooth spline outline, veins, QR recess ---
 check("outline is a smooth B-spline",
       any(isinstance(e.Curve, Part.BSplineCurve) for e in body.Edges))
 p_stem = Part.makeBox(4.0, 2.0, 3.0, App.Vector(-2.0, -87.0, 3.0))
-check("stem extends beyond leaf tip", overlap(body, p_stem) > 1.0,
-      f"stem material at y=-87..-85 = {overlap(body, p_stem):.1f} mm^3")
+check("no stem beyond leaf tip (removed in v2)", overlap(body, p_stem) < 1e-6,
+      f"material at y=-87..-85 = {overlap(body, p_stem):.1f} mm^3")
 p_rib = Part.makeCylinder(0.35, 0.45, App.Vector(0, -40.0, 34.85))
 check("midrib groove engraved (0.8mm)", overlap(lid, p_rib) < 0.05,
       f"material in groove = {overlap(lid, p_rib):.3f} mm^3")
@@ -186,19 +210,13 @@ for px, py in g["puntos_m3_sb"]:
     check(f"pilot floor solid under post ({px:.1f},{py:.1f})", overlap(body, p_floor) > 1.5,
           f"floor material = {overlap(body, p_floor):.2f} mm^3 (full 1.88)")
 
-# --- mounting and drainage: keyholes, zip-tie slots, weep holes pierce the base ---
-for kx, ky in g["puntos_keyhole"]:
-    p = Part.makeCylinder(3.3, 5.0, App.Vector(kx, ky, -1.0))
-    check(f"keyhole open at ({kx:.0f},{ky:.0f})", overlap(body, p) < 0.5,
-          f"material = {overlap(body, p):.2f} mm^3")
-for bx, by in g["ranuras_brida"]:
-    p = Part.makeBox(2.2, 6.6, 5.0, App.Vector(bx - 1.1, by - 3.3, -1.0))
-    check(f"zip-tie slot open at ({bx:.0f},{by:.0f})", overlap(body, p) < 0.5,
-          f"material = {overlap(body, p):.2f} mm^3")
-for wx in (-6.0, 6.0):
-    p = Part.makeCylinder(0.8, 5.0, App.Vector(wx, -52.0, -1.0))
-    check(f"weep hole open at ({wx:.0f},-52)", overlap(body, p) < 0.1,
-          f"material = {overlap(body, p):.2f} mm^3")
+# --- base is blind (v2): the old keyhole / zip-tie / weep hole positions are solid ---
+for hx, hy in [(-20.0, -35.0), (20.0, -35.0), (0.0, 52.0),
+               (-12.0, -45.0), (12.0, -45.0), (-12.0, 48.0), (12.0, 48.0),
+               (-6.0, -52.0), (6.0, -52.0)]:
+    p = Part.makeCylinder(0.8, g["grosor_base"] - 0.4, App.Vector(hx, hy, 0.2))
+    check(f"base solid at old hole ({hx:.0f},{hy:.0f})", overlap(body, p) > 3.0,
+          f"material = {overlap(body, p):.2f} mm^3 (full {3.14159*0.64*(g['grosor_base']-0.4):.2f})")
 
 # --- printed USB plug: seats with clearance, stops on the flare, pulls out ---
 check("USB plug seats without interference", overlap(body, plug) < 1e-3,
@@ -236,7 +254,8 @@ print(f"INFO material volume: body={body.Volume/1000:.1f} cm^3, lid={lid.Volume/
 
 # --- export for visual inspection / printing ---
 import Mesh
-for nm, s in (("body", body), ("lid", lid), ("mcu", mcu), ("sensor", sensor), ("plug", plug)):
+for nm, s in (("body", body), ("lid", lid), ("rails", carro),
+              ("mcu", mcu), ("sensor", sensor), ("plug", plug)):
     m = doc.addObject("Mesh::Feature", "M_" + nm)
     m.Mesh = Mesh.Mesh(s.tessellate(0.3))
     Mesh.export([m], os.path.join(OUT, nm + ".stl"))
