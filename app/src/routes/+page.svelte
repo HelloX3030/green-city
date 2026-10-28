@@ -7,10 +7,13 @@
 	import SensorCard from '#lib/SensorCard.svelte';
 	import LayerSheet from '#lib/LayerSheet.svelte';
 	import AboutSheet from '#lib/AboutSheet.svelte';
+	import MySheet from '#lib/MySheet.svelte';
 	import { inCity } from '#lib/city.ts';
 	import {
+		deleteReport,
 		getBikes,
 		getClusters,
+		getMine,
 		getSensors,
 		type Cluster,
 		type LayerId,
@@ -25,6 +28,8 @@
 	let layers = $state(new Set<LayerId>());
 	let layersOpen = $state(false);
 	let aboutOpen = $state(false);
+	let mine = $state<Report[]>([]);
+	let mineOpen = $state(false);
 	let bikes = $state<Awaited<ReturnType<typeof getBikes>> | null>(null);
 	let sent = $state(false); // the card right after sending says Gemeldet
 	let reporting = $state(false);
@@ -66,6 +71,12 @@
 		} catch {}
 	}
 
+	async function refreshMine() {
+		try {
+			mine = await getMine();
+		} catch {}
+	}
+
 	function toggle(id: LayerId) {
 		const next = new Set(layers);
 		next.has(id) ? next.delete(id) : next.add(id);
@@ -76,6 +87,7 @@
 	onMount(() => {
 		refresh();
 		refreshSensors();
+		refreshMine();
 		const t = setInterval(refresh, 5000);
 		const u = setInterval(refreshSensors, 30000);
 		const v = setInterval(refreshBikes, 300000);
@@ -119,8 +131,7 @@
 	function startReport(at?: { lat: number; lon: number }) {
 		selected = null;
 		sensor = null;
-		layersOpen = false;
-		aboutOpen = false;
+		layersOpen = aboutOpen = mineOpen = false;
 		reporting = true;
 		if (at) return map.flyTo(at.lat, at.lon, 16);
 		// fly to the phone's position if it comes quickly, else zoom in where we are
@@ -150,20 +161,50 @@
 		await refresh();
 		selected = clusters.find((c) => c.report_ids.includes(r.id)) ?? null;
 		sent = true;
+		refreshMine();
+	}
+
+	function openMine() {
+		mineOpen = !mineOpen;
+		if (mineOpen) {
+			selected = sensor = null;
+			layersOpen = aboutOpen = reporting = false;
+			refreshMine();
+		}
+	}
+
+	// from the list to the bubble on the map, or to the spot if the report fell out of the 14 days
+	function showReport(r: Report) {
+		mineOpen = false;
+		const c = clusters.find((x) => x.report_ids.includes(r.id));
+		if (c) select(c);
+		else say('Nicht mehr auf der Karte, älter als 14 Tage');
+		map.flyTo(c?.lat ?? r.lat, c?.lon ?? r.lon, 16);
+	}
+
+	async function withdraw(r: Report) {
+		try {
+			await deleteReport(r.id);
+		} catch {
+			return say('Zurückziehen fehlgeschlagen');
+		}
+		mine = mine.filter((x) => x.id !== r.id);
+		say('Meldung zurückgezogen');
+		refresh();
 	}
 
 	function select(c: Cluster | null) {
 		selected = c;
 		sensor = null;
 		sent = false;
-		if (c) layersOpen = aboutOpen = false;
+		if (c) layersOpen = aboutOpen = mineOpen = false;
 	}
 
 	function openAbout() {
 		aboutOpen = !aboutOpen;
 		if (aboutOpen) {
 			selected = sensor = null;
-			layersOpen = reporting = false;
+			layersOpen = reporting = mineOpen = false;
 		}
 	}
 </script>
@@ -184,7 +225,7 @@
 	onselectsensor={(s) => {
 		sensor = s;
 		selected = null;
-		layersOpen = aboutOpen = false;
+		layersOpen = aboutOpen = mineOpen = false;
 	}}
 />
 
@@ -198,7 +239,7 @@
 		<button
 			class="rb glass"
 			class:on={layersOpen}
-			onclick={() => ((layersOpen = !layersOpen), (aboutOpen = false))}
+			onclick={() => ((layersOpen = !layersOpen), (aboutOpen = mineOpen = false))}
 			aria-label="Ebenen"><Icon name="layers" /></button
 		>
 	{/if}
@@ -218,8 +259,11 @@
 		<LayerSheet {layers} ontoggle={toggle} onclose={() => (layersOpen = false)} />
 	{:else if aboutOpen}
 		<AboutSheet onclose={() => (aboutOpen = false)} />
+	{:else if mineOpen}
+		<MySheet reports={mine} {clusters} onopen={showReport} onwithdraw={withdraw} onclose={() => (mineOpen = false)} />
 	{:else}
 		<button class="primary" onclick={() => startReport()}><Icon name="plus" />Melden</button>
+		<button class="ghost" onclick={openMine}>Meine Meldungen{mine.length ? ` · ${mine.length}` : ''}</button>
 		<div class="legend">
 			<span><i class="s"></i>Sensor</span>
 			<span><i class="o"></i>Unser NoiseNode</span>
@@ -347,11 +391,20 @@
 		font-weight: 600;
 		font-size: 16px;
 	}
+	.ghost {
+		display: block;
+		width: 100%;
+		margin-top: 6px;
+		height: 36px;
+		color: var(--ink2);
+		font-weight: 500;
+		font-size: 14px;
+	}
 	.legend {
 		display: flex;
 		gap: 16px;
 		justify-content: center;
-		margin-top: 12px;
+		margin-top: 6px;
 		font-size: 12px;
 		color: var(--ink2);
 	}

@@ -38,6 +38,14 @@ class Api(unittest.TestCase):
         self.assertEqual(self.c.get("/reports/mine").status_code, 400)
         self.assertEqual(self.c.get("/clusters", headers={"x-device": "short"}).status_code, 400)
 
+    def test_withdraw_only_your_own(self):
+        rid = self.c.post("/reports", json=REPORT, headers=A).json()["id"]
+        self.assertEqual(self.c.delete(f"/reports/{rid}", headers=B).status_code, 404)
+        self.assertEqual(self.c.delete(f"/reports/{rid}").status_code, 400)
+        self.assertEqual(self.c.delete(f"/reports/{rid}", headers=A).status_code, 204)
+        self.assertEqual(self.c.delete(f"/reports/{rid}", headers=A).status_code, 404)
+        self.assertEqual(self.c.get("/reports/mine", headers=A).json(), [])
+
 
 if __name__ == "__main__":
     unittest.main()

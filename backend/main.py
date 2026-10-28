@@ -118,6 +118,15 @@ def my_reports(token: str = Depends(device)) -> list[dict]:
         return fetch_reports(con, user_id=db.user_for(con, token))
 
 
+@app.delete("/reports/{rid}", status_code=204)
+def withdraw_report(rid: int, token: str = Depends(device)) -> None:
+    """Only your own: anyone else's report looks like it is not there."""
+    with db.connect() as con:
+        gone = con.execute("DELETE FROM reports WHERE id = ? AND user_id = ?", (rid, db.user_of(con, token))).rowcount
+    if not gone:
+        raise HTTPException(404, "not your report")
+
+
 @app.get("/clusters")
 def list_clusters(
     days: int = Query(default=CLUSTER_WINDOW_DAYS, ge=1, le=365), token: str | None = Depends(device_or_none)

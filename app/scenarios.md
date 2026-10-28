@@ -9,6 +9,7 @@ Per size
 - zoomed out to 11, Melden: flies to my position at zoom 16, circle green, Melden enabled
 - send a report (Zu laut): "Gemeldet" card with "Du …", the bubble gets the green dot, close, home sheet back
 - tap a bubble at zoom 15: cluster card ("n Meldungen", "Du und …" since one is mine, no "diese Woche" when all are fresh), bubble highlighted, its 100 m disc drawn, the faint discs of the others only from zoom 15
+- Meine Meldungen from the home sheet: the sent report is listed with type, time, bubble size and status, a Zurückziehen button; tap on it from zoom 12 flies to its bubble at 16 with the card
 - layers: Lärmkarte, Messräder, Feinstaub on at zoom 11 and 16, legend shows
 - about sheet via the title pill, open and close
 
@@ -20,6 +21,7 @@ Phone only
 - zoom out in report mode: circle grey, hint "Näher ranzoomen", Melden disabled, enabled again after zooming in
 - drag past the city edge six times: centre stays inside the city limit, no jump after release
 - jump far outside at zoom 8: centre snaps to the city limit, zoom is the min zoom, the whole city is on screen
+- withdraw: Zurückziehen asks "Wirklich?", the second tap removes the row, the server has one report less, toast "Meldung zurückgezogen"
 - device token: with it `/clusters` marks my bubbles (`mine`) and `/reports/mine` lists my reports, without it nothing is mine and `/reports/mine` is refused; 32 chars in localStorage, same token and same user after a reload, a cleared storage is a new user with no marked bubbles, a report without the header is refused
 - backend unreachable: "Server nicht erreichbar" after the next poll, gone when it is back
 

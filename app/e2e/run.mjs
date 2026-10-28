@@ -195,6 +195,21 @@ for (const size of Object.keys(SIZES)) {
 		expect((await drawn('discs')) === 0, 'faint discs drawn at zoom 14');
 	});
 
+	await scenario(`${size}: Meine Meldungen lists my report, tap flies to its bubble`, async () => {
+		await page.goto();
+		await page.clickText('Meine Meldungen');
+		await wait(500);
+		const sheet = await page.sheet();
+		expect(sheet.includes('Meine Meldungen') && sheet.includes('Zu laut'), `list: "${sheet.split('\n').slice(0, 3).join(' / ')}"`);
+		expect(sheet.includes('Zurückziehen'), 'no Zurückziehen');
+		await page.eval(`window.__map.jumpTo({zoom: 12}); 0`);
+		await page.click('.sheet .open');
+		await wait(2500);
+		const card = await page.sheet();
+		expect(/^\d+ Meldung/m.test(card) && /^Du /m.test(card), `no card of my bubble: "${card.split('\n')[0]}"`);
+		await nearlyZoom(16);
+	});
+
 	await scenario(`${size}: layers on at zoom 11 and 16`, async () => {
 		await page.goto();
 		await page.eval(`window.__map.zoomTo(11, {duration: 0}); 0`);
@@ -331,6 +346,23 @@ await scenario('phone: jump far outside, centre snaps to the city limit, zoom-ou
 	const fits = await page.eval(`(() => { const m = window.__map, b = m.getBounds(); return b.getWest() < 9.0444 && b.getEast() > 9.3021 && b.getSouth() < 49.0929 && b.getNorth() > 49.2099 })()`);
 	expect(fits, 'city does not fit the screen at min zoom');
 	await page.shot('phone-min-zoom');
+});
+
+await scenario('phone: withdraw a report, gone from the list and the server', async () => {
+	await page.goto();
+	const mine = async () => (await fetch(`${API}/reports/mine`, { headers: { 'x-device': await page.eval(`localStorage.getItem('device')`) } }).then((r) => r.json())).length;
+	const n = await mine();
+	await page.clickText('Meine Meldungen');
+	await wait(500);
+	expect((await page.eval(`document.querySelectorAll('.sheet .row').length`)) === n, `list has not ${n} rows`);
+	await page.clickText('Zurückziehen');
+	await wait(200);
+	expect((await page.sheet()).includes('Wirklich?'), 'first tap did not ask');
+	await page.clickText('Wirklich?');
+	await wait(1000);
+	expect((await page.eval(`document.querySelectorAll('.sheet .row').length`)) === n - 1, 'row still in the list');
+	expect((await mine()) === n - 1, 'report still on the server');
+	expect((await page.eval(`document.querySelector('.toast')?.innerText`)) === 'Meldung zurückgezogen', 'no toast');
 });
 
 await scenario('phone: the device token stays over reloads and makes one user, a cleared device is a new one', async () => {

@@ -117,6 +117,11 @@ export const getReports = async (): Promise<Report[]> => (await req('/reports'))
 
 export const getMine = async (): Promise<Report[]> => (await req('/reports/mine')).json();
 
+export async function deleteReport(id: number): Promise<void> {
+	const r = await req(`/reports/${id}`, { method: 'DELETE' });
+	if (!r.ok) throw new Error(`${r.status}`);
+}
+
 export const getSensors = async (): Promise<Sensor[]> =>
 	(await req('/sensors')).json();
 
