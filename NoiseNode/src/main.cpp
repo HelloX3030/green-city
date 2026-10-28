@@ -2,6 +2,7 @@
 #include <Adafruit_NeoPixel.h>
 #include "CloudUpload.h"
 #include "NoiseAggregator.h"
+#include "SdStorage.h"
 
 // DFRobot Gravity analog sound level meter (SEN0232):
 // A/signal -> senseBox IO6 (GPIO6), + -> 3.3V, - -> GND.
@@ -54,12 +55,33 @@ void setup() {
     // Allow USB serial and the sensor to start without waiting indefinitely.
     delay(1000);
     Serial.println("Sound level meter ready (signal: GPIO6, 115200 baud)");
+    beginSdStorage();
     beginCloudUpload();
     aggregator.begin(millis());
     windowStartUtc = time(nullptr);
 }
 
+void handleSerialCommands() {
+    static char command[32];
+    static size_t used = 0;
+    for (unsigned i = 0; i < 32 && Serial.available(); ++i) {
+        const char c = Serial.read();
+        if (c == '\r') continue;
+        if (c == '\n') {
+            command[used] = 0;
+            if (!strcmp(command, "cloud pause")) setCloudUploadPaused(true);
+            else if (!strcmp(command, "cloud resume")) setCloudUploadPaused(false);
+            else if (!strcmp(command, "sd verify")) requestSdVerification();
+            else if (!strcmp(command, "reboot")) ESP.restart();
+            used = 0;
+        } else if (used < sizeof(command) - 1) {
+            command[used++] = c;
+        }
+    }
+}
+
 void loop() {
+    handleSerialCommands();
     static unsigned long lastReading = millis() - READING_INTERVAL_MS;
     const unsigned long now = millis();
     if (now - lastReading < READING_INTERVAL_MS) {
@@ -93,6 +115,7 @@ void loop() {
     const float decibels = voltage * 50.0f;
     const bool valid = millivolts >= 600 && millivolts <= 2600;
     aggregator.add(now, decibels, valid);
+    logSdSample(millivolts, valid);
     if (valid) {
         updateNoiseLed(decibels);
     } else {

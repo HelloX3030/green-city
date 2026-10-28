@@ -58,8 +58,9 @@ Use the latest/history endpoint patterns above with the IDs in this table. All t
 a request share a UTC timestamp labelling the end of the window. Normal cadence
 is one upload per minute after NTP establishes time. Only complete windows with
 480 valid samples are published. The first minute after boot is usually omitted.
-A gap means unavailable data, not zero. Failed uploads retain up to 30 windows
-in RAM; overflow drops the newest and resets lose the queue. Consumers should
+A gap means unavailable data, not zero. With a working SD card, failed uploads
+retain up to 1440 windows in a persistent outbox. A 30-window RAM queue is
+the fallback when SD is unavailable; RAM-only data can be lost on reset. Consumers should
 identify records using sensor ID plus timestamp. Sampling diagnostics remain
 on Serial. See README.md for exact eligibility rules and recovery policy.
 
@@ -75,8 +76,9 @@ history endpoint for all three channels:
 These correspond to 00:34:46 and 00:35:46 CET on 28 October. Both windows
 contained 480/480 valid samples, with no invalid readings; maximum sample gaps
 were 130 ms and 125 ms. The RAM queue returned to zero after each upload.
-Normal periodic operation is verified. Prolonged outage/reconnection, queue
-capacity exhaustion and overnight operation have not yet been hardware-tested.
+Normal periodic operation is verified. SD logging and reboot recovery are
+covered separately in `SD_LOGGING.md`. Queue capacity exhaustion and overnight
+operation have not yet been hardware-tested.
 
 Example live LAeq history query:
 
@@ -95,3 +97,16 @@ station metadata, not evidence that this initial home test was outdoors.
 
 Station upload tokens and Wi-Fi credentials are local secrets and are not
 needed by dashboard developers. They remain outside tracked source files.
+
+## Local archive and outage recovery
+
+The current firmware retains 125 ms sampling for statistics and archives one
+raw reading per second on SD. Complete uploadable minutes are persisted before
+transmission, with up to 1440 pending SD records and a bounded RAM fallback.
+Up to three windows share one request; requests are spaced at least 60 seconds
+apart. Every record retains its original window-end UTC timestamp.
+
+Power-cycle recovery was verified for `2026-10-27T23:48:25Z`: LAeq 69.7 dBA,
+maximum 86.9 dBA, events 7, retrieved from all three public histories after
+replay. No change to metric definitions or sensor IDs. See `SD_LOGGING.md` for
+paths, CSV columns, retention, diagnostics and remaining test limitations.

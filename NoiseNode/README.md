@@ -79,22 +79,32 @@ HTTPS runs in a separate FreeRTOS task with 10 s connection/read/handshake
 timeouts. Sampling shares the single CPU with networking, so exact cadence
 is not guaranteed; minute coverage checks detect incomplete sampling.
 
-A FIFO holds **30 minute summaries** in RAM, including the oldest during its
-upload attempt. Only 2xx responses remove items. Full queues reject the newest
-window with an explicit log, preserving the existing backlog. Power loss or
-reset loses queued data; persistent storage is not implemented.
+With a working FAT32 SD card, raw readings and all minute diagnostics are
+logged locally, and uploadable minutes use an SD-backed outbox. See
+`SD_LOGGING.md` for file formats, durability and the recovery test. The outbox
+holds up to **1440 pending minute summaries** (24 hours), surviving a reboot.
+Only cloud-accepted records are removed from the outbox. A separate minute CSV
+retains their statistics after upload. Raw CSV files retain one level per second (the statistics still use every
+125 ms sample), not audio.
 
-Each request contains all three measurements with the original end timestamp.
-Normal operation sends one request per complete minute. A backlog drains at
-most once per 5 s after successful requests. Failure retry delays increase from
+If the card is unavailable or a write fails, the cloud uploader falls back to
+a **30-window RAM queue**. Full RAM queues reject the newest window with an
+explicit log. A reset loses RAM-only data. SD capacity errors never trigger
+formatting or deletion of old raw data. The network continues independently. The RAM fallback has 27 queued slots plus
+up to three in-flight records (30 total), retained across retries but not resets.
+
+Each window contains all three measurements with its original end timestamp.
+Requests are spaced at least 60 s apart after completion. A request can batch
+up to three queued windows (nine values), allowing backlog recovery without
+rapid individual requests. Failure retry delays increase from
 60 s to 120, 240, 480 and 900 s, capped at 900 s. A `Retry-After` header can
 extend the delay (seconds or HTTP date, capped at seven days). Wi-Fi reconnects
 automatically, with explicit retry attempts every 30 s. Status 401/403/404
 logs a configuration hint; failures retain the FIFO's oldest window.
 
-A lost response can cause a retry of an already accepted timestamp. Consumers
+A lost response or reboot before deleting an accepted SD record can cause a retry of an already accepted timestamp. Consumers
 should identify records by sensor ID plus timestamp rather than summing
-repeated fetches. Before-NTP windows, incomplete windows, resets and FIFO
+repeated fetches. Before-NTP windows, incomplete windows, RAM resets and buffer
 overflow can all create gaps. See Serial diagnostics; never interpret a gap
 as silence or zero events.
 
@@ -106,7 +116,7 @@ https://github.com/sensebox/openSenseMap-API/blob/master/packages/api/lib/contro
 `POST https://api.opensensemap.org/boxes/<boxId>/data`, JSON array of
 `{sensor, value, createdAt}` objects. `Authorization` contains the raw station
 token, without a Bearer prefix. IDs are 24 lowercase hexadecimal characters.
-The documented request maximum is 2500 values; our payload contains three.
+The documented request maximum is 2500 values; our payload contains up to nine.
 The documentation does not establish a numerical production upload-frequency
 limit, so the retry policy is a client choice, not a claimed API quota.
 
@@ -122,4 +132,18 @@ g++ -std=c++11 -Wall -Wextra -Werror -I include test/native/noise_aggregator_tes
 /tmp/quietnode-aggregator-test
 g++ -std=c++11 -Wall -Wextra -Werror -I include test/native/upload_policy_test.cpp -o /tmp/quietnode-upload-test
 /tmp/quietnode-upload-test
+```
+
+SD record-format checks:
+
+```sh
+g++ -std=c++11 -Wall -Wextra -Werror -I include test/native/telemetry_record_test.cpp -o /tmp/quietnode-record-test
+/tmp/quietnode-record-test
+```
+
+Batched JSON and buffer-bound checks:
+
+```sh
+g++ -std=c++11 -Wall -Wextra -Werror -I include test/native/cloud_payload_test.cpp -o /tmp/quietnode-payload-test
+/tmp/quietnode-payload-test | python3 -m json.tool
 ```
