@@ -388,6 +388,11 @@
 		bottom: 0;
 		padding: 8px 18px calc(18px + env(safe-area-inset-bottom));
 		border-radius: var(--radius) var(--radius) 0 0;
+		/* a long card scrolls inside, the map keeps the top */
+		max-height: 72%;
+		box-sizing: border-box;
+		overflow-y: auto;
+		overscroll-behavior: contain;
 		box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.05), 0 -10px 30px rgba(0, 0, 0, 0.08);
 	}
 	@media (min-width: 600px) {
@@ -396,6 +401,7 @@
 			left: 14px;
 			bottom: 14px;
 			width: 400px;
+			max-height: calc(100% - 28px);
 			padding: 18px;
 			border-radius: var(--radius);
 			box-shadow: var(--shadow);

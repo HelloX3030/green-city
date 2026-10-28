@@ -220,11 +220,22 @@ for (const size of Object.keys(SIZES)) {
 			expect(picked && picked.includes(`${api.types[types[0]]} Meldung`), `filter line says "${picked}"`);
 			const texts = await page.eval(`[...document.querySelectorAll('.sheet .voices li')].length`);
 			const expected = (await fetch(`${API}/clusters/${api.id}/reports`).then((r) => r.json())).filter((r) => r.message && r.types.includes(types[0])).length;
-			expect(texts === Math.min(expected, 5), `${texts} texts for ${types[0]}, api has ${expected}`);
+			expect(texts === expected, `${texts} texts for ${types[0]}, api has ${expected}`);
 			await page.shot(`${size}-card-filter`);
 			await page.click('.sheet .type');
 		}
 		expect(!sheet.includes('diese Woche'), 'card says "diese Woche" though every report is fresh');
+		// a long card scrolls inside the sheet, the button at its end comes into view
+		const box = await page.eval(`(() => { const s = document.querySelector('.sheet'); return { h: s.getBoundingClientRect().height, scroll: s.scrollHeight, win: innerHeight, wide: innerWidth >= 600, texts: document.querySelectorAll('.sheet .voices li').length }; })()`);
+		expect(box.h <= (box.wide ? box.win - 28 : box.win * 0.72) + 1, `sheet is ${box.h} of ${box.win} px high`);
+		if (box.scroll > box.h) {
+			await page.eval(`document.querySelector('.sheet').scrollTop = 1e6; 0`);
+			await wait(200);
+			const btn = await page.eval(`(() => { const r = document.querySelector('.sheet .ghost').getBoundingClientRect(); return r.bottom <= innerHeight && r.top >= 0; })()`);
+			expect(btn, 'scrolled down, the button at the end is not in view');
+			await page.shot(`${size}-card-scrolled`);
+			await page.eval(`document.querySelector('.sheet').scrollTop = 0; 0`);
+		} else expect(box.wide || box.texts < 8, `${box.texts} texts and the phone sheet does not scroll`);
 		expect(await page.has('.pin.cluster.sel'), 'bubble not highlighted');
 		const drawn = (layer) => page.eval(`window.__map.queryRenderedFeatures({layers: ['${layer}']}).length`);
 		await page.idle();

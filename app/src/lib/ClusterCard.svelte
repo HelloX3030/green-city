@@ -35,8 +35,6 @@
 	// the single reports, for the texts; a tap on a type keeps only that type
 	let reports = $state<Report[]>([]);
 	let filter = $state<ReportType | null>(null);
-	let all = $state(false);
-	const SHOWN = 5;
 	$effect(() => {
 		const id = cluster.id;
 		void cluster.count; // again when the poll brings a new report
@@ -47,15 +45,12 @@
 	$effect(() => {
 		void cluster.id;
 		filter = null;
-		all = false;
 	});
 	const voices = $derived(reports.filter((r) => r.message && (!filter || r.types.includes(filter))));
 	// one of mine from today: another one counts as the same voice
 	const today = $derived(reports.some((r) => r.mine && r.created_at.slice(0, 10) === new Date().toISOString().slice(0, 10)));
-	const shown = $derived(all ? voices : voices.slice(0, SHOWN));
 	function pick(t: string) {
 		filter = filter === t ? null : (t as ReportType);
-		all = false;
 	}
 </script>
 
@@ -97,9 +92,9 @@
 	{/if}
 </div>
 {/if}
-{#if shown.length}
+{#if voices.length}
 	<ul class="voices">
-		{#each shown as r (r.id)}
+		{#each voices as r (r.id)}
 			<li class:me={r.mine}>
 				<i style="background: {typeInfo(filter ?? r.types[0]).color}"></i>
 				<span class="when">{timeAgo(r.created_at)}</span>
@@ -108,9 +103,6 @@
 			</li>
 		{/each}
 	</ul>
-	{#if voices.length > SHOWN && !all}
-		<button class="more" onclick={() => (all = true)}>alle {voices.length} Texte</button>
-	{/if}
 {/if}
 {#if today && (!sent || cluster.mine > 1)}
 	<p class="hint">Zählt einmal pro Tag, egal wie oft du meldest.</p>
@@ -245,12 +237,6 @@
 	}
 	.text {
 		overflow-wrap: anywhere;
-	}
-	.more {
-		margin-top: 6px;
-		font-size: 13px;
-		color: var(--accent);
-		font-weight: 500;
 	}
 	.ghost {
 		display: block;
