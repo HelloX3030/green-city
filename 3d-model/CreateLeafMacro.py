@@ -142,10 +142,14 @@ puntos_apoyo_sb = [
 ]
 
 for px, py in puntos_m3_sb:
-    torreta = Part.makeCylinder(3.5, 4.0, App.Vector(px, py, grosor_base))
-    agujero = Part.makeCylinder(1.4, 6.0, App.Vector(px, py, grosor_base))
-    torreta = torreta.cut(agujero)
+    torreta = Part.makeCylinder(4.0, 4.0, App.Vector(px, py, grosor_base))
     cuerpo = cuerpo.fuse(torreta)
+    # Boca Ø4.0 x 4.5 para inserto roscado M3 (p. ej. Ruthex M3 x 5.7);
+    # debajo sigue un piloto Ø2.8 que deja 1 mm de suelo. Sin insertos, un
+    # tornillo M3 autorroscante agarra igualmente en el piloto.
+    boca_inserto = Part.makeCylinder(2.0, 6.0, App.Vector(px, py, grosor_base + 4.0 - 4.5))
+    piloto = Part.makeCylinder(1.4, 6.0, App.Vector(px, py, 1.0))
+    cuerpo = cuerpo.cut(boca_inserto).cut(piloto)
 
 for px, py in puntos_apoyo_sb:
     cuerpo = cuerpo.fuse(Part.makeCylinder(3.5, 4.0, App.Vector(px, py, grosor_base)))
@@ -180,6 +184,32 @@ railes_limpios = railes_completos.common(cavidad) # Mantiene solo la parte inter
 cuerpo = cuerpo.fuse(railes_limpios)
 
 # ============================================================
+# 2a. REFUERZOS (media caña interior y chaflán inferior)
+# ============================================================
+# Media caña pared-suelo r~3: cuña perimetral cuyo flanco interior es un
+# loft de 3 perfiles sobre la cuerda del cuadrante (puntos del arco a 0°,
+# 45° y 90°). Refuerza la unión más cargada y evita la grieta de esquina.
+# El perfil superior rebasa 0.3 mm dentro de la pared para que el corte y
+# la fusión no dejen caras coincidentes.
+cunna_molde = crear_prisma(contorno_interior, grosor_base, 3.0)
+cunna_nucleo = Part.makeLoft(
+    [wire_contorno(contorno, grosor_base, factor_interior - 3.0/55, factor_interior - 3.0/55),
+     wire_contorno(contorno, grosor_base + 0.88, factor_interior - 0.88/55, factor_interior - 0.88/55),
+     wire_contorno(contorno, grosor_base + 5.8, factor_interior + 0.3/55, factor_interior + 0.3/55)],
+    True, False)
+cuerpo = cuerpo.fuse(cunna_molde.cut(cunna_nucleo))
+
+# Chaflán de 0.5 mm en el canto inferior exterior: compensa la pata de
+# elefante de la primera capa y la caja asienta plana aunque el borde rebose.
+f_chaflan = 1.0 - 0.5 / 55.0
+chaflan_molde = crear_prisma(contorno, -0.5, 1.0)
+chaflan_nucleo = Part.makeLoft(
+    [wire_contorno(contorno, -0.5, f_chaflan, f_chaflan),
+     wire_contorno(contorno, 0.0, f_chaflan, f_chaflan),
+     wire_contorno(contorno, 0.5, 1.001, 1.001)], True, False)
+cuerpo = cuerpo.cut(chaflan_molde.cut(chaflan_nucleo))
+
+# ============================================================
 # 2b. MONTAJE Y DRENAJE (intemperie)
 # ============================================================
 # Ojales de cerradura (keyhole) atravesando la base: la caja se cuelga de
@@ -188,7 +218,9 @@ cuerpo = cuerpo.fuse(railes_limpios)
 # arriba), por eso las ranuras salen de cada círculo hacia +y. La cabeza
 # del tornillo queda dentro, apoyada contra el suelo de la caja; las tres
 # posiciones quedan fuera de la sombra de la placa MCU.
-puntos_keyhole = [(-20.0, -35.0), (20.0, -35.0), (0.0, 54.0)]
+# (el ojal superior va en y=52: con la media caña pared-suelo, la cabeza del
+# tornillo en el extremo de la ranura necesita quedar a >3 mm de la pared)
+puntos_keyhole = [(-20.0, -35.0), (20.0, -35.0), (0.0, 52.0)]
 for kx, ky in puntos_keyhole:
     circulo = Part.makeCylinder(3.6, grosor_base + 2.0, App.Vector(kx, ky, -1.0))
     ranura = Part.makeBox(4.2, 8.0, grosor_base + 2.0, App.Vector(kx - 2.1, ky, -1.0))
