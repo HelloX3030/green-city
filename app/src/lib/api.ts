@@ -32,6 +32,7 @@ export interface Cluster {
 	lat: number;
 	lon: number;
 	count: number;
+	recent: number; // of the last 7 days
 	weight: number; // count with decay, halves every 7 days
 	types: Record<string, number>;
 	dominant: ReportType; // by decayed weight

@@ -177,7 +177,9 @@ for (const size of Object.keys(SIZES)) {
 		if (!pin) return;
 		await page.tap(...pin);
 		await wait(800);
-		expect(/^\d+ Meldung/m.test(await page.sheet()), 'no cluster card');
+		const sheet = await page.sheet();
+		expect(/^\d+ Meldung/m.test(sheet), 'no cluster card');
+		expect(!sheet.includes('diese Woche'), 'card says "diese Woche" though every report is fresh');
 		expect(await page.has('.pin.cluster.sel'), 'bubble not highlighted');
 		const drawn = (layer) => page.eval(`window.__map.queryRenderedFeatures({layers: ['${layer}']}).length`);
 		expect((await drawn('disc-sel')) === 1, 'selected disc not drawn');

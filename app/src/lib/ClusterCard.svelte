@@ -27,7 +27,11 @@
 			</p>
 		{:else}
 			<h2>{cluster.count} {cluster.count === 1 ? 'Meldung' : 'Meldungen'}</h2>
-			<p>{main.label} · letzte {timeAgo(cluster.latest)}</p>
+			<p>
+				{main.label}
+				{#if cluster.recent < cluster.count}· {cluster.recent === 0 ? 'keine' : cluster.recent} davon diese Woche{/if}
+				· letzte {timeAgo(cluster.latest)}
+			</p>
 		{/if}
 	</div>
 	<button class="x" onclick={onclose} aria-label="Schließen"><Icon name="x" size={16} /></button>

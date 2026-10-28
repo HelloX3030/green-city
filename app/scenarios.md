@@ -6,7 +6,7 @@ Per size
 - first open: home sheet with Melden, NoiseNode pin on the map
 - zoomed out to 11, Melden: flies to my position at zoom 16, circle green, Melden enabled
 - send a report (Zu laut): "Gemeldet" card, close, home sheet back
-- tap a bubble at zoom 15: cluster card, bubble highlighted, its 100 m disc drawn, the faint discs of the others only from zoom 15
+- tap a bubble at zoom 15: cluster card ("n Meldungen", no "diese Woche" when all are fresh), bubble highlighted, its 100 m disc drawn, the faint discs of the others only from zoom 15
 - layers: Lärmkarte, Messräder, Feinstaub on at zoom 11 and 16, legend shows
 - about sheet via the title pill, open and close
 

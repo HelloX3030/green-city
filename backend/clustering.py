@@ -57,6 +57,7 @@ def cluster(reports: list[dict]) -> list[dict]:
                 "lat": c["lat"],
                 "lon": c["lon"],
                 "count": len(members),
+                "recent": sum(1 for r in members if weights[r["id"]] >= 0.5),  # the last HALF_LIFE_DAYS
                 "weight": round(sum(weights.values()), 2),
                 "types": dict(types.most_common()),
                 "dominant": weighted.most_common(1)[0][0],
