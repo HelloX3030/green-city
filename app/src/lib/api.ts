@@ -4,6 +4,9 @@ import type { IconName } from './icons';
 export type ReportType = 'noise' | 'heat' | 'air' | 'no_shade' | 'other';
 
 // one colour and icon per type, used on pins, tiles, badges and chips alike
+// same as RADIUS_M in backend/clustering.py: reports this close to a bubble join it
+export const CLUSTER_RADIUS_M = 100;
+
 export const TYPES: { id: ReportType; label: string; color: string; icon: IconName }[] = [
 	{ id: 'noise', label: 'Zu laut', color: '#6f63b8', icon: 'noise' },
 	{ id: 'heat', label: 'Zu heiß', color: '#c4664f', icon: 'heat' },

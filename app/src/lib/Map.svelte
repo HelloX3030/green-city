@@ -27,6 +27,7 @@
 		dominantType,
 		typeInfo,
 		isLive,
+		CLUSTER_RADIUS_M,
 		pmColor,
 		type Cluster,
 		type LayerId,
@@ -75,9 +76,13 @@
 		const cam = map.cameraForBounds(CITY_BBOX);
 		if (cam?.zoom) map.setMinZoom(cam.zoom - 0.1);
 	}
-	const PICK_ZOOM = 14; // a report needs at least this zoom, the circle is ~50 m then
+	const PICK_ZOOM = 15; // a report needs at least this zoom, the circle is 64 px then
 	let zoom = $state(13);
+	let lat = $state(49.15);
 	const tooFar = $derived(picking && zoom < PICK_ZOOM);
+	// the report circle is the cluster radius on the ground, so it grows with the zoom
+	const metresPerPx = $derived((156543.03 * Math.cos((lat * Math.PI) / 180)) / 2 ** zoom);
+	const circlePx = $derived(Math.max(24, (2 * CLUSTER_RADIUS_M) / metresPerPx));
 	const NOISE_TILES =
 		'https://datahub.uba.de/server/rest/services/VeLa/LK/MapServer/export?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&layers=show:4210&format=png32&transparent=true&f=image';
 	const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
@@ -244,7 +249,10 @@
 				map.on('mouseenter', id, () => (map.getCanvas().style.cursor = 'pointer'));
 				map.on('mouseleave', id, () => (map.getCanvas().style.cursor = ''));
 			}
-			map.on('zoom', () => (zoom = map.getZoom()));
+			map.on('move', () => {
+				zoom = map.getZoom();
+				lat = map.getCenter().lat;
+			});
 			fitMinZoom();
 			map.on('moveend', () => {
 				if (picking) pick();
@@ -448,8 +456,13 @@
 <div class="map" bind:this={el}></div>
 {#if picking}
 	<div class="dim" aria-hidden="true"></div>
-	<div class="crosshair" class:far={tooFar} style="--bottom: {padBottom}px; --left: {padLeft}px" aria-hidden="true">
-		<span class="hint">{tooFar ? 'Näher ranzoomen' : 'Karte schieben, bis der Kreis passt'}</span>
+	<div
+		class="crosshair"
+		class:far={tooFar}
+		style="--bottom: {padBottom}px; --left: {padLeft}px; --d: {circlePx.toFixed(1)}px"
+		aria-hidden="true"
+	>
+		<span class="hint">{tooFar ? 'Näher ranzoomen' : 'Schieb die Karte auf die Stelle'}</span>
 	</div>
 {/if}
 <div class="legends" style="--bottom: {padBottom}px; --left: {padLeft}px">
@@ -486,8 +499,9 @@
 		position: absolute;
 		left: calc((100% + var(--left)) / 2);
 		top: calc((100% - var(--bottom)) / 2);
-		width: 84px;
-		height: 84px;
+		box-sizing: border-box;
+		width: var(--d);
+		height: var(--d);
 		transform: translate(-50%, -50%);
 		border-radius: 50%;
 		border: 2px dashed var(--accent);
@@ -516,7 +530,7 @@
 	.hint {
 		position: absolute;
 		left: 50%;
-		top: 100%;
+		top: calc(50% + min(var(--d) / 2, 90px));
 		transform: translate(-50%, 12px);
 		white-space: nowrap;
 		font-size: 12px;

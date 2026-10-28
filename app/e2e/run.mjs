@@ -227,6 +227,34 @@ await scenario('phone: Melden with position denied', async () => {
 	await nearlyZoom(15);
 });
 
+await scenario('phone: the report circle is 100 m on the ground, so it doubles per zoom level', async () => {
+	await page.goto();
+	await melden();
+	await wait(3500);
+	const width = () => page.eval(`document.querySelector('.crosshair').getBoundingClientRect().width`);
+	await page.eval(`window.__map.jumpTo({center: [9.2, 49.15], zoom: 15}); 0`);
+	await wait(300);
+	const w15 = await width();
+	await page.eval(`window.__map.jumpTo({center: [9.2, 49.15], zoom: 16}); 0`);
+	await wait(300);
+	const w16 = await width();
+	expect(Math.abs(w15 - 64) < 3, `circle at zoom 15 is ${w15} px, not 64`);
+	expect(Math.abs(w16 - 128) < 3, `circle at zoom 16 is ${w16} px, not 128`);
+	// the hint hangs below the ring, but at most 90 px under the centre dot
+	const hintGap = () =>
+		page.eval(
+			`(() => { const r = document.querySelector('.crosshair').getBoundingClientRect(); return document.querySelector('.hint').getBoundingClientRect().top - (r.top + r.height / 2); })()`
+		);
+	const g16 = await hintGap();
+	expect(Math.abs(g16 - 76) < 4, `hint sits ${g16} px below the centre at zoom 16, not 76`);
+	await page.shot('phone-circle-16');
+	await page.eval(`window.__map.jumpTo({center: [9.2, 49.15], zoom: 18}); 0`);
+	await wait(300);
+	const g18 = await hintGap();
+	expect(Math.abs(g18 - 102) < 4, `hint sits ${g18} px below the centre at zoom 18, not 102`);
+	await page.shot('phone-circle-18');
+});
+
 await scenario('phone: zoom out in report mode greys the circle and disables Melden', async () => {
 	await page.goto();
 	await melden();
