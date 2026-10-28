@@ -59,9 +59,10 @@
 		return `${WD[d.getDay()]} ${d.getDate()}.${d.getMonth() + 1}.`;
 	};
 	const when = (t: number) => (range === 'all' ? day(t) : `${day(t)}, ${String(new Date(t).getHours()).padStart(2, '0')}:00`);
-	const axis = (t: number) => {
+	// hours when the data spans less than two days (a sensor that just went live), else days
+	const axis = (t: number, span: number) => {
 		const d = new Date(t);
-		if (range === '24h') return `${String(d.getHours()).padStart(2, '0')}:00`;
+		if (span < 2 * 86400e3) return `${String(d.getHours()).padStart(2, '0')}:00`;
 		if (range === '7d') return `${WD[d.getDay()]} ${d.getDate()}.`;
 		return `${d.getDate()}.${d.getMonth() + 1}.`;
 	};
@@ -93,7 +94,7 @@
 		const ticks = [hi, (hi + lo) / 2, lo].map((v) => ({ v, y: y(v) }));
 		const labels = [0, 1, 2, 3].map((j) => {
 			const t = t0 + ((t1 - t0) * j) / 3;
-			return { x: x(t), text: axis(t), anchor: j === 0 ? 'start' : j === 3 ? 'end' : 'middle' };
+			return { x: x(t), text: axis(t, t1 - t0), anchor: j === 0 ? 'start' : j === 3 ? 'end' : 'middle' };
 		});
 		return { xy, line, area, ticks, labels };
 	});
