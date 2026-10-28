@@ -140,6 +140,8 @@ async function scenario(name, fn) {
 const melden = () => page.clickText('Melden');
 // set an input's value the way a keyboard would, Svelte sees the input event
 const type = (sel, text) => page.eval(`(() => { const i = document.querySelector(${JSON.stringify(sel)}); i.value = ${JSON.stringify(text)}; i.dispatchEvent(new Event('input', { bubbles: true })); })(); 0`);
+// a point on the element where a tap lands on it: the centre, else around it; small pins sit on top of big ones
+const FREE = `(el) => { const r = el.getBoundingClientRect(); const c = [r.x + r.width / 2, r.y + r.height / 2]; for (const [dx, dy] of [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]]) { const x = c[0] + dx * r.width * 0.35, y = c[1] + dy * r.height * 0.35; if (x > 0 && y > 0 && x < innerWidth && y < innerHeight && el.contains(document.elementFromPoint(x, y))) return [x, y]; } return null; }`;
 const nearlyZoom = async (z) => expect((await page.zoom()) >= z - 0.01, `zoom ${(await page.zoom()).toFixed(2)} < ${z}`);
 
 for (const size of Object.keys(SIZES)) {
@@ -190,7 +192,7 @@ for (const size of Object.keys(SIZES)) {
 		await page.setView(CITY.longitude, CITY.latitude, 15);
 		await wait(1000);
 		// the bubble of the report the previous scenario sent, somewhere near the screen centre
-		const pin = await page.eval(`(() => { for (const p of document.querySelectorAll('.pin.cluster')) { const r = p.getBoundingClientRect(); const x = r.x + r.width / 2, y = r.y + r.height / 2; if (x > 0 && y > 0 && x < innerWidth && y < innerHeight) return [x, y]; } return null; })()`);
+		const pin = await page.eval(`(() => { const free = ${FREE}; for (const p of document.querySelectorAll('.pin.cluster')) { const at = free(p); if (at) return at; } return null; })()`);
 		expect(pin, 'no bubble on screen');
 		if (!pin) return;
 		await page.tap(...pin);
@@ -402,13 +404,28 @@ await scenario('phone: zoomed out, touching bubbles merge and a tap on a group z
 	expect(groups > 0, 'no merged bubble at zoom 12');
 	expect((await onScreen()) === (await apiPeople()), `bubbles say ${await onScreen()} people, the API ${await apiPeople()}`);
 	await page.shot('phone-groups');
-	const group = await page.eval(`(() => { const r = document.querySelector('.pin.cluster.group').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
+	const group = await page.eval(`(() => { const free = ${FREE}; for (const p of document.querySelectorAll('.pin.cluster.group')) { const at = free(p); if (at) return at; } return null; })()`);
+	expect(group, 'no free spot on the group to tap');
 	await page.tap(...group);
 	await page.settled();
 	await wait(500);
 	expect((await page.zoom()) >= 14 - 1e-6, `tap on the group left the zoom at ${(await page.zoom()).toFixed(2)}`);
 	expect(!(await page.has('.sheet .badge')), 'a group opened a card instead of zooming in');
 	expect((await onScreen()) === (await apiPeople()), `after the zoom the bubbles say ${await onScreen()} people, the API ${await apiPeople()}`);
+});
+
+await scenario('phone: a sensor under a big bubble is still tappable', async () => {
+	await page.goto();
+	// the NoiseNode is 30 m from the runner's bubble: at zoom 15 that is 19 px, inside the bubble
+	await page.setView(CITY.longitude, CITY.latitude, 15);
+	await wait(500);
+	const sensor = await page.eval(`(() => { const r = document.querySelector('.pin.sensor.ours').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
+	const bubble = await page.eval(`(() => { const r = [...document.querySelectorAll('.pin.cluster')].map((p) => p.getBoundingClientRect()).find((r) => r.width > 28 + 6); return r ? [r.x + r.width / 2, r.y + r.height / 2, r.width] : null; })()`);
+	expect(bubble && Math.hypot(bubble[0] - sensor[0], bubble[1] - sensor[1]) < bubble[2] / 2, 'the sensor is not under a bigger bubble');
+	await page.tap(...sensor);
+	await wait(500);
+	expect((await page.sheet()).includes('NoiseNode'), 'the tap opened the bubble, not the sensor');
+	await page.shot('phone-sensor-under-bubble');
 });
 
 await scenario('phone: withdraw a report, gone from the list and the server', async () => {

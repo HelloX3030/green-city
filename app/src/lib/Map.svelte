@@ -158,6 +158,9 @@
 	const popup = new Popup({ closeButton: false, offset: 8, maxWidth: '260px' });
 	const clusterMarkers = new globalThis.Map<number, Marker>();
 	const sensorMarkers = new globalThis.Map<string, Marker>();
+	// small pins over big ones, bubbles and sensors alike, so nothing hides under a big bubble; the selected one on top
+	const SENSOR_PX = 28;
+	const layer = (size: number, sel: boolean) => String(sel ? 100 : 100 - Math.round(size));
 	let me: Marker | null = null;
 
 	onMount(() => {
@@ -419,12 +422,12 @@
 			}
 			m.setLngLat([b.lon, b.lat]);
 			const div = m.getElement();
-			// grows with the log of the voices, 36 px for one, 64 at most; the big ones sit on top of the small
+			// grows with the log of the voices, 30 px for one, 64 at most
 			const size = bubbleSize(b.weight);
 			const sel = selId !== null && b.members.some((c) => c.id === selId);
 			div.style.setProperty('--c', TYPES.find((t) => t.id === b.type)?.color ?? '#8a8a8e');
 			div.style.setProperty('--s', `${size}px`);
-			div.style.zIndex = String(sel ? 100 : size);
+			div.style.zIndex = layer(size, sel);
 			div.textContent = String(b.people);
 			div.classList.toggle('sel', sel);
 			div.classList.toggle('mine', b.mine);
@@ -464,10 +467,12 @@
 				sensorMarkers.set(s.id, m);
 			}
 			const div = m.getElement();
+			const sel = selected !== null && 'kind' in selected && selected.id === s.id;
 			div.style.color = s.team ? 'var(--accent)' : SENSOR_KIND[s.kind].color;
+			div.style.zIndex = layer(SENSOR_PX, sel);
 			div.classList.toggle('ours', s.team);
 			div.classList.toggle('off', !isLive(s));
-			div.classList.toggle('sel', selected !== null && 'kind' in selected && selected.id === s.id);
+			div.classList.toggle('sel', sel);
 		}
 		for (const [id, m] of sensorMarkers) {
 			if (!seen.has(id)) {
@@ -696,10 +701,6 @@
 		place-items: center;
 		cursor: pointer;
 	}
-	/* bubbles above sensors (their z-index is set per bubble, the selected one on top) */
-	:global(.pin.sensor.sel) {
-		z-index: 1;
-	}
 	:global(.pin .i) {
 		width: 15px;
 		height: 15px;
@@ -726,6 +727,7 @@
 		border-radius: 50%;
 		border: 2px solid var(--accent);
 		animation: pulse 2.2s ease-out infinite;
+		pointer-events: none; /* the ring is 44 px, a tap next to the pin should hit what is there */
 	}
 	:global(.pin.sensor.sel) {
 		box-shadow: 0 0 0 3px #fff, 0 0 0 5px currentColor;
