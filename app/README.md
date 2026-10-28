@@ -4,7 +4,7 @@ SvelteKit + MapLibre. One page: map, one bottom sheet (report, cluster card, sen
 
 Look: CARTO Positron basemap, glass surfaces, one green for actions. Colours and icons per report type, sensor kind and layer live in `src/lib/api.ts`, the icon paths in `src/lib/icons.ts`. Sensors and clusters are DOM markers (`.pin` styles in `Map.svelte`), trees and bike rides are map layers.
 
-Layout: one bottom sheet on phones, a 400 px card bottom-left from 600 px width, the map centre shifts away from it.
+Title pill top left opens a short about sheet (three steps, status colours). Layout: one bottom sheet on phones, a 400 px card bottom-left from 600 px width, the map centre shifts away from it.
 
 Map limits: city limit from opendata.heilbronn.de (`src/lib/boundary.json`, rebuild with `make boundary`). Outside the city a grey wash, panning stops a few hundred metres beyond the city bbox, zoom 11 to 18.
 

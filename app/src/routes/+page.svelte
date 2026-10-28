@@ -6,6 +6,7 @@
 	import ClusterCard from '#lib/ClusterCard.svelte';
 	import SensorCard from '#lib/SensorCard.svelte';
 	import LayerSheet from '#lib/LayerSheet.svelte';
+	import AboutSheet from '#lib/AboutSheet.svelte';
 	import {
 		getBikes,
 		getClusters,
@@ -22,6 +23,7 @@
 	let sensor = $state<Sensor | null>(null);
 	let layers = $state(new Set<LayerId>());
 	let layersOpen = $state(false);
+	let aboutOpen = $state(false);
 	let bikes = $state<Awaited<ReturnType<typeof getBikes>> | null>(null);
 	let mine = $state(false);
 	let reporting = $state(false);
@@ -89,6 +91,7 @@
 		selected = null;
 		sensor = null;
 		layersOpen = false;
+		aboutOpen = false;
 		reporting = true;
 		if (at) map.flyTo(at.lat, at.lon, 16);
 		else locate();
@@ -105,7 +108,15 @@
 		selected = c;
 		sensor = null;
 		mine = false;
-		if (c) layersOpen = false;
+		if (c) layersOpen = aboutOpen = false;
+	}
+
+	function openAbout() {
+		aboutOpen = !aboutOpen;
+		if (aboutOpen) {
+			selected = sensor = null;
+			layersOpen = reporting = false;
+		}
 	}
 </script>
 
@@ -125,11 +136,11 @@
 	onselectsensor={(s) => {
 		sensor = s;
 		selected = null;
-		layersOpen = false;
+		layersOpen = aboutOpen = false;
 	}}
 />
 
-<div class="title glass"><Icon name="leaf" size={17} />Heilbronn meldet</div>
+<button class="title glass" class:on={aboutOpen} onclick={openAbout}><Icon name="leaf" size={17} />Heilbronn meldet</button>
 {#if offline}<div class="off">Server nicht erreichbar</div>{/if}
 
 {#if !reporting}
@@ -138,7 +149,7 @@
 		<button
 			class="rb glass"
 			class:on={layersOpen}
-			onclick={() => (layersOpen = !layersOpen)}
+			onclick={() => ((layersOpen = !layersOpen), (aboutOpen = false))}
 			aria-label="Ebenen"><Icon name="layers" /></button
 		>
 		<button class="rb glass zoom" onclick={() => map.zoomBy(1)} aria-label="Vergrößern"><Icon name="plus" /></button>
@@ -156,6 +167,8 @@
 		<SensorCard {sensor} onclose={() => (sensor = null)} />
 	{:else if layersOpen}
 		<LayerSheet {layers} ontoggle={toggle} onclose={() => (layersOpen = false)} />
+	{:else if aboutOpen}
+		<AboutSheet onclose={() => (aboutOpen = false)} />
 	{:else}
 		<button class="primary" onclick={() => startReport()}><Icon name="plus" />Melden</button>
 		<div class="legend">
@@ -181,10 +194,16 @@
 		font-size: 15px;
 		letter-spacing: -0.01em;
 		color: var(--ink);
-		pointer-events: none;
 	}
 	.title :global(svg) {
 		color: var(--accent);
+	}
+	.title.on {
+		background: var(--accent);
+		color: var(--on-accent);
+	}
+	.title.on :global(svg) {
+		color: var(--on-accent);
 	}
 	.off {
 		z-index: 3;
