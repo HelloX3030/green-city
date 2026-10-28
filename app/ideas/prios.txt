@@ -1,0 +1,29 @@
+Priorities list:
+- Make the frontend work (reporting and moving is still a little buggy).
+- Filter clusters based on their "weight", so make them bigger or show up over other clusters. So the ability to enter a minimum count 
+for a cluster, then it only shows those. (Filter)
+- Other report issues (garbage and such). (Other issues)
+- Message for ALL live users (broadcast). (Notification via Sessions)
+Or use a persistant temp cookie session (temp user session without account sys) that 
+can be used to figure out "who" reported what (so store that with the report), then only send the notification of the new sensor to
+those users that reported in a certain radius around the new sensor. *1
+- Try to setup a sensor in real time and make it connect and show on the map.
+- Adding misc. Sensor data (so beehives or bird boxes and such).
+- Adding fetches for historical data to pre-maturely "confirm" reports.
+	- Home sensors: https://api.atrai.bike/collections/osem_home_data_heilbronn/items?f=json&limit=1000000
+	- Bike sensors: https://api.atrai.bike/collections/osem_bike_data/items?limit=1000000
+	- Bike data: https://cloud.reedu.de/s/X9x2XE9a9xCxLm8?dir=/datasets
+	- Weather data: https://brightsky.dev/docs/#/operations/getWeather
+	- Air quality data: https://open-meteo.com/en/docs/air-quality-api?hourly=pm10,pm2_5,carbon_dioxide,sulphur_dioxide,dust,nitrogen_dioxide,carbon_monoxide
+	- Temp data: https://open-meteo.com/en/docs/historical-forecast-api?hourly=temperature_2m,relative_humidity_2m
+	- Noise data: pdf maps
+	- Other: https://hackathon.greencity.hn/resources
+- (Reports should possibly only last for a limited ammount of time.)
+- (Deployement of the sensors doesnt always hae to be done by the city, but also citizens.)
+- (Just an idea or motivation for the project: People are one of the best sensors that we have, and they are in abbundance.)
+
+*1 Basically each active socket is identified by the cookie session, so when you 
+connect the server recieves the token, then uses that to identify that user, aka link their reports to their socket to notify exactly that user. It 
+is not really robust but not really required since the data we link for users isnt really "sensitive", its just the reports. Also since we dont have auth 
+a user has no data really. Also the token is just a static token without expiration or validity, so not super safe and its also not verified (jwt). So all 
+it does is link a client to reports, so we know who to send a notif to when a sensor is deployed. Aka just a session token as a cookie.
