@@ -18,7 +18,7 @@
 	setWorkerUrl(workerUrl);
 	import { onMount } from 'svelte';
 	import { iconSvg } from './icons';
-	import { RING, CITY_BBOX } from './city.ts';
+	import { RING, CITY_BBOX, clampToCity, inCity } from './city.ts';
 	import {
 		TYPES,
 		SENSOR_KIND,
@@ -63,12 +63,18 @@
 	let ready = $state(false);
 
 	const HEILBRONN: [number, number] = [9.2185, 49.1427];
-	// city limit: grey wash outside the ring, the screen centre never leaves the city bbox
-	const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
-	const keepCentre = (c: LngLat, zoom: number) => ({
-		center: new LngLat(clamp(c.lng, CITY_BBOX[0], CITY_BBOX[2]), clamp(c.lat, CITY_BBOX[1], CITY_BBOX[3])),
-		zoom
-	});
+	// city limit: grey wash outside the ring, the screen centre never leaves the city polygon
+	// (replaces MapLibre's own constrain, so min and max zoom are clamped here too)
+	function keepCentre(c: LngLat, zoom: number) {
+		const [lat, lon] = clampToCity(c.lat, c.lng);
+		const z = map ? Math.min(map.getMaxZoom(), Math.max(map.getMinZoom(), zoom)) : zoom;
+		return { center: new LngLat(lon, lat), zoom: z };
+	}
+	// you can zoom out until the city fills the screen, not further
+	function fitMinZoom() {
+		const cam = map.cameraForBounds(CITY_BBOX);
+		if (cam?.zoom) map.setMinZoom(cam.zoom - 0.1);
+	}
 	const PICK_ZOOM = 14; // a report needs at least this zoom, the circle is ~50 m then
 	let zoom = $state(13);
 	const tooFar = $derived(picking && zoom < PICK_ZOOM);
@@ -88,7 +94,6 @@
 			style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
 			center: HEILBRONN,
 			zoom: 13,
-			minZoom: 11,
 			maxZoom: 18,
 			transformConstrain: keepCentre,
 			attributionControl: false
@@ -97,7 +102,8 @@
 		map.scrollZoom.setWheelZoomRate(1 / 900);
 		map.touchZoomRotate.disableRotation();
 
-		if (import.meta.env.DEV) (window as any).__map = map;
+		if (import.meta.env.DEV) Object.assign(window, { __map: map, __inCity: inCity });
+		map.on('resize', fitMinZoom);
 
 		map.on('load', () => {
 			el.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
@@ -239,6 +245,7 @@
 				map.on('mouseleave', id, () => (map.getCanvas().style.cursor = ''));
 			}
 			map.on('zoom', () => (zoom = map.getZoom()));
+			fitMinZoom();
 			map.on('moveend', () => {
 				if (picking) pick();
 			});
@@ -264,6 +271,7 @@
 		// setPadding cancels a running animation, so wait for it
 		if (map.isMoving()) map.once('moveend', () => map.setPadding(pad));
 		else map.setPadding(pad);
+		fitMinZoom();
 	});
 
 	$effect(() => {

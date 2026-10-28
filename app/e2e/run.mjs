@@ -250,17 +250,24 @@ await scenario('phone: drag past the city edge stops without jumping', async () 
 	await wait(1000);
 	const c2 = await page.center();
 	expect(c1.lng === c2.lng && c1.lat === c2.lat, 'map still moving after release');
-	expect(Math.abs(c1.lng - 9.30209) < 0.0005, `centre not at the east edge of the city: ${c1.lng}`);
+	expect(c1.lng > 9.25, `did not reach the east edge: ${c1.lng}`);
+	expect(await page.eval(`window.__inCity(${c1.lat}, ${c1.lng})`), `centre left the city: ${c1.lng} ${c1.lat}`);
 });
 
-await scenario('phone: zoomed out, the centre is clamped but the view shows the surroundings', async () => {
+await scenario('phone: jump far outside, centre snaps to the city limit, zoom-out stops where the city fills the screen', async () => {
 	await page.goto();
-	await page.setView(9.5, 49.3, 11);
+	await page.setView(9.5, 49.3, 8);
 	await wait(600);
 	const c = await page.center();
-	expect(Math.abs(c.lng - 9.30209) < 0.0005 && Math.abs(c.lat - 49.20992) < 0.0005, `centre left the city: ${c.lng} ${c.lat}`);
-	expect((await page.zoom()) < 11.1, 'zoom-out was blocked');
-	await page.shot('phone-zoomed-out-corner');
+	expect(await page.eval(`window.__inCity(${c.lat}, ${c.lng})`), `centre left the city: ${c.lng} ${c.lat}`);
+	expect(c.lng > 9.25 && c.lat > 49.16, `centre not at the north-east edge of the city: ${c.lng} ${c.lat}`);
+	const z = await page.zoom();
+	expect(z > 9.5 && z < 12.5 && Math.abs(z - (await page.eval(`window.__map.getMinZoom()`))) < 0.01, `zoom ${z} is not the min zoom`);
+	await page.eval(`window.__map.jumpTo({center: [9.1733, 49.1514]}); 0`);
+	await wait(300);
+	const fits = await page.eval(`(() => { const m = window.__map, b = m.getBounds(); return b.getWest() < 9.0444 && b.getEast() > 9.3021 && b.getSouth() < 49.0929 && b.getNorth() > 49.2099 })()`);
+	expect(fits, 'city does not fit the screen at min zoom');
+	await page.shot('phone-min-zoom');
 });
 
 await scenario('phone: backend down shows the offline note and recovers', async () => {
