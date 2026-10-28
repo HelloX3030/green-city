@@ -210,6 +210,18 @@ holgura_falda = 0.4  # holgura radial falda-pared; la distancia mínima del cont
 falda_ext = factor_interior - holgura_falda / 55.0
 falda_int = falda_ext - grosor_falda / 55.0
 
+# Vaciado del domo: la tapa era un bloque macizo de plástico. Se resta un loft
+# interior con los mismos perfiles, escalado en planta al borde interior de la
+# falda (falda_int) y comprimido en z para dejar ~2.5 mm de pared en lo alto;
+# el borde de apoyo queda macizo y la falda continúa la pared interior del domo.
+contorno_falda_int = [(x * falda_int, y * falda_int) for x, y in contorno]
+escala_z_vaciado = (altura_domo - 2.5) / altura_domo
+wires_vaciado = [crear_wire_perfil(contorno_falda_int, f,
+                                   altura_carcasa + (z - altura_carcasa) * escala_z_vaciado)
+                 for f, z in perfiles]
+vaciado = Part.makeLoft(wires_vaciado, True, False)
+tapa = tapa.cut(vaciado)
+
 falda = crear_prisma([(x * falda_ext, y * falda_ext) for x, y in contorno],
                      altura_carcasa - falda_alto, falda_alto)
 falda = falda.cut(crear_prisma([(x * falda_int, y * falda_int) for x, y in contorno],
