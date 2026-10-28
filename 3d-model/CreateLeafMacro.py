@@ -15,9 +15,12 @@ doc = App.newDocument("Carcasa_Hoja_Railes_Extendidos")
 L = 145.0  # Largo total
 W = 130.0  # Ancho total
 
-# 1. senseBox MCU S2 (Base)
-sb_largo = 78.0
-sb_ancho = 72.0
+# 1. senseBox MCU S2 (Base) — del diseño Eagle oficial (repo sensebox/
+# senseBox-MCU-S2-ESP32S2, hardware/2.1 y 2.2): placa de 74 x 68 mm con
+# 2 taladros M3 (3.2 mm) en (±24.5, +29) y 2 de 2.5 mm en (±11, +32).
+# La medida del equipo en `measurements` (78 x 72) sobremedía ~4 mm por eje.
+sb_largo = 74.0
+sb_ancho = 68.0
 sb_alto = 11.0
 desfase_y_mcu = 7.0  # desplaza el MCU hacia la parte ancha de la hoja: centrado, sus esquinas inferiores chocan con la pared
 
@@ -92,7 +95,9 @@ cuerpo = exterior.cut(cavidad)
 # esquina), con boca abocinada por fuera para guiar el enchufe hasta el puerto.
 usb_ancho = 13.0
 usb_alto = 8.0
-usb_centro_y = -sb_ancho/2 + desfase_y_mcu + 41.0
+# En el .brd oficial el conector (USB4105) está en el borde de 68 mm, a +5 mm
+# del centro de la placa — coincide con el centro que daba la medida del equipo
+usb_centro_y = desfase_y_mcu + 5.0
 usb_y0 = usb_centro_y - usb_ancho/2
 usb_z0 = grosor_base + 3.5    # la placa apoya sobre torretas de 4 mm
 usb_cz = usb_z0 + usb_alto/2
@@ -117,12 +122,18 @@ boca_usbc = Part.makeLoft([rect_wire_x(-W/2 - 3.0, usb_centro_y, usb_cz, 18.0, 1
                            rect_wire_x(-W/2 + 7.0, usb_centro_y, usb_cz, usb_ancho, usb_alto)], True)
 cuerpo = cuerpo.cut(boca_usbc)
 
-# Standoffs base (Fijación M3) para senseBox MCU
+# Torretas para la senseBox MCU: la placa NO tiene taladros en las esquinas.
+# Según el .brd oficial lleva 2 taladros M3 en (±24.5, +29): dos torretas
+# roscables ahí, y dos torretas lisas de apoyo bajo el borde opuesto (la cara
+# inferior de la placa solo tiene serigrafía, se puede apoyar donde haga falta).
+# Los taladros de 2.5 mm en (±11, +32) quedan libres (opcional: pines de registro).
 puntos_m3_sb = [
-    (-sb_largo/2 + 5, desfase_y_mcu - sb_ancho/2 + 5),
-    ( sb_largo/2 - 5, desfase_y_mcu - sb_ancho/2 + 5),
-    (-sb_largo/2 + 5, desfase_y_mcu + sb_ancho/2 - 5),
-    ( sb_largo/2 - 5, desfase_y_mcu + sb_ancho/2 - 5)
+    (-24.5, desfase_y_mcu + 29.0),
+    ( 24.5, desfase_y_mcu + 29.0),
+]
+puntos_apoyo_sb = [
+    (-24.5, desfase_y_mcu - 29.0),
+    ( 24.5, desfase_y_mcu - 29.0),
 ]
 
 for px, py in puntos_m3_sb:
@@ -130,6 +141,9 @@ for px, py in puntos_m3_sb:
     agujero = Part.makeCylinder(1.4, 6.0, App.Vector(px, py, grosor_base))
     torreta = torreta.cut(agujero)
     cuerpo = cuerpo.fuse(torreta)
+
+for px, py in puntos_apoyo_sb:
+    cuerpo = cuerpo.fuse(Part.makeCylinder(3.5, 4.0, App.Vector(px, py, grosor_base)))
 
 # ============================================================
 # 2. RAÍLES GUÍA CONTINUOS (DE PARED A PARED)
