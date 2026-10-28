@@ -10,7 +10,7 @@ Reporting: Melden flies to the phone's position at zoom 16 if it comes within 2 
 
 Testing: `make e2e` runs `e2e/run.mjs`, headless Chrome through the flows in `scenarios.md` at three screen sizes with emulated positions. Screenshots in `e2e/out/`. Run it before a commit, add flows for new features.
 
-Map limits: city limit from opendata.heilbronn.de (`src/lib/boundary.json`, rebuild with `make boundary`). Outside the city a grey wash, panning stops a few hundred metres beyond the city bbox, zoom 11 to 18.
+Map limits: city limit from opendata.heilbronn.de (`src/lib/boundary.json`, rebuild with `make boundary`). Outside the city a grey wash. The screen centre (crosshair in report mode) is clamped to the city bbox on every move, the view itself is free, zoom 11 to 18.
 
 Context layers (layers button top right): UBA road noise map 2022 (raster straight from datahub.uba.de), city tree register (`static/trees.json`, rebuild with `make trees`), bike rides of the last 7 days from the backend, all-time PM2.5 of the Heilbronn senseBox:bikes on a 25 m grid (`static/pm.json`, rebuild with `make pm`, ~5 min of openSenseMap requests). The grid shows as dots below zoom 14.5 and as the real cells above. Thumbnails in the layer list (`static/thumbs/`) are screenshots of the map with that layer on.
 

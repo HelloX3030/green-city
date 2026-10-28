@@ -169,12 +169,13 @@ for (const size of Object.keys(SIZES)) {
 		await page.goto();
 		await page.setView(CITY.longitude, CITY.latitude, 15);
 		await wait(1000);
-		const pin = await page.eval(`(() => { const p = document.querySelector('.pin.cluster'); if (!p) return null; const r = p.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
+		// the bubble of the report the previous scenario sent, somewhere near the screen centre
+		const pin = await page.eval(`(() => { for (const p of document.querySelectorAll('.pin.cluster')) { const r = p.getBoundingClientRect(); const x = r.x + r.width / 2, y = r.y + r.height / 2; if (x > 0 && y > 0 && x < innerWidth && y < innerHeight) return [x, y]; } return null; })()`);
 		expect(pin, 'no bubble on screen');
 		if (!pin) return;
 		await page.tap(...pin);
 		await wait(800);
-		expect(/Meldung/.test(await page.sheet()), 'no cluster card');
+		expect(/^\d+ Meldung/m.test(await page.sheet()), 'no cluster card');
 		expect(await page.has('.pin.cluster.sel'), 'bubble not highlighted');
 	});
 
@@ -249,7 +250,17 @@ await scenario('phone: drag past the city edge stops without jumping', async () 
 	await wait(1000);
 	const c2 = await page.center();
 	expect(c1.lng === c2.lng && c1.lat === c2.lat, 'map still moving after release');
-	expect(c1.lng < 9.32, `panned too far east: ${c1.lng}`);
+	expect(Math.abs(c1.lng - 9.30209) < 0.0005, `centre not at the east edge of the city: ${c1.lng}`);
+});
+
+await scenario('phone: zoomed out, the centre is clamped but the view shows the surroundings', async () => {
+	await page.goto();
+	await page.setView(9.5, 49.3, 11);
+	await wait(600);
+	const c = await page.center();
+	expect(Math.abs(c.lng - 9.30209) < 0.0005 && Math.abs(c.lat - 49.20992) < 0.0005, `centre left the city: ${c.lng} ${c.lat}`);
+	expect((await page.zoom()) < 11.1, 'zoom-out was blocked');
+	await page.shot('phone-zoomed-out-corner');
 });
 
 await scenario('phone: backend down shows the offline note and recovers', async () => {

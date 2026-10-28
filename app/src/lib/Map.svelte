@@ -1,6 +1,7 @@
 <script lang="ts">
 	import {
 		Map as MLMap,
+		LngLat,
 		Marker,
 		Popup,
 		AttributionControl,
@@ -62,14 +63,12 @@
 	let ready = $state(false);
 
 	const HEILBRONN: [number, number] = [9.2185, 49.1427];
-	// city limit: grey wash outside the ring, panning stops a little beyond the city bbox
-	const PAD = 0.005; // ~400 m
-	const BOUNDS: [number, number, number, number] = [
-		CITY_BBOX[0] - PAD,
-		CITY_BBOX[1] - PAD,
-		CITY_BBOX[2] + PAD,
-		CITY_BBOX[3] + PAD
-	];
+	// city limit: grey wash outside the ring, the screen centre never leaves the city bbox
+	const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
+	const keepCentre = (c: LngLat, zoom: number) => ({
+		center: new LngLat(clamp(c.lng, CITY_BBOX[0], CITY_BBOX[2]), clamp(c.lat, CITY_BBOX[1], CITY_BBOX[3])),
+		zoom
+	});
 	const PICK_ZOOM = 14; // a report needs at least this zoom, the circle is ~50 m then
 	let zoom = $state(13);
 	const tooFar = $derived(picking && zoom < PICK_ZOOM);
@@ -91,7 +90,7 @@
 			zoom: 13,
 			minZoom: 11,
 			maxZoom: 18,
-			maxBounds: BOUNDS,
+			transformConstrain: keepCentre,
 			attributionControl: false
 		});
 		map.addControl(new AttributionControl({ compact: true }), 'top-left');

@@ -14,7 +14,8 @@ Phone only
 - Melden with position outside Heilbronn: toast "Du bist außerhalb von Heilbronn", zooms in where it is
 - Melden with position denied: toast "Standort nicht verfügbar", zooms in where it is
 - zoom out in report mode: circle grey, hint "Näher ranzoomen", Melden disabled, enabled again after zooming in
-- drag past the city edge six times: stops at the bbox, no jump after release
+- drag past the city edge six times: centre stops at the bbox edge, no jump after release
+- jump far outside at zoom 11: centre clamped to the bbox corner, zoom-out not blocked
 - backend unreachable: "Server nicht erreichbar" after the next poll, gone when it is back
 
 Not covered, check by hand on a phone
