@@ -1,6 +1,6 @@
 // what the map shows of the reports: which types, how many reports at least, how far back, only confirmed.
 // Nothing set means everything, the defaults; the choice is kept in localStorage.
-import { TYPES, type Cluster, type ReportType } from './api';
+import { TYPES, typeInfo, type Cluster, type ReportType } from './api';
 
 export interface Filter {
 	types: ReportType[]; // empty means all
@@ -14,6 +14,17 @@ export const DAYS = [7, 14, 30] as const;
 export const DEFAULT: Filter = { types: [], min: 1, days: 14, confirmed: false };
 
 export const isDefault = (f: Filter) => !f.types.length && f.min === 1 && f.days === 14 && !f.confirmed;
+
+// one line for the home sheet: "Zu laut, Zu heiß · ab 3 Meldungen · 7 Tage · nur Bestätigte"
+export const describeFilter = (f: Filter) =>
+	[
+		f.types.length ? f.types.map((t) => typeInfo(t).label).join(', ') : null,
+		f.min > 1 ? `ab ${f.min} Meldungen` : null,
+		f.days !== 14 ? `${f.days} Tage` : null,
+		f.confirmed ? 'nur Bestätigte' : null
+	]
+		.filter(Boolean)
+		.join(' · ');
 
 const KEY = 'filter';
 export function loadFilter(): Filter {

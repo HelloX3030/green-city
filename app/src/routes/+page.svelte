@@ -9,7 +9,7 @@
 	import AboutSheet from '#lib/AboutSheet.svelte';
 	import MySheet from '#lib/MySheet.svelte';
 	import { inCity } from '#lib/city.ts';
-	import { applyFilter, loadFilter, saveFilter, type Filter } from '#lib/filter.ts';
+	import { DEFAULT, applyFilter, describeFilter, isDefault, loadFilter, saveFilter, type Filter } from '#lib/filter.ts';
 	import {
 		deleteReport,
 		getBikes,
@@ -32,6 +32,7 @@
 	let layers = $state(new Set<LayerId>());
 	let filter = $state<Filter>(loadFilter());
 	const shown = $derived(applyFilter(clusters, filter)); // the bubbles on the map
+	const filtering = $derived(!isDefault(filter)); // a dot on the layers button and a line on the home sheet say so
 	let layersOpen = $state(false);
 	let aboutOpen = $state(false);
 	let mine = $state<Report[]>([]);
@@ -283,6 +284,7 @@
 		<button
 			class="rb glass"
 			class:on={layersOpen}
+			class:dot={filtering}
 			onclick={() => ((layersOpen = !layersOpen), (aboutOpen = mineOpen = false))}
 			aria-label="Ebenen"><Icon name="layers" /></button
 		>
@@ -308,6 +310,12 @@
 	{:else}
 		<button class="primary" onclick={() => startReport()}><Icon name="plus" />Melden</button>
 		<button class="ghost" onclick={openMine}>Meine Meldungen{mine.length ? ` · ${mine.length}` : ''}</button>
+		{#if filtering}
+			<div class="filter">
+				<button class="what" onclick={() => (layersOpen = true)}><Icon name="layers" size={13} />{describeFilter(filter)}</button>
+				<button class="off" onclick={() => setFilter(DEFAULT)} aria-label="Filter aufheben"><Icon name="x" size={12} /></button>
+			</div>
+		{/if}
 		<div class="legend">
 			<span><i class="s"></i>Sensor</span>
 			<span><i class="o"></i>Unser NoiseNode</span>
@@ -385,6 +393,64 @@
 	.rb.on {
 		background: var(--accent);
 		color: var(--on-accent);
+	}
+	.rb {
+		position: relative;
+	}
+	.rb.dot::after {
+		/* a filter is set */
+		content: '';
+		position: absolute;
+		top: 4px;
+		right: 4px;
+		width: 9px;
+		height: 9px;
+		border-radius: 50%;
+		background: var(--accent);
+		border: 2px solid #fff;
+	}
+	.rb.on.dot::after {
+		background: #fff;
+		border-color: var(--accent);
+	}
+	.filter {
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		gap: 4px;
+		margin-top: 8px;
+		font-size: 12px;
+		color: var(--ink2);
+	}
+	.filter .what {
+		display: inline-flex;
+		align-items: center;
+		gap: 5px;
+		height: 24px;
+		padding: 0 8px;
+		border-radius: 12px;
+		background: var(--fill);
+		color: var(--ink2);
+		font-size: 12px;
+		font-weight: 500;
+		min-width: 0;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.filter .what :global(svg) {
+		flex: none;
+		color: var(--accent);
+	}
+	.filter .off {
+		flex: none;
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		background: var(--fill);
+		display: grid;
+		place-items: center;
+		color: var(--ink2);
 	}
 	@media (pointer: coarse) {
 		.zoom {

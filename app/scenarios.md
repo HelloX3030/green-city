@@ -11,7 +11,7 @@ Per size
 - tap a bubble at zoom 15: cluster card (headline "n Meldungen", below it "Du und N andere" with N the other people since one is mine, no "diese Woche" when all are fresh, my report marked "Du" in the list, button "Nochmal melden" since I reported here today), the number on the bubble is the report count of the API, bubble highlighted, its 100 m disc drawn, the faint discs of the others only from zoom 15; type chips (icon and reports) when the bubble has more than one type or I reported here, the ones I named ringed in their colour, a tap on one filters the texts to that type and says "Zu laut · 3 Meldungen"; the sheet is at most 72 % of the screen high, with many texts it scrolls and the button at the end comes into view
 - Meine Meldungen from the home sheet: the sent report is listed with type, time, bubble size and status, a Zurückziehen button; tap on it from zoom 12 flies to its bubble at 16 with the card
 - layers: Lärmkarte, Messräder, Feinstaub on at zoom 11 and 16, legend shows
-- filters in the Ebenen sheet: only "Zu laut" leaves the bubbles with noise reports, numbered by them; "mindestens 3" drops the small ones; "die letzten 30 Tage" refetches with that window; "Nur Bestätigte"; "Zurücksetzen" brings everything back, the choice survives a reload
+- filters in the Ebenen sheet: only "Zu laut" leaves the bubbles with noise reports, numbered by them; "mindestens 3" drops the small ones; "die letzten 30 Tage" refetches with that window; "Nur Bestätigte"; while set the layers button has a dot and the home sheet shows the filter line with an ×; "Zurücksetzen" or the × brings everything back, the choice survives a reload
 - about sheet via the title pill, open and close
 
 Phone only
