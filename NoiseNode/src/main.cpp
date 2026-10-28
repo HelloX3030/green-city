@@ -55,7 +55,12 @@ void setup() {
     // Allow USB serial and the sensor to start without waiting indefinitely.
     delay(1000);
     Serial.println("Sound level meter ready (signal: GPIO6, 115200 baud)");
-    beginSdStorage();
+    // The SD mount and Wi-Fi leave too little contiguous heap for the TLS handshake.
+    if (cloudUploadConfigured()) {
+        Serial.println("[sd] Disabled while cloud upload is configured; using RAM queue");
+    } else {
+        beginSdStorage();
+    }
     beginCloudUpload();
     aggregator.begin(millis());
     windowStartUtc = time(nullptr);

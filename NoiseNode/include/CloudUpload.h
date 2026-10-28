@@ -5,7 +5,9 @@
 
 // Periodic HTTPS uploads run separately from sensor sampling.
 void beginCloudUpload();
-// Minute diagnostics go to SD; complete windows use a durable SD outbox or RAM fallback.
+// True when Wi-Fi, station, token and three distinct minute sensor IDs are configured.
+bool cloudUploadConfigured();
+// Minute diagnostics use SD only in local-only builds; cloud uploads use the RAM queue.
 // A true result means queued for processing, not necessarily flushed yet.
 bool offerCloudSummary(const NoiseSummary& summary, time_t startUtc, time_t endUtc);
 

@@ -1,5 +1,10 @@
 # SD logging and persistent upload recovery
 
+> **Activation:** SD logging runs only when cloud upload is **not** configured.
+> On this board the SD mount plus Wi-Fi leaves too little contiguous heap for
+> the TLS handshake, so cloud mode skips the SD mount and uses the RAM queue.
+> The outbox upload/replay path below is inactive in that mode.
+
 The onboard senseBox MCU-S2 slot is used with FAT32. No formatting is performed.
 Only files beneath `/quietnode` are created or managed by this firmware.
 SD power is active LOW on GPIO9; SPI uses SCK12, MISO13, MOSI11 and CS10,
@@ -38,8 +43,7 @@ in this CSV even though they are not uploaded.
 A separate FreeRTOS worker drains a 8-sample RAM queue (~8 s at 1 Hz) into a 512-byte
 write buffer. Writes are grouped and raw data is flushed every five seconds.
 The sampling loop only enqueues records without waiting on SD I/O. File
-stream buffers are limited to 512 bytes and the mount to two open files to
-leave enough contiguous RAM for certificate-verified TLS. SD/network
+stream buffers are limited to 512 bytes and the mount to two open files. SD/network
 workers share the MCU's CPU; sampling diagnostics still determine cloud
 eligibility. Queue overflow is reported through `raw_dropped` and sequence gaps.
 
@@ -47,7 +51,7 @@ A separate 4-entry queue hands minute results to the worker. An enqueued
 minute is **not durable yet**. The worker writes each eligible summary to a
 32-byte versioned binary temporary record, flushes/closes it, verifies its CRC
 by reopening it, then renames it to `.q`. `[sd] Minute durable` marks completion.
-The uploader prefers up to three oldest ready SD records per request, using
+The uploader, when active alongside SD logging, prefers up to three oldest ready SD records per request, using
 each original window timestamp and the configured three sensor channels. It
 spaces requests by at least 60 seconds, including when catching up a backlog.
 

@@ -79,21 +79,18 @@ HTTPS runs in a separate FreeRTOS task with 10 s connection/read/handshake
 timeouts. Sampling shares the single CPU with networking, so exact cadence
 is not guaranteed; minute coverage checks detect incomplete sampling.
 
-With a working FAT32 SD card, raw readings and all minute diagnostics are
-logged locally, and uploadable minutes use an SD-backed outbox. See
-`SD_LOGGING.md` for file formats, durability and the recovery test. The outbox
-holds up to **1440 pending minute summaries** (24 hours), surviving a reboot.
-Only cloud-accepted records are removed from the outbox. A separate minute CSV
-retains their statistics after upload. Raw CSV files retain one level per second (the statistics still use every
-125 ms sample), not audio.
+Cloud upload and SD logging are mutually exclusive on this board. Mounting the
+FAT32 card and connecting Wi-Fi leaves roughly 19 KB in the largest free heap
+block, while the certificate-verified TLS handshake needs two 16 KB buffers.
+Running both fails with `SSL - Memory allocation failed`. When cloud upload is
+configured, the firmware therefore skips the SD mount and uses the RAM queue
+described below. When cloud upload is **not** configured, SD logging runs for
+local data collection as described in `SD_LOGGING.md` (no upload occurs in
+that mode).
 
-If the card is unavailable or a write fails, the cloud uploader falls back to
-a **30-window RAM queue**. Full RAM queues reject the newest window with an
-explicit log. A reset loses RAM-only data. SD capacity errors never trigger
-formatting or deletion of old raw data. The network continues independently. The RAM fallback has 27 queued slots plus
-up to three in-flight records (30 total), retained across retries but not resets.
-
-Each window contains all three measurements with its original end timestamp.
+The RAM queue holds **27 queued windows plus up to three in-flight records**
+(30 minutes total), retained across retries but lost on reset. Each window
+contains all three measurements with its original end timestamp.
 Requests are spaced at least 60 s apart after completion. A request can batch
 up to three queued windows (nine values), allowing backlog recovery without
 rapid individual requests. Failure retry delays increase from

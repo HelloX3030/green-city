@@ -149,13 +149,17 @@ void uploadWorker(void*) {
 
 } // namespace
 
+bool cloudUploadConfigured() {
+    return strlen(QUIETNODE_WIFI_SSID) && validId(QUIETNODE_BOX_ID) &&
+           validId(QUIETNODE_LAEQ_SENSOR_ID) && validId(QUIETNODE_LMAX_SENSOR_ID) &&
+           validId(QUIETNODE_EVENTS_SENSOR_ID) && strlen(QUIETNODE_ACCESS_TOKEN) &&
+           strcmp(QUIETNODE_LAEQ_SENSOR_ID, QUIETNODE_LMAX_SENSOR_ID) &&
+           strcmp(QUIETNODE_LAEQ_SENSOR_ID, QUIETNODE_EVENTS_SENSOR_ID) &&
+           strcmp(QUIETNODE_LMAX_SENSOR_ID, QUIETNODE_EVENTS_SENSOR_ID);
+}
+
 void beginCloudUpload() {
-    if (!strlen(QUIETNODE_WIFI_SSID) || !validId(QUIETNODE_BOX_ID) ||
-        !validId(QUIETNODE_LAEQ_SENSOR_ID) || !validId(QUIETNODE_LMAX_SENSOR_ID) ||
-        !validId(QUIETNODE_EVENTS_SENSOR_ID) || !strlen(QUIETNODE_ACCESS_TOKEN) ||
-        !strcmp(QUIETNODE_LAEQ_SENSOR_ID, QUIETNODE_LMAX_SENSOR_ID) ||
-        !strcmp(QUIETNODE_LAEQ_SENSOR_ID, QUIETNODE_EVENTS_SENSOR_ID) ||
-        !strcmp(QUIETNODE_LMAX_SENSOR_ID, QUIETNODE_EVENTS_SENSOR_ID)) {
+    if (!cloudUploadConfigured()) {
         Serial.println("[cloud] Disabled: configure Wi-Fi, station and all three minute sensor IDs");
         return;
     }
