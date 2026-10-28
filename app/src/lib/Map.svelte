@@ -61,20 +61,15 @@
 	let ready = $state(false);
 
 	const HEILBRONN: [number, number] = [9.2185, 49.1427];
-	// city limit: inside nothing shows, outside a grey wash fades in and the map springs back
+	// city limit: grey wash outside the ring, panning stops a little beyond the city bbox
 	const RING = boundary.ring as [number, number][];
-	const CENTROID: [number, number] = [
-		RING.reduce((a, p) => a + p[0], 0) / RING.length,
-		RING.reduce((a, p) => a + p[1], 0) / RING.length
-	];
-	const PAD = 0.08; // hard stop this far outside the city bbox, in degrees
+	const PAD = 0.005; // ~400 m
 	const BOUNDS: [number, number, number, number] = [
 		Math.min(...RING.map((p) => p[0])) - PAD,
 		Math.min(...RING.map((p) => p[1])) - PAD,
 		Math.max(...RING.map((p) => p[0])) + PAD,
 		Math.max(...RING.map((p) => p[1])) + PAD
 	];
-	let springing = false;
 	const NOISE_TILES =
 		'https://datahub.uba.de/server/rest/services/VeLa/LK/MapServer/export?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&layers=show:4210&format=png32&transparent=true&f=image';
 	const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
@@ -122,25 +117,13 @@
 				id: 'mask',
 				type: 'fill',
 				source: 'mask',
-				paint: { 'fill-color': '#6e6e73', 'fill-opacity': 0, 'fill-opacity-transition': { duration: 0 } }
+				paint: { 'fill-color': '#6e6e73', 'fill-opacity': 0.3 }
 			});
 			map.addLayer({
 				id: 'mask-line',
 				type: 'line',
 				source: 'mask',
-				paint: { 'line-color': '#6e6e73', 'line-width': 1.5, 'line-opacity': 0, 'line-opacity-transition': { duration: 0 } }
-			});
-			map.on('move', () => {
-				const out = outside();
-				const t = Math.min(1, out / 260); // 0 at the edge, 1 at 260 px beyond
-				map.setPaintProperty('mask', 'fill-opacity', 0.45 * t);
-				map.setPaintProperty('mask-line', 'line-opacity', Math.min(1, t * 3));
-			});
-			map.on('moveend', () => {
-				if (springing || !outside()) return;
-				springing = true;
-				map.once('moveend', () => (springing = false));
-				map.easeTo({ center: inward(), duration: 600 });
+				paint: { 'line-color': '#6e6e73', 'line-width': 1.5, 'line-opacity': 0.7 }
 			});
 			// context layers, all hidden until toggled
 			map.addSource('noise', { type: 'raster', tiles: [NOISE_TILES], tileSize: 256, maxzoom: 17 });
@@ -383,40 +366,6 @@
 	});
 
 	const fmt = (v: number) => v.toLocaleString('de-DE', { maximumFractionDigits: 1 });
-
-	function inside([x, y]: [number, number]) {
-		let hit = false;
-		for (let i = 0, j = RING.length - 1; i < RING.length; j = i++) {
-			const [xi, yi] = RING[i], [xj, yj] = RING[j];
-			if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit;
-		}
-		return hit;
-	}
-
-	function nearest([x, y]: [number, number]) {
-		let best = RING[0], d = Infinity;
-		for (const p of RING) {
-			const dd = (p[0] - x) ** 2 + ((p[1] - y) * 1.5) ** 2;
-			if (dd < d) (d = dd), (best = p);
-		}
-		return best;
-	}
-
-	// how far the view centre is beyond the city limit, in screen px (0 inside)
-	function outside() {
-		const c = map.getCenter();
-		const ll: [number, number] = [c.lng, c.lat];
-		if (inside(ll)) return 0;
-		const n = nearest(ll);
-		return map.project(ll).dist(map.project(n));
-	}
-
-	// nearest point on the limit, nudged a little towards the centre of the city
-	function inward(): [number, number] {
-		const c = map.getCenter();
-		const n = nearest([c.lng, c.lat]);
-		return [n[0] + (CENTROID[0] - n[0]) * 0.06, n[1] + (CENTROID[1] - n[1]) * 0.06];
-	}
 
 	$effect(() => {
 		if (ready && picking) {
