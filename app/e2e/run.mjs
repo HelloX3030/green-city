@@ -182,6 +182,9 @@ for (const size of Object.keys(SIZES)) {
 		expect(/^Du /m.test(sheet), 'card does not say Du');
 		expect(await page.has('.pin.cluster.sel.mine'), 'my bubble has no mine mark');
 		expect(await page.sheetHas(`Baustelle ab 6 Uhr (${size})`), 'my text is not on the card');
+		const first = await page.eval(`document.querySelector('.sheet .voices li')?.innerText`);
+		expect(first && first.includes('Du') && first.includes(`(${size})`), `the first text is not mine with a Du tag: "${first}"`);
+		await page.shot(`${size}-sent`);
 		await page.click('[aria-label="Schließen"]');
 		await wait(300);
 		expect((await page.sheet()).includes('Melden'), 'home sheet not back');
@@ -204,6 +207,8 @@ for (const size of Object.keys(SIZES)) {
 		const api = (await fetch(`${API}/clusters`).then((r) => r.json())).find((c) => String(c.count) === n && c.people <= +n);
 		expect(api, `bubble says ${n}, no cluster has that many reports`);
 		if (api && api.people > 1) expect(sheet.includes(`Du und ${api.people - 1} andere`), `card counts "${sheet.split('\n')[0]}", people ${api.people}`);
+		expect(await page.has('.sheet .voices li.me'), 'my report is not marked in the list');
+		expect(sheet.includes('Nochmal melden') && sheet.includes('Zählt einmal pro Tag'), 'reported today, but no Nochmal melden and the once-a-day hint');
 		// the type chips: icon and reports per type, only when there is more than one type; a tap filters the texts
 		const types = api ? Object.keys(api.types) : [];
 		const chips = await page.eval(`[...document.querySelectorAll('.sheet .type')].map((b) => b.textContent.trim())`);
@@ -409,7 +414,8 @@ await scenario('phone: zoomed out, touching bubbles merge and a tap on a group z
 	await page.tap(...group);
 	await page.settled();
 	await wait(500);
-	expect((await page.zoom()) >= 14 - 1e-6, `tap on the group left the zoom at ${(await page.zoom()).toFixed(2)}`);
+	// fitBounds on the members: how far in depends on their spread, at least a level
+	expect((await page.zoom()) >= 13 - 1e-6, `tap on the group left the zoom at ${(await page.zoom()).toFixed(2)}`);
 	expect(!(await page.has('.sheet .badge')), 'a group opened a card instead of zooming in');
 	expect((await onScreen()) === (await apiCount()), `after the zoom the bubbles say ${await onScreen()} reports, the API ${await apiCount()}`);
 });

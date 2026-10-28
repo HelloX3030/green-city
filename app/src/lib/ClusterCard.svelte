@@ -50,6 +50,8 @@
 		all = false;
 	});
 	const voices = $derived(reports.filter((r) => r.message && (!filter || r.types.includes(filter))));
+	// one of mine from today: another one counts as the same voice
+	const today = $derived(reports.some((r) => r.mine && r.created_at.slice(0, 10) === new Date().toISOString().slice(0, 10)));
 	const shown = $derived(all ? voices : voices.slice(0, SHOWN));
 	function pick(t: string) {
 		filter = filter === t ? null : (t as ReportType);
@@ -72,9 +74,6 @@
 	</div>
 	<button class="x" onclick={onclose} aria-label="Schließen"><Icon name="x" size={16} /></button>
 </div>
-{#if sent && cluster.mine > 1}
-	<p class="hint">Zählt einmal pro Tag, egal wie oft du meldest.</p>
-{/if}
 {#if cluster.status}
 	<span class="status" style="background: {STATUS[cluster.status].color}">{STATUS[cluster.status].label}</span>
 	<p class="reason">{cluster.reason}</p>
@@ -101,9 +100,10 @@
 {#if shown.length}
 	<ul class="voices">
 		{#each shown as r (r.id)}
-			<li>
+			<li class:me={r.mine}>
 				<i style="background: {typeInfo(filter ?? r.types[0]).color}"></i>
 				<span class="when">{timeAgo(r.created_at)}</span>
+				{#if r.mine}<span class="tag">Du</span>{/if}
 				<span class="text">{r.message}</span>
 			</li>
 		{/each}
@@ -112,8 +112,11 @@
 		<button class="more" onclick={() => (all = true)}>alle {voices.length} Texte</button>
 	{/if}
 {/if}
+{#if today && (!sent || cluster.mine > 1)}
+	<p class="hint">Zählt einmal pro Tag, egal wie oft du meldest.</p>
+{/if}
 {#if !sent}
-	<button class="ghost" onclick={onreport}>Hier auch melden</button>
+	<button class="ghost" onclick={onreport}>{today ? 'Nochmal melden' : 'Hier auch melden'}</button>
 {/if}
 
 <style>
@@ -144,9 +147,20 @@
 		color: var(--ink2);
 	}
 	.hint {
-		margin: -4px 0 10px;
+		margin: 10px 0 0;
 		font-size: 12px;
 		color: var(--ink2);
+	}
+	.tag {
+		flex: none;
+		font-size: 11px;
+		font-weight: 700;
+		line-height: 16px;
+		padding: 0 6px;
+		border-radius: 8px;
+		background: var(--accent);
+		color: #fff;
+		margin-top: 1px;
 	}
 	.x {
 		margin-left: auto;

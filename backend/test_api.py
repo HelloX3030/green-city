@@ -39,14 +39,16 @@ class Api(unittest.TestCase):
         self.assertEqual(self.c.get("/reports/mine").status_code, 400)
         self.assertEqual(self.c.get("/clusters", headers={"x-device": "short"}).status_code, 400)
 
-    def test_a_bubbles_reports_newest_first_without_author(self):
+    def test_a_bubbles_reports_mine_first_then_newest_without_author(self):
         self.c.post("/reports", json={**REPORT, "message": "first"}, headers=A)
         self.c.post("/reports", json={**REPORT, "types": ["heat"]}, headers=B)
         self.c.post("/reports", json={**REPORT, "lon": 9.24, "message": "elsewhere"}, headers=B)
         (near, far) = sorted(self.c.get("/clusters").json(), key=lambda c: c["id"])
         rows = self.c.get(f"/clusters/{near['id']}/reports").json()
-        self.assertEqual([r["message"] for r in rows], [None, "first"])
+        self.assertEqual([(r["message"], r["mine"]) for r in rows], [(None, False), ("first", False)])
         self.assertNotIn("user_id", rows[0])
+        rows = self.c.get(f"/clusters/{near['id']}/reports", headers=A).json()
+        self.assertEqual([(r["message"], r["mine"]) for r in rows], [("first", True), (None, False)])
         self.assertEqual(self.c.get(f"/clusters/{far['id']}/reports").json()[0]["message"], "elsewhere")
         self.assertEqual(self.c.get("/clusters/999/reports").status_code, 404)
 

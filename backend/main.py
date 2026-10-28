@@ -40,6 +40,10 @@ class Report(ReportIn):
     created_at: datetime
 
 
+class BubbleReport(Report):
+    mine: bool = False  # from the caller's device
+
+
 class Me(BaseModel):
     id: int
     name: str | None
@@ -219,16 +223,20 @@ def list_clusters(
     return clusters
 
 
-@app.get("/clusters/{cid}/reports", response_model=list[Report])
-def cluster_reports(cid: int, days: int = Query(default=CLUSTER_WINDOW_DAYS, ge=1, le=365)) -> list[dict]:
-    """The reports of one bubble, newest first, without who sent them."""
+@app.get("/clusters/{cid}/reports", response_model=list[BubbleReport])
+def cluster_reports(
+    cid: int, days: int = Query(default=CLUSTER_WINDOW_DAYS, ge=1, le=365), token: str | None = Depends(device_or_none)
+) -> list[dict]:
+    """The reports of one bubble: the caller's own first (`mine`), then the others, newest first; no author."""
     since = datetime.now(timezone.utc) - timedelta(days=days)
     with db.connect() as con:
         reports = fetch_reports(con, since)
+        me = db.user_of(con, token)
     for c in cluster(reports):
         if c["id"] == cid:
             ids = set(c["report_ids"])
-            return [r for r in reports if r["id"] in ids]
+            rows = [{**r, "mine": me is not None and r.get("user_id") == me} for r in reports if r["id"] in ids]
+            return sorted(rows, key=lambda r: not r["mine"])
     raise HTTPException(404, "no such bubble")
 
 

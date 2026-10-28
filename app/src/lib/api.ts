@@ -24,6 +24,7 @@ export interface Report {
 	lon: number;
 	types: ReportType[];
 	created_at: string;
+	mine?: boolean; // in a bubble's list: from this device
 }
 
 export interface Cluster {
@@ -252,7 +253,7 @@ export function subscribe(on: (kind: string) => void, live: (up: boolean) => voi
 	};
 }
 
-// the reports of one bubble, newest first, no author
+// the reports of one bubble, mine first, then newest first, no author
 export async function clusterReports(id: number): Promise<Report[]> {
 	const res = await req(`/clusters/${id}/reports`);
 	return res.ok ? res.json() : [];
