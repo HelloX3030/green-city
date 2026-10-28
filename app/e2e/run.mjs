@@ -92,6 +92,13 @@ const page = {
 	click: (sel) => page.eval(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) throw new Error('no ' + ${JSON.stringify(sel)}); el.click(); })(); 0`),
 	clickText: (text) => page.eval(`(() => { const el = [...document.querySelectorAll('button')].find(b => b.textContent.trim().startsWith(${JSON.stringify(text)})); if (!el) throw new Error('no button ' + ${JSON.stringify(text)}); el.click(); })(); 0`),
 	sheet: () => page.eval(`document.querySelector('.sheet')?.innerText ?? ''`),
+	sheetHas: async (text, ms = 4000) => {
+		for (let t = 0; t < ms; t += 200) {
+			if ((await page.sheet()).includes(text)) return true;
+			await wait(200);
+		}
+		return false;
+	},
 	has: (sel) => page.eval(`!!document.querySelector(${JSON.stringify(sel)})`),
 	until: async (sel, ms) => {
 		for (let t = 0; t < ms; t += 250) {
@@ -104,6 +111,8 @@ const page = {
 	// tiles and sources are rendered, or 3 s passed
 	idle: () => page.eval(`Promise.race([new Promise((r) => window.__map.once('idle', r)), new Promise((r) => setTimeout(r, 3000))]).then(() => 0)`),
 	center: () => page.eval(`JSON.stringify(window.__map.getCenter())`).then(JSON.parse),
+	// a fly animation ended, or 6 s passed
+	settled: () => page.eval(`new Promise((r) => { const t0 = Date.now(); const f = () => (window.__map.isMoving() && Date.now() - t0 < 6000 ? setTimeout(f, 100) : r(0)); setTimeout(f, 300); })`),
 	setView: (lon, lat, zoom) => page.eval(`window.__map.jumpTo({center: [${lon}, ${lat}], zoom: ${zoom}}); 0`),
 	wait
 };
@@ -145,7 +154,8 @@ for (const size of Object.keys(SIZES)) {
 		await page.eval(`window.__map.zoomTo(11, {duration: 0}); 0`);
 		await wait(500);
 		await melden();
-		await wait(3500);
+		await page.settled();
+		await wait(300);
 		await nearlyZoom(16);
 		const c = await page.center();
 		expect(Math.abs(c.lat - CITY.latitude) < 0.001 && Math.abs(c.lng - CITY.longitude) < 0.001, `centre ${c.lat.toFixed(4)},${c.lng.toFixed(4)} not at my position`);
@@ -157,7 +167,8 @@ for (const size of Object.keys(SIZES)) {
 	await scenario(`${size}: send a report, then the card, then close`, async () => {
 		await page.goto();
 		await melden();
-		await wait(3500);
+		await page.settled();
+		await wait(300);
 		await page.clickText('Zu laut');
 		await page.clickText('Melden');
 		await page.until('.sheet .badge', 6000); // post, then the clusters poll with the new report
@@ -186,6 +197,7 @@ for (const size of Object.keys(SIZES)) {
 		expect(!sheet.includes('diese Woche'), 'card says "diese Woche" though every report is fresh');
 		expect(await page.has('.pin.cluster.sel'), 'bubble not highlighted');
 		const drawn = (layer) => page.eval(`window.__map.queryRenderedFeatures({layers: ['${layer}']}).length`);
+		await page.idle();
 		expect((await drawn('disc-sel')) === 1, 'selected disc not drawn');
 		expect((await drawn('discs')) > 0, 'faint discs not drawn at zoom 15');
 		await page.shot(`${size}-disc`);
@@ -204,7 +216,8 @@ for (const size of Object.keys(SIZES)) {
 		expect(sheet.includes('Zurückziehen'), 'no Zurückziehen');
 		await page.eval(`window.__map.jumpTo({zoom: 12}); 0`);
 		await page.click('.sheet .open');
-		await wait(2500);
+		await page.settled();
+		await wait(300);
 		const card = await page.sheet();
 		expect(/^\d+ Meldung/m.test(card) && /^Du /m.test(card), `no card of my bubble: "${card.split('\n')[0]}"`);
 		await nearlyZoom(16);
@@ -261,7 +274,8 @@ await scenario('phone: Melden with position denied', async () => {
 await scenario('phone: the report circle is 100 m on the ground, so it doubles per zoom level', async () => {
 	await page.goto();
 	await melden();
-	await wait(3500);
+	await page.settled();
+	await wait(300);
 	const width = () => page.eval(`document.querySelector('.crosshair').getBoundingClientRect().width`);
 	await page.eval(`window.__map.jumpTo({center: [9.2, 49.15], zoom: 15}); 0`);
 	await wait(300);
@@ -291,7 +305,8 @@ await scenario('phone: centre on a bubble shows which one the report joins', asy
 	expect(c, 'no bubble with more than one report');
 	await page.goto();
 	await melden();
-	await wait(3500);
+	await page.settled();
+	await wait(300);
 	await page.setView(c.lon, c.lat, 16);
 	await wait(400);
 	expect(await page.has('.pin.cluster.join'), 'bubble has no ring');
@@ -308,7 +323,8 @@ await scenario('phone: centre on a bubble shows which one the report joins', asy
 await scenario('phone: zoom out in report mode greys the circle and disables Melden', async () => {
 	await page.goto();
 	await melden();
-	await wait(3500);
+	await page.settled();
+	await wait(300);
 	await page.eval(`window.__map.zoomTo(12, {duration: 0}); 0`);
 	await wait(800);
 	expect(await page.has('.crosshair.far'), 'crosshair not grey');
@@ -363,6 +379,42 @@ await scenario('phone: withdraw a report, gone from the list and the server', as
 	expect((await page.eval(`document.querySelectorAll('.sheet .row').length`)) === n - 1, 'row still in the list');
 	expect((await mine()) === n - 1, 'report still on the server');
 	expect((await page.eval(`document.querySelector('.toast')?.innerText`)) === 'Meldung zurückgezogen', 'no toast');
+});
+
+await scenario('phone: a name, and a second device linked by code brings its reports along', async () => {
+	await page.goto();
+	const token = await page.eval(`localStorage.getItem('device')`);
+	const api = (path, init = {}, t = token) => fetch(`${API}${path}`, { ...init, headers: { 'x-device': t, 'content-type': 'application/json', ...init.headers } });
+	const type = (sel, text) => page.eval(`(() => { const i = document.querySelector(${JSON.stringify(sel)}); i.value = ${JSON.stringify(text)}; i.dispatchEvent(new Event('input', { bubbles: true })); })(); 0`);
+	await page.clickText('Meine Meldungen');
+	await wait(500);
+	await page.clickText('Name angeben');
+	await wait(200);
+	await type('.sheet input', 'Kim');
+	await page.clickText('Speichern');
+	expect(await page.sheetHas('Kim'), 'name not on the sheet');
+	expect((await api('/me').then((r) => r.json())).name === 'Kim', 'name not saved');
+	// a second device with a report of its own claims this device's code
+	const other = 'e2e-other-' + Math.random().toString(16).slice(2).padEnd(24, '0');
+	await api('/reports', { method: 'POST', body: JSON.stringify({ lat: 49.14, lon: 9.2, types: ['heat'] }) }, other);
+	const before = (await api('/reports/mine').then((r) => r.json())).length;
+	await page.clickText('Anderes Gerät verknüpfen');
+	await wait(800);
+	const code = await page.eval(`document.querySelector('.sheet .code')?.innerText`);
+	expect(/^[A-Z2-9]{6}$/.test(code ?? ''), `code is ${code}`);
+	await page.shot('phone-link');
+	// a wrong code typed on this device
+	await type('.sheet .claim input', 'ZZZZZZ');
+	await page.clickText('Verknüpfen');
+	await wait(800);
+	expect((await page.eval(`document.querySelector('.toast')?.innerText`)) === 'Code unbekannt oder abgelaufen', 'no toast for a bad code');
+	// the other device claims the code, this one notices on its own
+	const claimed = await api('/me/claim', { method: 'POST', body: JSON.stringify({ code }) }, other).then((r) => r.json());
+	expect(claimed.name === 'Kim' && claimed.devices === 2, `claim gave ${JSON.stringify(claimed)}`);
+	expect((await api('/reports/mine').then((r) => r.json())).length === before + 1, 'the other device\'s report did not come along');
+	expect(await page.sheetHas('Zu heiß', 6000), `sheet did not come back with the linked report: "${(await page.sheet()).split('\n')[0]}"`);
+	expect((await page.sheet()).includes('(2)'), 'sheet does not count 2 devices');
+	expect((await page.eval(`document.querySelector('.toast')?.innerText`)) === 'Geräte verknüpft', 'no linked toast');
 });
 
 await scenario('phone: the device token stays over reloads and makes one user, a cleared device is a new one', async () => {

@@ -117,6 +117,31 @@ export const getReports = async (): Promise<Report[]> => (await req('/reports'))
 
 export const getMine = async (): Promise<Report[]> => (await req('/reports/mine')).json();
 
+export interface Me {
+	id: number;
+	name: string | null; // the account in v00
+	devices: number;
+}
+
+const json = (body: unknown, method = 'POST'): RequestInit => ({
+	method,
+	headers: { 'content-type': 'application/json' },
+	body: JSON.stringify(body)
+});
+
+export const getMe = async (): Promise<Me> => (await req('/me')).json();
+
+export const setName = async (name: string): Promise<Me> => (await req('/me', json({ name }, 'PATCH'))).json();
+
+export const linkCode = async (): Promise<{ code: string; expires_at: string }> =>
+	(await req('/me/link', { method: 'POST' })).json();
+
+export async function claim(code: string): Promise<Me> {
+	const r = await req('/me/claim', json({ code }));
+	if (!r.ok) throw new Error(`${r.status}`);
+	return r.json();
+}
+
 export async function deleteReport(id: number): Promise<void> {
 	const r = await req(`/reports/${id}`, { method: 'DELETE' });
 	if (!r.ok) throw new Error(`${r.status}`);

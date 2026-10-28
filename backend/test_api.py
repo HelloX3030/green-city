@@ -38,6 +38,31 @@ class Api(unittest.TestCase):
         self.assertEqual(self.c.get("/reports/mine").status_code, 400)
         self.assertEqual(self.c.get("/clusters", headers={"x-device": "short"}).status_code, 400)
 
+    def test_name_is_the_account(self):
+        self.assertIsNone(self.c.get("/me", headers=A).json()["name"])
+        self.assertEqual(self.c.patch("/me", json={"name": " Kim "}, headers=A).json()["name"], "Kim")
+        self.assertEqual(self.c.get("/me", headers=A).json()["name"], "Kim")
+        self.assertIsNone(self.c.patch("/me", json={"name": ""}, headers=A).json()["name"])
+
+    def test_link_joins_the_devices_and_their_reports(self):
+        self.c.post("/reports", json=REPORT, headers=A)
+        self.c.post("/reports", json={**REPORT, "message": "from b"}, headers=B)
+        code = self.c.post("/me/link", headers=A).json()["code"]
+        self.assertEqual(len(code), 6)
+        self.assertEqual(self.c.post("/me/claim", json={"code": code.lower()}, headers=B).json()["id"], self.c.get("/me", headers=A).json()["id"])
+        self.assertEqual(self.c.get("/me", headers=A).json()["devices"], 2)
+        self.assertEqual(len(self.c.get("/reports/mine", headers=A).json()), 2)  # b's report came along
+        self.assertEqual(len(self.c.get("/reports/mine", headers=B).json()), 2)
+        self.assertEqual(self.c.get("/clusters", headers=B).json()[0]["mine"], 2)
+        self.assertEqual(self.c.post("/me/claim", json={"code": code}, headers=B).status_code, 400)  # spent
+        self.assertEqual(self.c.post("/me/claim", json={"code": "ZZZZZZ"}, headers=B).status_code, 400)
+
+    def test_expired_code_is_refused(self):
+        code = self.c.post("/me/link", headers=A).json()["code"]
+        with db.connect() as con:
+            con.execute("UPDATE links SET expires_at = '2000-01-01T00:00:00+00:00'")
+        self.assertEqual(self.c.post("/me/claim", json={"code": code}, headers=B).status_code, 400)
+
     def test_withdraw_only_your_own(self):
         rid = self.c.post("/reports", json=REPORT, headers=A).json()["id"]
         self.assertEqual(self.c.delete(f"/reports/{rid}", headers=B).status_code, 404)

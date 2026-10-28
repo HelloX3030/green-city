@@ -1,7 +1,8 @@
 import json
 import os
+import secrets
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 DB_PATH = Path(os.environ.get("GREENCITY_DB_PATH", Path(__file__).parent / "reports.db"))
@@ -30,7 +31,15 @@ CREATE TABLE IF NOT EXISTS devices (
     user_id    INTEGER NOT NULL REFERENCES users (id),
     created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS links (
+    code       TEXT PRIMARY KEY,
+    user_id    INTEGER NOT NULL REFERENCES users (id),
+    expires_at TEXT NOT NULL
+);
 """
+
+CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"  # no 0/O, 1/I
+LINK_MINUTES = 10
 
 
 def connect() -> sqlite3.Connection:
@@ -66,6 +75,38 @@ def user_of(con: sqlite3.Connection, token: str | None) -> int | None:
     """The user behind a device token, None for an unknown or missing one."""
     row = token and con.execute("SELECT user_id FROM devices WHERE token = ?", (token,)).fetchone()
     return row["user_id"] if row else None
+
+
+def me(con: sqlite3.Connection, uid: int) -> dict:
+    row = dict(con.execute("SELECT * FROM users WHERE id = ?", (uid,)).fetchone())
+    row["devices"] = con.execute("SELECT count(*) FROM devices WHERE user_id = ?", (uid,)).fetchone()[0]
+    return row
+
+
+def link_code(con: sqlite3.Connection, uid: int) -> dict:
+    """A short code another device can claim within LINK_MINUTES to become this user."""
+    now = datetime.now(timezone.utc)
+    con.execute("DELETE FROM links WHERE expires_at < ?", (now.isoformat(),))
+    code = "".join(secrets.choice(CODE_CHARS) for _ in range(6))
+    expires = (now + timedelta(minutes=LINK_MINUTES)).isoformat()
+    con.execute("INSERT INTO links (code, user_id, expires_at) VALUES (?,?,?)", (code, uid, expires))
+    return {"code": code, "expires_at": expires}
+
+
+def claim(con: sqlite3.Connection, token: str, code: str) -> int | None:
+    """The device behind token joins the user behind code, taking its reports along.
+    None when the code is unknown or expired, the code is spent either way."""
+    now = datetime.now(timezone.utc).isoformat()
+    row = con.execute("SELECT user_id FROM links WHERE code = ? AND expires_at >= ?", (code.upper(), now)).fetchone()
+    con.execute("DELETE FROM links WHERE code = ?", (code.upper(),))
+    if not row:
+        return None
+    new, old = row["user_id"], user_for(con, token)
+    if new != old:
+        con.execute("UPDATE reports SET user_id = ? WHERE user_id = ?", (new, old))
+        con.execute("UPDATE devices SET user_id = ? WHERE user_id = ?", (new, old))
+        con.execute("DELETE FROM users WHERE id = ?", (old,))
+    return new
 
 
 def row_to_report(row: sqlite3.Row) -> dict:

@@ -6,7 +6,8 @@ FastAPI + SQLite. Stores reports, returns clusters with a sensor-data verdict, p
 
 Every request may carry `X-Device: <32-64 chars>`, the app's random token. `users` is a row per person, `devices` maps tokens to users, created on first contact. Writes and `/reports/mine` need the header, `/clusters` uses it for `mine` if present. Old reports with an `author` id are mapped to a user on start, the id works as a token.
 
-- `GET /me` – `{id, name, created_at}` of the caller
+- `GET /me` – `{id, name, created_at, devices}` of the caller; `PATCH /me {name}` sets the name, the whole account in v00
+- `POST /me/link` – `{code, expires_at}`, a 6-char code valid 10 min; `POST /me/claim {code}` on another device makes it this user, its reports so far come along (its old user row goes)
 - `POST /reports` `{lat, lon, types: ["noise"|"heat"|"air"|"no_shade"|"other"], message?}`, needs `X-Device`
 - `GET /reports?since=<iso>`
 - `GET /reports/mine` – the caller's reports, newest first, needs `X-Device`

@@ -22,6 +22,7 @@ Phone only
 - drag past the city edge six times: centre stays inside the city limit, no jump after release
 - jump far outside at zoom 8: centre snaps to the city limit, zoom is the min zoom, the whole city is on screen
 - withdraw: Zurückziehen asks "Wirklich?", the second tap removes the row, the server has one report less, toast "Meldung zurückgezogen"
+- account: Name angeben → Speichern sets the name on the server and the sheet; Anderes Gerät verknüpfen shows a 6-char code, a wrong code typed here gives the toast, a second device claims the code through the API and this one comes back to the list by itself (polls /me while the code is shown) with the other's report and "(2)" devices
 - device token: with it `/clusters` marks my bubbles (`mine`) and `/reports/mine` lists my reports, without it nothing is mine and `/reports/mine` is refused; 32 chars in localStorage, same token and same user after a reload, a cleared storage is a new user with no marked bubbles, a report without the header is refused
 - backend unreachable: "Server nicht erreichbar" after the next poll, gone when it is back
 

@@ -13,10 +13,12 @@
 		deleteReport,
 		getBikes,
 		getClusters,
+		getMe,
 		getMine,
 		getSensors,
 		type Cluster,
 		type LayerId,
+		type Me,
 		type Report,
 		type Sensor
 	} from '#lib/api.ts';
@@ -29,6 +31,7 @@
 	let layersOpen = $state(false);
 	let aboutOpen = $state(false);
 	let mine = $state<Report[]>([]);
+	let me = $state<Me | null>(null);
 	let mineOpen = $state(false);
 	let bikes = $state<Awaited<ReturnType<typeof getBikes>> | null>(null);
 	let sent = $state(false); // the card right after sending says Gemeldet
@@ -73,8 +76,13 @@
 
 	async function refreshMine() {
 		try {
-			mine = await getMine();
+			[mine, me] = await Promise.all([getMine(), getMe()]);
 		} catch {}
+	}
+
+	function linked() {
+		refreshMine();
+		refresh();
 	}
 
 	function toggle(id: LayerId) {
@@ -260,7 +268,7 @@
 	{:else if aboutOpen}
 		<AboutSheet onclose={() => (aboutOpen = false)} />
 	{:else if mineOpen}
-		<MySheet reports={mine} {clusters} onopen={showReport} onwithdraw={withdraw} onclose={() => (mineOpen = false)} />
+		<MySheet reports={mine} {clusters} {me} onopen={showReport} onwithdraw={withdraw} onchanged={linked} onsay={say} onclose={() => (mineOpen = false)} />
 	{:else}
 		<button class="primary" onclick={() => startReport()}><Icon name="plus" />Melden</button>
 		<button class="ghost" onclick={openMine}>Meine Meldungen{mine.length ? ` · ${mine.length}` : ''}</button>

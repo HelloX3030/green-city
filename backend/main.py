@@ -43,6 +43,20 @@ class Me(BaseModel):
     id: int
     name: str | None
     created_at: datetime
+    devices: int
+
+
+class NameIn(BaseModel):
+    name: str | None = Field(default=None, max_length=40)
+
+
+class CodeIn(BaseModel):
+    code: str = Field(min_length=6, max_length=6)
+
+
+class Link(BaseModel):
+    code: str
+    expires_at: datetime
 
 
 TOKEN = re.compile(r"^[A-Za-z0-9-]{32,64}$")
@@ -89,8 +103,34 @@ def fetch_reports(con, since: datetime | None = None, user_id: int | None = None
 @app.get("/me", response_model=Me)
 def me(token: str = Depends(device)) -> dict:
     with db.connect() as con:
+        return db.me(con, db.user_for(con, token))
+
+
+@app.patch("/me", response_model=Me)
+def set_name(body: NameIn, token: str = Depends(device)) -> dict:
+    """The whole account in v00: a name, nothing else."""
+    name = body.name.strip() if body.name else None
+    with db.connect() as con:
         uid = db.user_for(con, token)
-        return dict(con.execute("SELECT * FROM users WHERE id = ?", (uid,)).fetchone())
+        con.execute("UPDATE users SET name = ? WHERE id = ?", (name or None, uid))
+        return db.me(con, uid)
+
+
+@app.post("/me/link", response_model=Link)
+def link(token: str = Depends(device)) -> dict:
+    """A 6-char code, valid 10 minutes, typed into another device to make it this user."""
+    with db.connect() as con:
+        return db.link_code(con, db.user_for(con, token))
+
+
+@app.post("/me/claim", response_model=Me)
+def claim(body: CodeIn, token: str = Depends(device)) -> dict:
+    """This device becomes the user behind the code, its reports so far come along."""
+    with db.connect() as con:
+        uid = db.claim(con, token, body.code)
+        if uid is None:
+            raise HTTPException(400, "code unknown or expired")
+        return db.me(con, uid)
 
 
 @app.post("/reports", response_model=Report, status_code=201)
