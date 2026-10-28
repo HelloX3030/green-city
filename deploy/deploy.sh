@@ -14,12 +14,21 @@ echo "==> pulling $BRANCH"
 git fetch --quiet origin "$BRANCH"
 git switch --quiet "$BRANCH"
 git pull --quiet --ff-only origin "$BRANCH"
+
+if [ -n "$(git status --porcelain)" ]; then
+	echo "==> working tree is dirty; commit and push before deploying" >&2
+	git status --short >&2
+	exit 1
+fi
+
 COMMIT="$(git rev-parse --short HEAD)"
 echo "==> deploying $COMMIT"
 
 ssh "$HOST" "mkdir -p '$REMOTE_DIR'"
 rsync -az --delete \
 	--exclude .git \
+	--exclude .agents \
+	--exclude .github \
 	--exclude .deployed \
 	--exclude node_modules \
 	--exclude build \
