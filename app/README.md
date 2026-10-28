@@ -4,6 +4,8 @@ SvelteKit + MapLibre. One page: map, one bottom sheet (report, cluster card, sen
 
 Look: CARTO Positron basemap, glass surfaces, one green for actions. Colours and icons per report type, sensor kind and layer live in `src/lib/api.ts`, the icon paths in `src/lib/icons.ts`. Sensors and clusters are DOM markers (`.pin` styles in `Map.svelte`), trees and bike rides are map layers.
 
+Map limits: city limit from opendata.heilbronn.de (`src/lib/boundary.json`, rebuild with `make boundary`). Inside nothing shows, outside a grey wash fades in while you drag and the map springs back on release. Zoom 11 to 18, hard stop a little beyond the city bbox.
+
 Context layers (layers button top right): UBA road noise map 2022 (raster straight from datahub.uba.de), city tree register (`static/trees.json`, rebuild with `make trees`), bike rides of the last 7 days from the backend.
 
 `make app` from the repo root. `make build` writes static files to `build/`.

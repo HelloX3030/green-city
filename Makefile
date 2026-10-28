@@ -1,4 +1,4 @@
-.PHONY: setup dev backend app build check trees
+.PHONY: setup dev backend app build check trees boundary
 
 setup:            ## install everything (uv + npm)
 	cd backend && uv sync
@@ -22,3 +22,6 @@ check:            ## type-check the app
 
 trees:            ## rebuild app/static/trees.json from the city tree register
 	python3 research/trees.py
+
+boundary:         ## rebuild app/src/lib/boundary.json from the city limit
+	python3 research/boundary.py
