@@ -6,7 +6,7 @@ Look: CARTO Positron basemap, glass surfaces, one green for actions. Colours and
 
 Title pill top left opens a short about sheet (three steps, status colours). Layout: one bottom sheet on phones, a 400 px card bottom-left from 600 px width, the map centre shifts away from it.
 
-Reporting: Melden flies to the phone's position at zoom 16 if it comes within 2 s, else zooms to 15 where you are. The circle is the 100 m cluster radius on the ground (`CLUSTER_RADIUS_M`, same as the backend), it grows with the zoom. Below zoom 15 the circle is grey and Melden disabled. Position denied or outside Heilbronn shows a toast. The map padding waits for a running animation, setPadding would cancel it.
+Reporting: Melden flies to the phone's position at zoom 16 if it comes within 2 s, else zooms to 15 where you are. The circle is the 100 m cluster radius on the ground (`CLUSTER_RADIUS_M`, same as the backend), it grows with the zoom. Below zoom 15 the circle is grey and Melden disabled. The bubble a report would join (nearest within 100 m, the backend rule) gets a green ring and the hint says so. Position denied or outside Heilbronn shows a toast. The map padding waits for a running animation, setPadding would cancel it.
 
 Testing: `make e2e` runs `e2e/run.mjs`, headless Chrome through the flows in `scenarios.md` at three screen sizes with emulated positions. Screenshots in `e2e/out/`. Run it before a commit, add flows for new features.
 

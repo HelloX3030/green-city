@@ -18,7 +18,7 @@
 	setWorkerUrl(workerUrl);
 	import { onMount } from 'svelte';
 	import { iconSvg } from './icons';
-	import { RING, CITY_BBOX, clampToCity, inCity } from './city.ts';
+	import { RING, CITY_BBOX, clampToCity, inCity, distanceM } from './city.ts';
 	import {
 		TYPES,
 		SENSOR_KIND,
@@ -79,7 +79,28 @@
 	const PICK_ZOOM = 15; // a report needs at least this zoom, the circle is 64 px then
 	let zoom = $state(13);
 	let lat = $state(49.15);
+	let lon = $state(9.22);
 	const tooFar = $derived(picking && zoom < PICK_ZOOM);
+	// the bubble a report at the screen centre would join: nearest anchor within the radius, as the backend does it
+	const joins = $derived.by(() => {
+		if (!picking || tooFar) return null;
+		let best: Cluster | null = null;
+		let bestD = CLUSTER_RADIUS_M;
+		for (const c of clusters) {
+			const d = distanceM(lat, lon, c.lat, c.lon);
+			if (d < bestD) (best = c), (bestD = d);
+		}
+		return best;
+	});
+	const hint = $derived(
+		tooFar
+			? 'Näher ranzoomen'
+			: joins
+				? joins.count === 1
+					? 'Kommt zur Meldung hier dazu'
+					: `Kommt zu den ${joins.count} Meldungen hier dazu`
+				: 'Schieb die Karte auf die Stelle'
+	);
 	// the report circle is the cluster radius on the ground, so it grows with the zoom
 	const metresPerPx = $derived((156543.03 * Math.cos((lat * Math.PI) / 180)) / 2 ** zoom);
 	const circlePx = $derived(Math.max(24, (2 * CLUSTER_RADIUS_M) / metresPerPx));
@@ -251,7 +272,7 @@
 			}
 			map.on('move', () => {
 				zoom = map.getZoom();
-				lat = map.getCenter().lat;
+				({ lat, lng: lon } = map.getCenter());
 			});
 			fitMinZoom();
 			map.on('moveend', () => {
@@ -323,6 +344,12 @@
 				clusterMarkers.delete(id);
 			}
 		}
+	});
+
+	$effect(() => {
+		const id = joins?.id; // read outside the loop, the markers map is empty on the first run
+		void clusters; // and again after a refresh, the marker may be new
+		for (const [cid, m] of clusterMarkers) m.getElement().classList.toggle('join', cid === id);
 	});
 
 	$effect(() => {
@@ -462,7 +489,7 @@
 		style="--bottom: {padBottom}px; --left: {padLeft}px; --d: {circlePx.toFixed(1)}px"
 		aria-hidden="true"
 	>
-		<span class="hint">{tooFar ? 'Näher ranzoomen' : 'Schieb die Karte auf die Stelle'}</span>
+		<span class="hint">{hint}</span>
 	</div>
 {/if}
 <div class="legends" style="--bottom: {padBottom}px; --left: {padLeft}px">
@@ -648,6 +675,11 @@
 		background: var(--c);
 		opacity: 0.22;
 		z-index: -1;
+	}
+	/* outline, a box-shadow would hide under the halo */
+	:global(.pin.cluster.join) {
+		outline: 3px solid var(--accent);
+		outline-offset: 2px;
 	}
 	:global(.pin.cluster.sel) {
 		box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--c), 0 4px 12px rgba(0, 0, 0, 0.25);

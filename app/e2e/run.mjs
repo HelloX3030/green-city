@@ -255,6 +255,25 @@ await scenario('phone: the report circle is 100 m on the ground, so it doubles p
 	await page.shot('phone-circle-18');
 });
 
+await scenario('phone: centre on a bubble shows which one the report joins', async () => {
+	const c = (await fetch(`${API}/clusters`).then((r) => r.json())).find((c) => c.count > 1);
+	expect(c, 'no bubble with more than one report');
+	await page.goto();
+	await melden();
+	await wait(3500);
+	await page.setView(c.lon, c.lat, 16);
+	await wait(400);
+	expect(await page.has('.pin.cluster.join'), 'bubble has no ring');
+	const hint = await page.eval(`document.querySelector('.hint').textContent`);
+	expect(hint === `Kommt zu den ${c.count} Meldungen hier dazu`, `hint is "${hint}"`);
+	await page.shot('phone-join');
+	// 150 m east: outside the radius
+	await page.setView(c.lon + 0.00206, c.lat, 16);
+	await wait(400);
+	expect(!(await page.has('.pin.cluster.join')), 'ring still there 150 m away');
+	expect((await page.eval(`document.querySelector('.hint').textContent`)).startsWith('Schieb'), 'hint not back');
+});
+
 await scenario('phone: zoom out in report mode greys the circle and disables Melden', async () => {
 	await page.goto();
 	await melden();
