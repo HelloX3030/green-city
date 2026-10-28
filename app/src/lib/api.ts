@@ -110,12 +110,32 @@ export interface Ride {
 export const getBikes = async (): Promise<FeatureCollection<LineString, Ride>> =>
 	(await fetch(`${base}/bikes`)).json();
 
-export type LayerId = 'noise' | 'trees' | 'bikes';
+export type LayerId = 'noise' | 'trees' | 'bikes' | 'pm';
 
 export const LAYERS: { id: LayerId; label: string; color: string; icon: IconName; hint: string }[] = [
 	{ id: 'noise', label: 'Lärmkarte 2022', color: '#b06a5a', icon: 'map', hint: 'Berechneter Straßenlärm, Umweltbundesamt' },
 	{ id: 'trees', label: 'Stadtbäume', color: '#7aa874', icon: 'tree', hint: '43 000 Bäume aus dem Baumkataster' },
-	{ id: 'bikes', label: 'Messräder, letzte 7 Tage', color: '#4e7ea6', icon: 'bike', hint: 'Fahrräder mit Feinstaubsensor, Farbe = PM2,5' }
+	{
+		id: 'bikes',
+		label: 'Messräder, letzte 7 Tage',
+		color: '#4e7ea6',
+		icon: 'bike',
+		hint: 'Räder mit Feinstaubsensor (senseBox:bike). Farbe = PM2,5 der Fahrt'
+	},
+	{
+		id: 'pm',
+		label: 'Feinstaub, alle Fahrten',
+		color: '#9a8468',
+		icon: 'air',
+		hint: 'Alle Messrad-Fahrten seit Nov. 2025 auf einem 25-m-Raster. Farbe = PM2,5 im Mittel'
+	}
+];
+
+export const PM_LEGEND: [string, string][] = [
+	['<10', '#5a8f5f'],
+	['10', '#c7a24a'],
+	['15', '#c4664f'],
+	['25', '#a03d3d']
 ];
 
 export const NOISE_LEGEND = [

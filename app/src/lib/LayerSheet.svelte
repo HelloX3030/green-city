@@ -15,7 +15,10 @@
 </div>
 {#each LAYERS as l}
 	<button class="layer" onclick={() => ontoggle(l.id)} aria-pressed={layers.has(l.id)}>
-		<span class="badge" style="background: {l.color}"><Icon name={l.icon} size={19} /></span>
+		<span class="thumb">
+			<img src="/thumbs/{l.id}.png" alt="" width="60" height="60" />
+			<i style="background: {l.color}"><Icon name={l.icon} size={13} /></i>
+		</span>
 		<span class="text"><b>{l.label}</b><small>{l.hint}</small></span>
 		<span class="tog" class:on={layers.has(l.id)}></span>
 	</button>
@@ -48,21 +51,37 @@
 		align-items: center;
 		gap: 12px;
 		width: 100%;
-		padding: 10px 0;
+		padding: 9px 0;
 		border-top: 1px solid var(--line);
 		text-align: left;
 	}
 	.layer:first-of-type {
 		border-top: 0;
 	}
-	.badge {
-		width: 38px;
-		height: 38px;
-		border-radius: 11px;
+	.thumb {
+		position: relative;
+		flex: none;
+		width: 60px;
+		height: 60px;
+	}
+	.thumb img {
+		display: block;
+		width: 60px;
+		height: 60px;
+		border-radius: 12px;
+		box-shadow: inset 0 0 0 1px var(--line);
+	}
+	.thumb i {
+		position: absolute;
+		right: -5px;
+		bottom: -5px;
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+		border: 2px solid #fff;
 		display: grid;
 		place-items: center;
 		color: #fff;
-		flex: none;
 	}
 	.text {
 		min-width: 0;

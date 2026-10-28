@@ -6,10 +6,11 @@
 		AttributionControl,
 		setWorkerUrl,
 		type GeoJSONSource,
+		type ExpressionSpecification,
 		type MapMouseEvent
 	} from 'maplibre-gl';
 	import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
-	import type { FeatureCollection, LineString } from 'geojson';
+	import type { FeatureCollection, LineString, Point, Polygon } from 'geojson';
 	import 'maplibre-gl/dist/maplibre-gl.css';
 
 	// Vite bundles MapLibre so its default worker path is wrong; point it at a bundled worker.
@@ -21,6 +22,7 @@
 		TYPES,
 		SENSOR_KIND,
 		NOISE_LEGEND,
+		PM_LEGEND,
 		dominantType,
 		isLive,
 		pmColor,
@@ -77,6 +79,7 @@
 		'https://datahub.uba.de/server/rest/services/VeLa/LK/MapServer/export?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&layers=show:4210&format=png32&transparent=true&f=image';
 	const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
 	let treesLoaded = false;
+	let pmLoaded = false;
 	const popup = new Popup({ closeButton: false, offset: 8, maxWidth: '260px' });
 	const clusterMarkers = new globalThis.Map<number, Marker>();
 	const sensorMarkers = new globalThis.Map<string, Marker>();
@@ -168,6 +171,30 @@
 					]
 				}
 			});
+			// all-time PM2.5 grid: dots when zoomed out, the real 25 m cells when zoomed in
+			const PM_COLOR: ExpressionSpecification = ['step', ['get', 'pm'], '#5a8f5f', 10, '#c7a24a', 15, '#c4664f', 25, '#a03d3d'];
+			map.addSource('pm', { type: 'geojson', data: EMPTY });
+			map.addLayer({
+				id: 'pm',
+				type: 'circle',
+				source: 'pm',
+				maxzoom: 14.5,
+				layout: { visibility: 'none' },
+				paint: {
+					'circle-color': PM_COLOR,
+					'circle-opacity': 0.7,
+					'circle-radius': ['interpolate', ['exponential', 2], ['zoom'], 11, 1, 14.5, 4]
+				}
+			});
+			map.addSource('pm-cells', { type: 'geojson', data: EMPTY });
+			map.addLayer({
+				id: 'pm-cells',
+				type: 'fill',
+				source: 'pm-cells',
+				minzoom: 14.5,
+				layout: { visibility: 'none' },
+				paint: { 'fill-color': PM_COLOR, 'fill-opacity': 0.6, 'fill-antialias': false }
+			});
 			map.addSource('bikes', { type: 'geojson', data: EMPTY });
 			map.addLayer({
 				id: 'bikes',
@@ -191,6 +218,14 @@
 						.addTo(map);
 					return;
 				}
+				const cell = map.queryRenderedFeatures(e.point, { layers: ['pm', 'pm-cells'] })[0]?.properties;
+				if (cell) {
+					popup
+						.setLngLat(e.lngLat)
+						.setHTML(`<b>PM2,5 Ø ${fmt(cell.pm)} µg/m³</b><br>${cell.n} Messungen hier`)
+						.addTo(map);
+					return;
+				}
 				const tree = map.queryRenderedFeatures(e.point, { layers: ['trees'] })[0]?.properties;
 				if (tree) {
 					popup
@@ -199,8 +234,10 @@
 						.addTo(map);
 				}
 			});
-			map.on('mouseenter', 'bikes', () => (map.getCanvas().style.cursor = 'pointer'));
-			map.on('mouseleave', 'bikes', () => (map.getCanvas().style.cursor = ''));
+			for (const id of ['bikes', 'pm', 'pm-cells']) {
+				map.on('mouseenter', id, () => (map.getCanvas().style.cursor = 'pointer'));
+				map.on('mouseleave', id, () => (map.getCanvas().style.cursor = ''));
+			}
 			map.on('moveend', () => {
 				if (picking) {
 					const c = map.getCenter();
@@ -297,9 +334,10 @@
 
 	$effect(() => {
 		if (!ready) return;
-		for (const id of ['noise', 'trees', 'bikes'] as LayerId[]) {
+		for (const id of ['noise', 'trees', 'bikes', 'pm'] as LayerId[]) {
 			map.setLayoutProperty(id, 'visibility', layers.has(id) ? 'visible' : 'none');
 		}
+		map.setLayoutProperty('pm-cells', 'visibility', layers.has('pm') ? 'visible' : 'none');
 		if (layers.has('trees') && !treesLoaded) {
 			treesLoaded = true;
 			fetch('/trees.json')
@@ -315,6 +353,31 @@
 					})
 				)
 				.catch(() => (treesLoaded = false));
+		}
+		if (layers.has('pm') && !pmLoaded) {
+			pmLoaded = true;
+			fetch('/pm.json')
+				.then((r) => r.json())
+				.then(({ step: [dx, dy], cells }: { step: [number, number]; cells: [number, number, number, number][] }) => {
+					const feature = (geometry: Point | Polygon, [, , pm, n]: number[]) => ({ type: 'Feature' as const, geometry, properties: { pm, n } });
+					(map.getSource('pm') as GeoJSONSource).setData({
+						type: 'FeatureCollection',
+						features: cells.map((c) => feature({ type: 'Point', coordinates: [c[0], c[1]] }, c))
+					});
+					(map.getSource('pm-cells') as GeoJSONSource).setData({
+						type: 'FeatureCollection',
+						features: cells.map(([x, y, pm, n]) =>
+							feature(
+								{
+									type: 'Polygon',
+									coordinates: [[[x - dx / 2, y - dy / 2], [x + dx / 2, y - dy / 2], [x + dx / 2, y + dy / 2], [x - dx / 2, y + dy / 2], [x - dx / 2, y - dy / 2]]]
+								},
+								[x, y, pm, n]
+							)
+						)
+					});
+				})
+				.catch(() => (pmLoaded = false));
 		}
 		if (!layers.size) popup.remove();
 	});
@@ -387,14 +450,24 @@
 		<span class="hint">Karte schieben, bis der Kreis passt</span>
 	</div>
 {/if}
-{#if layers.has('noise')}
-	<div class="legend glass" style="--bottom: {sheetHeight}px">
-		{#each NOISE_LEGEND as [db, color]}
-			<span><i style="background: {color}"></i>{db}</span>
-		{/each}
-		<span class="unit">dB(A) Lden</span>
-	</div>
-{/if}
+<div class="legends" style="--bottom: {sheetHeight}px">
+	{#if layers.has('bikes') || layers.has('pm')}
+		<div class="legend glass">
+			{#each PM_LEGEND as [v, color]}
+				<span><i style="background: {color}"></i>{v}</span>
+			{/each}
+			<span class="unit">µg/m³ PM2,5</span>
+		</div>
+	{/if}
+	{#if layers.has('noise')}
+		<div class="legend glass">
+			{#each NOISE_LEGEND as [db, color]}
+				<span><i style="background: {color}"></i>{db}</span>
+			{/each}
+			<span class="unit">dB(A) Lden</span>
+		</div>
+	{/if}
+</div>
 
 <style>
 	.map {
@@ -443,10 +516,17 @@
 		border-radius: 999px;
 		box-shadow: var(--shadow);
 	}
-	.legend {
+	.legends {
 		position: absolute;
 		left: 14px;
 		bottom: calc(var(--bottom) + 12px);
+		display: flex;
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 6px;
+		pointer-events: none;
+	}
+	.legend {
 		display: flex;
 		gap: 6px;
 		align-items: center;

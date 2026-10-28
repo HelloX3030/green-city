@@ -1,4 +1,4 @@
-.PHONY: setup dev backend app build check trees boundary
+.PHONY: setup dev backend app build check trees boundary pm
 
 setup:            ## install everything (uv + npm)
 	cd backend && uv sync
@@ -25,3 +25,6 @@ trees:            ## rebuild app/static/trees.json from the city tree register
 
 boundary:         ## rebuild app/src/lib/boundary.json from the city limit
 	python3 research/boundary.py
+
+pm:               ## rebuild app/static/pm.json, all-time bike PM2.5 grid (~5 min)
+	python3 research/pm.py
