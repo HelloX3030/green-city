@@ -1,19 +1,45 @@
 :root {
-	--bg: #1a1a1a;
-	--fg: #f3f3f3;
-	--accent: #facc15;
-	color-scheme: dark;
+	--bg: #ededeb;
+	--ink: #1d1d1f;
+	--ink2: #6e6e73;
+	--line: rgba(0, 0, 0, 0.08);
+	--fill: rgba(0, 0, 0, 0.05);
+	--glass: rgba(255, 255, 255, 0.82);
+	--glass-strong: rgba(255, 255, 255, 0.94);
+	--accent: #3a7d5c;
+	--on-accent: #fff;
+	--shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.1);
+	--radius: 22px;
+	color-scheme: light;
 }
 html,
 body {
 	margin: 0;
 	height: 100%;
 	overflow: hidden;
-	background: #000;
-	font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+	background: var(--bg);
+	color: var(--ink);
+	font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+	font-size: 14px;
+	line-height: 1.35;
 	-webkit-tap-highlight-color: transparent;
+	-webkit-font-smoothing: antialiased;
+}
+button,
+input {
+	font-family: inherit;
+	font-size: inherit;
+	color: inherit;
 }
 button {
-	font-family: inherit;
 	cursor: pointer;
+	border: 0;
+	background: none;
+	padding: 0;
+}
+.glass {
+	background: var(--glass);
+	backdrop-filter: blur(20px) saturate(1.5);
+	-webkit-backdrop-filter: blur(20px) saturate(1.5);
+	box-shadow: var(--shadow);
 }

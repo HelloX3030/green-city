@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Icon from './Icon.svelte';
 	import { TYPES, postReport, type Report, type ReportType } from './api';
 
 	let {
@@ -33,114 +34,137 @@
 	}
 </script>
 
-<div class="sheet">
-	<div class="handle"></div>
-	<h2>Was stört dich hier?</h2>
-	<div class="chips">
-		{#each TYPES as t}
-			<button
-				class="chip"
-				class:on={selected.includes(t.id)}
-				style="--c: {t.color}"
-				onclick={() => toggle(t.id)}>{t.label}</button
-			>
-		{/each}
+<div class="head">
+	<div>
+		<h2>Was stört dich hier?</h2>
+		<p>Mehrere möglich</p>
 	</div>
-	<input class="msg" placeholder="Optional: ein Satz dazu" maxlength="500" bind:value={message} />
-	<p class="hint">Ort: Karte verschieben, bis der Kreis passt.</p>
-	{#if error}<p class="err">{error}</p>{/if}
-	<div class="row">
-		<button class="ghost" onclick={onclose}>Abbrechen</button>
-		<button class="primary" disabled={!selected.length || !location || sending} onclick={send}>
-			{sending ? 'Sende…' : 'Melden'}
+	<button class="x" onclick={onclose} aria-label="Abbrechen"><Icon name="x" size={16} /></button>
+</div>
+<div class="tiles">
+	{#each TYPES as t}
+		<button
+			class="tile"
+			class:on={selected.includes(t.id)}
+			style="--c: {t.color}"
+			onclick={() => toggle(t.id)}
+		>
+			<Icon name={t.icon} size={22} />
+			{t.label}
 		</button>
-	</div>
+	{/each}
+</div>
+<input class="msg" placeholder="Ein Satz dazu, optional" maxlength="500" bind:value={message} />
+{#if error}<p class="err">{error}</p>{/if}
+<div class="row">
+	<button class="ghost" onclick={onclose}>Abbrechen</button>
+	<button class="primary" disabled={!selected.length || !location || sending} onclick={send}>
+		<Icon name="check" size={18} />
+		{sending ? 'Sende…' : 'Melden'}
+	</button>
 </div>
 
 <style>
-	.sheet {
-		z-index: 3;
-		position: absolute;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: var(--bg);
-		color: var(--fg);
-		border-radius: 18px 18px 0 0;
-		padding: 8px 16px calc(16px + env(safe-area-inset-bottom));
-		box-shadow: 0 -8px 30px #0008;
-	}
-	.handle {
-		width: 36px;
-		height: 4px;
-		background: #555;
-		border-radius: 2px;
-		margin: 0 auto 10px;
+	.head {
+		display: flex;
+		align-items: center;
+		gap: 12px;
+		margin-bottom: 4px;
 	}
 	h2 {
-		font-size: 18px;
-		margin: 0 0 12px;
+		margin: 0;
+		font-size: 17px;
+		font-weight: 700;
+		letter-spacing: -0.01em;
 	}
-	.chips {
-		display: flex;
-		flex-wrap: wrap;
+	.head p {
+		margin: 1px 0 0;
+		font-size: 12px;
+		color: var(--ink2);
+	}
+	.x {
+		margin-left: auto;
+		width: 30px;
+		height: 30px;
+		border-radius: 50%;
+		background: var(--fill);
+		display: grid;
+		place-items: center;
+		color: var(--ink2);
+	}
+	.tiles {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
 		gap: 8px;
-		margin-bottom: 12px;
+		margin-top: 10px;
 	}
-	.chip {
-		border: 1.5px solid var(--c);
+	.tile {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 6px;
+		padding: 12px 6px 10px;
+		border-radius: 14px;
+		background: var(--fill);
+		font-size: 12px;
+		font-weight: 500;
+		border: 1.5px solid transparent;
+	}
+	.tile :global(svg) {
 		color: var(--c);
-		background: transparent;
-		border-radius: 999px;
-		padding: 8px 14px;
-		font-size: 15px;
 	}
-	.chip.on {
-		background: var(--c);
-		color: #111;
-		font-weight: 600;
+	.tile.on {
+		background: #fff;
+		border-color: var(--c);
+		color: var(--c);
+		box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 	}
 	.msg {
 		width: 100%;
 		box-sizing: border-box;
-		background: #222;
-		color: var(--fg);
-		border: 1px solid #333;
-		border-radius: 10px;
-		padding: 10px 12px;
-		font-size: 15px;
+		margin-top: 10px;
+		height: 42px;
+		border-radius: 12px;
+		background: var(--fill);
+		border: 0;
+		padding: 0 12px;
+		font-size: 14px;
 	}
-	.hint {
-		color: #999;
-		font-size: 13px;
-		margin: 8px 0;
+	.msg::placeholder {
+		color: var(--ink2);
 	}
 	.err {
-		color: #f87171;
-		font-size: 14px;
-		margin: 4px 0;
+		color: #a03d3d;
+		font-size: 13px;
+		margin: 8px 0 0;
 	}
 	.row {
-		display: flex;
-		gap: 10px;
+		display: grid;
+		grid-template-columns: 1fr 2fr;
+		gap: 8px;
+		margin-top: 12px;
 	}
 	.row button {
-		flex: 1;
-		padding: 12px;
-		border-radius: 12px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		gap: 8px;
+		height: 50px;
+		border-radius: 14px;
+		font-weight: 600;
 		font-size: 16px;
-		border: 0;
 	}
 	.primary {
 		background: var(--accent);
-		color: #111;
-		font-weight: 600;
+		color: var(--on-accent);
 	}
 	.primary:disabled {
 		opacity: 0.4;
+		cursor: default;
 	}
 	.ghost {
-		background: #2a2a2a;
-		color: var(--fg);
+		background: var(--fill);
+		font-weight: 500;
+		font-size: 14px;
 	}
 </style>

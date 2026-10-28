@@ -1,9 +1,9 @@
 <script lang="ts">
 	import {
 		Map as MLMap,
-		NavigationControl,
-		GeolocateControl,
+		Marker,
 		Popup,
+		AttributionControl,
 		setWorkerUrl,
 		type GeoJSONSource,
 		type MapMouseEvent
@@ -15,10 +15,10 @@
 	// Vite bundles MapLibre so its default worker path is wrong; point it at a bundled worker.
 	setWorkerUrl(workerUrl);
 	import { onMount } from 'svelte';
+	import { iconSvg } from './icons';
 	import {
 		TYPES,
-		STATUS,
-		SENSOR_COLOR,
+		SENSOR_KIND,
 		NOISE_LEGEND,
 		dominantType,
 		isLive,
@@ -32,18 +32,22 @@
 	let {
 		clusters = [],
 		sensors = [],
+		selected = null,
 		bikes = null,
 		layers = new Set<LayerId>(),
 		picking = false,
+		sheetHeight = 0,
 		onpick,
 		onselect,
 		onselectsensor
 	}: {
 		clusters?: Cluster[];
 		sensors?: Sensor[];
+		selected?: Cluster | Sensor | null;
 		bikes?: FeatureCollection<LineString, Ride> | null;
 		layers?: Set<LayerId>;
 		picking?: boolean;
+		sheetHeight?: number;
 		onpick?: (c: { lat: number; lon: number }) => void;
 		onselect?: (c: Cluster | null) => void;
 		onselectsensor?: (s: Sensor) => void;
@@ -59,24 +63,24 @@
 	const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
 	let treesLoaded = false;
 	const popup = new Popup({ closeButton: false, offset: 8, maxWidth: '260px' });
+	const clusterMarkers = new globalThis.Map<number, Marker>();
+	const sensorMarkers = new globalThis.Map<string, Marker>();
+	let me: Marker | null = null;
 
 	onMount(() => {
 		map = new MLMap({
 			container: el,
-			style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+			style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
 			center: HEILBRONN,
 			zoom: 13,
-			attributionControl: { compact: true }
+			attributionControl: false
 		});
-		map.addControl(new NavigationControl({ showCompass: false }), 'top-right');
-		map.addControl(
-			new GeolocateControl({ positionOptions: { enableHighAccuracy: true } }),
-			'top-right'
-		);
+		map.addControl(new AttributionControl({ compact: true }), 'top-left');
 
 		if (import.meta.env.DEV) (window as any).__map = map;
 
 		map.on('load', () => {
+			el.querySelector('.maplibregl-ctrl-attrib')?.classList.remove('maplibregl-compact-show');
 			// context layers, all hidden until toggled
 			map.addSource('noise', { type: 'raster', tiles: [NOISE_TILES], tileSize: 256, maxzoom: 17 });
 			map.addLayer({
@@ -84,7 +88,7 @@
 				type: 'raster',
 				source: 'noise',
 				layout: { visibility: 'none' },
-				paint: { 'raster-opacity': 0.55 }
+				paint: { 'raster-opacity': 0.45 }
 			});
 			map.addSource('trees', { type: 'geojson', data: EMPTY });
 			map.addLayer({
@@ -93,8 +97,8 @@
 				source: 'trees',
 				layout: { visibility: 'none' },
 				paint: {
-					'circle-color': '#22c55e',
-					'circle-opacity': 0.5,
+					'circle-color': '#7aa874',
+					'circle-opacity': 0.55,
 					'circle-radius': [
 						'interpolate',
 						['exponential', 2],
@@ -112,71 +116,10 @@
 				type: 'line',
 				source: 'bikes',
 				layout: { visibility: 'none', 'line-cap': 'round', 'line-join': 'round' },
-				paint: { 'line-color': ['get', 'color'], 'line-width': 3, 'line-opacity': 0.8 }
-			});
-			map.addSource('sensors', { type: 'geojson', data: sensorsGeoJSON(sensors) });
-			map.addLayer({
-				id: 'sensor-dot',
-				type: 'circle',
-				source: 'sensors',
-				paint: {
-					'circle-color': ['get', 'color'],
-					'circle-opacity': ['case', ['get', 'live'], 0.9, 0.35],
-					'circle-radius': ['case', ['get', 'team'], 7, 5],
-					'circle-stroke-color': '#111',
-					'circle-stroke-width': 1.5
-				}
-			});
-			map.addSource('clusters', { type: 'geojson', data: toGeoJSON(clusters) });
-			map.addLayer({
-				id: 'cluster-glow',
-				type: 'circle',
-				source: 'clusters',
-				paint: {
-					'circle-color': ['get', 'color'],
-					'circle-opacity': 0.25,
-					'circle-radius': ['+', 18, ['*', 6, ['sqrt', ['get', 'weight']]]],
-					'circle-blur': 0.6
-				}
-			});
-			map.addLayer({
-				id: 'cluster-dot',
-				type: 'circle',
-				source: 'clusters',
-				paint: {
-					'circle-color': ['get', 'color'],
-					'circle-opacity': 0.85,
-					'circle-radius': ['+', 8, ['*', 3, ['sqrt', ['get', 'weight']]]],
-					'circle-stroke-color': ['get', 'stroke'],
-					'circle-stroke-width': 2.5
-				}
-			});
-			map.addLayer({
-				id: 'cluster-count',
-				type: 'symbol',
-				source: 'clusters',
-				layout: {
-					'text-field': ['to-string', ['get', 'count']],
-					'text-size': 12,
-					'text-font': ['Open Sans Bold'],
-					'text-allow-overlap': true
-				},
-				paint: { 'text-color': '#111' }
-			});
-			map.on('click', 'cluster-dot', (e: MapMouseEvent & { features?: any[] }) => {
-				const id = e.features?.[0]?.properties?.id;
-				onselect?.(clusters.find((c) => c.id === id) ?? null);
-			});
-			map.on('click', 'sensor-dot', (e: MapMouseEvent & { features?: any[] }) => {
-				if (map.queryRenderedFeatures(e.point, { layers: ['cluster-dot'] }).length) return;
-				const id = e.features?.[0]?.properties?.id;
-				const s = sensors.find((s) => s.id === id);
-				if (s) onselectsensor?.(s);
+				paint: { 'line-color': ['get', 'color'], 'line-width': 4, 'line-opacity': 0.85 }
 			});
 			map.on('click', (e: MapMouseEvent) => {
 				popup.remove();
-				const hit = map.queryRenderedFeatures(e.point, { layers: ['cluster-dot', 'sensor-dot'] });
-				if (hit.length) return;
 				onselect?.(null);
 				const ride = map.queryRenderedFeatures(e.point, { layers: ['bikes'] })[0]?.properties as Ride;
 				if (ride) {
@@ -198,10 +141,8 @@
 						.addTo(map);
 				}
 			});
-			for (const l of ['cluster-dot', 'sensor-dot', 'bikes']) {
-				map.on('mouseenter', l, () => (map.getCanvas().style.cursor = 'pointer'));
-				map.on('mouseleave', l, () => (map.getCanvas().style.cursor = ''));
-			}
+			map.on('mouseenter', 'bikes', () => (map.getCanvas().style.cursor = 'pointer'));
+			map.on('mouseleave', 'bikes', () => (map.getCanvas().style.cursor = ''));
 			map.on('moveend', () => {
 				if (picking) {
 					const c = map.getCenter();
@@ -213,14 +154,76 @@
 		return () => map.remove();
 	});
 
+	// the sheet covers the bottom, so the map's centre moves up with it
 	$effect(() => {
 		if (!ready) return;
-		(map.getSource('clusters') as GeoJSONSource).setData(toGeoJSON(clusters));
+		map.setPadding({ top: 0, left: 0, right: 0, bottom: sheetHeight });
 	});
 
 	$effect(() => {
 		if (!ready) return;
-		(map.getSource('sensors') as GeoJSONSource).setData(sensorsGeoJSON(sensors));
+		const seen = new Set<number>();
+		for (const c of clusters) {
+			seen.add(c.id);
+			let m = clusterMarkers.get(c.id);
+			if (!m) {
+				const div = document.createElement('div');
+				div.className = 'pin cluster';
+				div.onclick = (e) => {
+					e.stopPropagation();
+					popup.remove();
+					onselect?.(clusters.find((x) => x.id === c.id) ?? null);
+				};
+				m = new Marker({ element: div }).setLngLat([c.lon, c.lat]).addTo(map);
+				clusterMarkers.set(c.id, m);
+			}
+			m.setLngLat([c.lon, c.lat]);
+			const div = m.getElement();
+			const size = Math.round(30 + 6 * Math.sqrt(c.weight));
+			div.style.setProperty('--c', TYPES.find((t) => t.id === dominantType(c))?.color ?? '#8a8a8e');
+			div.style.setProperty('--s', `${size}px`);
+			div.textContent = String(c.count);
+			div.classList.toggle('sel', selected !== null && 'report_ids' in selected && selected.id === c.id);
+		}
+		for (const [id, m] of clusterMarkers) {
+			if (!seen.has(id)) {
+				m.remove();
+				clusterMarkers.delete(id);
+			}
+		}
+	});
+
+	$effect(() => {
+		if (!ready) return;
+		const seen = new Set<string>();
+		for (const s of sensors) {
+			seen.add(s.id);
+			let m = sensorMarkers.get(s.id);
+			if (!m) {
+				const div = document.createElement('div');
+				div.className = 'pin sensor';
+				div.innerHTML = iconSvg(SENSOR_KIND[s.kind].icon);
+				div.onclick = (e) => {
+					e.stopPropagation();
+					popup.remove();
+					const cur = sensors.find((x) => x.id === s.id);
+					if (cur) onselectsensor?.(cur);
+				};
+				m = new Marker({ element: div }).setLngLat([s.lon, s.lat]).addTo(map);
+				sensorMarkers.set(s.id, m);
+			}
+			const div = m.getElement();
+			div.style.color = s.team ? 'var(--accent)' : SENSOR_KIND[s.kind].color;
+			div.classList.toggle('ours', s.team);
+			div.classList.toggle('off', !isLive(s));
+			div.classList.toggle('sel', selected !== null && 'kind' in selected && selected.id === s.id);
+		}
+		for (const [id, m] of sensorMarkers) {
+			if (!seen.has(id)) {
+				m.remove();
+				sensorMarkers.delete(id);
+			}
+		}
 	});
 
 	$effect(() => {
@@ -267,45 +270,33 @@
 		}
 	});
 
-	function toGeoJSON(cs: Cluster[]): FeatureCollection {
-		return {
-			type: 'FeatureCollection',
-			features: cs.map((c) => ({
-				type: 'Feature',
-				geometry: { type: 'Point', coordinates: [c.lon, c.lat] },
-				properties: {
-					id: c.id,
-					count: c.count,
-					weight: c.weight,
-					color: TYPES.find((t) => t.id === dominantType(c))?.color,
-					stroke: c.status ? STATUS[c.status].color : '#fff'
-				}
-			}))
-		};
+	export function flyTo(lat: number, lon: number, zoom = 15) {
+		map?.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), zoom) });
 	}
 
-	function sensorsGeoJSON(ss: Sensor[]): FeatureCollection {
-		return {
-			type: 'FeatureCollection',
-			features: ss.map((s) => ({
-				type: 'Feature',
-				geometry: { type: 'Point', coordinates: [s.lon, s.lat] },
-				properties: { id: s.id, color: SENSOR_COLOR[s.kind], live: isLive(s), team: s.team }
-			}))
-		};
+	export function zoomBy(d: number) {
+		map?.zoomTo(map.getZoom() + d, { duration: 300 });
 	}
 
-	export function flyTo(lat: number, lon: number) {
-		map?.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), 15) });
+	export function showMe(lat: number, lon: number) {
+		if (!me) {
+			const div = document.createElement('div');
+			div.className = 'pin me';
+			me = new Marker({ element: div }).addTo(map);
+		}
+		me.setLngLat([lon, lat]);
 	}
 </script>
 
 <div class="map" bind:this={el}></div>
 {#if picking}
-	<div class="crosshair" aria-hidden="true"></div>
+	<div class="dim" aria-hidden="true"></div>
+	<div class="crosshair" style="--bottom: {sheetHeight}px" aria-hidden="true">
+		<span class="hint">Karte schieben, bis der Kreis passt</span>
+	</div>
 {/if}
 {#if layers.has('noise')}
-	<div class="legend">
+	<div class="legend glass" style="--bottom: {sheetHeight}px">
 		{#each NOISE_LEGEND as [db, color]}
 			<span><i style="background: {color}"></i>{db}</span>
 		{/each}
@@ -314,17 +305,61 @@
 {/if}
 
 <style>
+	.map {
+		position: absolute;
+		inset: 0;
+	}
+	.dim {
+		position: absolute;
+		inset: 0;
+		background: rgba(0, 0, 0, 0.1);
+		pointer-events: none;
+	}
+	.crosshair {
+		position: absolute;
+		left: 50%;
+		top: calc((100% - var(--bottom)) / 2);
+		width: 84px;
+		height: 84px;
+		transform: translate(-50%, -50%);
+		border-radius: 50%;
+		border: 2px dashed var(--accent);
+		background: rgba(58, 125, 92, 0.1);
+		pointer-events: none;
+	}
+	.crosshair::after {
+		content: '';
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: 10px;
+		height: 10px;
+		transform: translate(-50%, -50%);
+		border-radius: 50%;
+		background: var(--accent);
+		box-shadow: 0 0 0 3px #fff;
+	}
+	.hint {
+		position: absolute;
+		left: 50%;
+		top: 100%;
+		transform: translate(-50%, 12px);
+		white-space: nowrap;
+		font-size: 12px;
+		background: var(--glass-strong);
+		padding: 5px 10px;
+		border-radius: 999px;
+		box-shadow: var(--shadow);
+	}
 	.legend {
 		position: absolute;
-		left: 12px;
-		bottom: calc(96px + env(safe-area-inset-bottom));
+		left: 14px;
+		bottom: calc(var(--bottom) + 12px);
 		display: flex;
 		gap: 6px;
 		align-items: center;
-		background: var(--bg);
-		color: var(--fg);
 		border-radius: 999px;
-		padding: 4px 10px;
+		padding: 5px 10px;
 		font-size: 11px;
 		pointer-events: none;
 	}
@@ -337,45 +372,112 @@
 		vertical-align: -1px;
 	}
 	.legend .unit {
-		color: #999;
+		color: var(--ink2);
+	}
+
+	/* markers live outside the component tree */
+	:global(.pin) {
+		display: grid;
+		place-items: center;
+		cursor: pointer;
+	}
+	:global(.pin .i) {
+		width: 15px;
+		height: 15px;
+	}
+	:global(.pin.sensor) {
+		width: 28px;
+		height: 28px;
+		border-radius: 50%;
+		background: #fff;
+		border: 1.5px solid rgba(0, 0, 0, 0.14);
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
+	}
+	:global(.pin.sensor.off) {
+		opacity: 0.55;
+	}
+	:global(.pin.sensor.ours) {
+		border: 2px solid var(--accent);
+		opacity: 1;
+	}
+	:global(.pin.sensor.ours::after) {
+		content: '';
+		position: absolute;
+		inset: -8px;
+		border-radius: 50%;
+		border: 2px solid var(--accent);
+		animation: pulse 2.2s ease-out infinite;
+	}
+	:global(.pin.sensor.sel) {
+		box-shadow: 0 0 0 3px #fff, 0 0 0 5px currentColor;
+	}
+	@keyframes pulse {
+		0% {
+			transform: scale(0.7);
+			opacity: 0.6;
+		}
+		100% {
+			transform: scale(1.5);
+			opacity: 0;
+		}
+	}
+	@media (prefers-reduced-motion: reduce) {
+		:global(.pin.sensor.ours::after) {
+			animation: none;
+			opacity: 0.4;
+		}
+	}
+	:global(.pin.cluster) {
+		width: var(--s);
+		height: var(--s);
+		border-radius: 50%;
+		background: var(--c);
+		color: #fff;
+		font-weight: 700;
+		font-size: 14px;
+		border: 2px solid #fff;
+		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+	}
+	:global(.pin.cluster::before) {
+		content: '';
+		position: absolute;
+		inset: -11px;
+		border-radius: 50%;
+		background: var(--c);
+		opacity: 0.22;
+		z-index: -1;
+	}
+	:global(.pin.cluster.sel) {
+		box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--c), 0 4px 12px rgba(0, 0, 0, 0.25);
+	}
+	:global(.pin.me) {
+		width: 16px;
+		height: 16px;
+		border-radius: 50%;
+		background: #3b82f6;
+		border: 3px solid #fff;
+		box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15), 0 2px 6px rgba(0, 0, 0, 0.3);
+		cursor: default;
+	}
+	:global(.maplibregl-ctrl-top-left) {
+		top: 56px;
+	}
+	:global(.maplibregl-ctrl-attrib) {
+		background: var(--glass) !important;
+		border-radius: 999px;
+		font-size: 11px;
 	}
 	:global(.maplibregl-popup-content) {
-		background: var(--bg);
-		color: var(--fg);
-		border-radius: 10px;
+		background: var(--glass-strong);
+		color: var(--ink);
+		border-radius: 12px;
 		padding: 8px 12px;
 		font-size: 13px;
 		line-height: 1.4;
+		box-shadow: var(--shadow);
 	}
 	:global(.maplibregl-popup-tip) {
-		border-top-color: var(--bg) !important;
-		border-bottom-color: var(--bg) !important;
-	}
-	.map {
-		position: absolute;
-		inset: 0;
-	}
-	.crosshair {
-		position: absolute;
-		left: 50%;
-		top: 50%;
-		width: 22px;
-		height: 22px;
-		margin: -11px 0 0 -11px;
-		border: 3px solid #fff;
-		border-radius: 50%;
-		box-shadow: 0 0 0 2px #0008;
-		pointer-events: none;
-	}
-	.crosshair::after {
-		content: '';
-		position: absolute;
-		left: 50%;
-		top: 50%;
-		width: 4px;
-		height: 4px;
-		margin: -2px 0 0 -2px;
-		background: #fff;
-		border-radius: 50%;
+		border-top-color: var(--glass-strong) !important;
+		border-bottom-color: var(--glass-strong) !important;
 	}
 </style>

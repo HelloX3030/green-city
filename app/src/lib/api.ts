@@ -1,13 +1,15 @@
 import type { FeatureCollection, LineString } from 'geojson';
+import type { IconName } from './icons';
 
 export type ReportType = 'noise' | 'heat' | 'air' | 'no_shade' | 'other';
 
-export const TYPES: { id: ReportType; label: string; color: string }[] = [
-	{ id: 'noise', label: 'Zu laut', color: '#a78bfa' },
-	{ id: 'heat', label: 'Zu heiß', color: '#fb923c' },
-	{ id: 'air', label: 'Schlechte Luft', color: '#9ca3af' },
-	{ id: 'no_shade', label: 'Kein Schatten', color: '#4ade80' },
-	{ id: 'other', label: 'Anderes', color: '#60a5fa' }
+// one colour and icon per type, used on pins, tiles, badges and chips alike
+export const TYPES: { id: ReportType; label: string; color: string; icon: IconName }[] = [
+	{ id: 'noise', label: 'Zu laut', color: '#6f63b8', icon: 'noise' },
+	{ id: 'heat', label: 'Zu heiß', color: '#c4664f', icon: 'heat' },
+	{ id: 'air', label: 'Schlechte Luft', color: '#4e7ea6', icon: 'air' },
+	{ id: 'no_shade', label: 'Kein Schatten', color: '#a18a4f', icon: 'no_shade' },
+	{ id: 'other', label: 'Anderes', color: '#8a8a8e', icon: 'other' }
 ];
 
 export const typeInfo = (id: string) => TYPES.find((t) => t.id === id) ?? TYPES[4];
@@ -39,9 +41,9 @@ export interface Cluster {
 export type Status = 'confirmed' | 'unconfirmed' | 'no_data';
 
 export const STATUS: Record<Status, { label: string; color: string }> = {
-	confirmed: { label: 'Bestätigt', color: '#4ade80' },
-	unconfirmed: { label: 'Nicht bestätigt', color: '#facc15' },
-	no_data: { label: 'Keine Daten', color: '#f87171' }
+	confirmed: { label: 'Bestätigt', color: '#3a7d5c' },
+	unconfirmed: { label: 'Nicht bestätigt', color: '#c38b2f' },
+	no_data: { label: 'Keine Daten', color: '#8e8e93' }
 };
 
 export interface SensorValue {
@@ -64,10 +66,10 @@ export interface Sensor {
 	last: string | null;
 }
 
-export const SENSOR_COLOR: Record<Sensor['kind'], string> = {
-	env: '#38bdf8',
-	air: '#9ca3af',
-	noise: '#facc15'
+export const SENSOR_KIND: Record<Sensor['kind'], { color: string; icon: IconName; label: string }> = {
+	env: { color: '#c4664f', icon: 'heat', label: 'Wetter' },
+	air: { color: '#4e7ea6', icon: 'air', label: 'Luft' },
+	noise: { color: '#6f63b8', icon: 'noise', label: 'Lärm' }
 };
 
 export const isLive = (s: Sensor) => !!s.last && Date.now() - new Date(s.last).getTime() < 2 * 3600e3;
@@ -110,10 +112,10 @@ export const getBikes = async (): Promise<FeatureCollection<LineString, Ride>> =
 
 export type LayerId = 'noise' | 'trees' | 'bikes';
 
-export const LAYERS: { id: LayerId; label: string; color: string; hint: string }[] = [
-	{ id: 'noise', label: 'Lärmkarte 2022', color: '#cd463e', hint: 'Straßenlärm Lden, UBA' },
-	{ id: 'trees', label: 'Bäume', color: '#22c55e', hint: 'Baumkataster Stadt Heilbronn' },
-	{ id: 'bikes', label: 'Messräder 7 Tage', color: '#f472b6', hint: 'senseBox:bike, PM2,5 je Fahrt' }
+export const LAYERS: { id: LayerId; label: string; color: string; icon: IconName; hint: string }[] = [
+	{ id: 'noise', label: 'Lärmkarte 2022', color: '#b06a5a', icon: 'map', hint: 'Berechneter Straßenlärm, Umweltbundesamt' },
+	{ id: 'trees', label: 'Stadtbäume', color: '#7aa874', icon: 'tree', hint: '43 000 Bäume aus dem Baumkataster' },
+	{ id: 'bikes', label: 'Messräder, letzte 7 Tage', color: '#4e7ea6', icon: 'bike', hint: 'Fahrräder mit Feinstaubsensor, Farbe = PM2,5' }
 ];
 
 export const NOISE_LEGEND = [
@@ -126,7 +128,7 @@ export const NOISE_LEGEND = [
 
 // PM2.5 colour for a ride mean, WHO daily limit is 15
 export const pmColor = (v: number) =>
-	v < 10 ? '#4ade80' : v < 15 ? '#facc15' : v < 25 ? '#fb923c' : '#f87171';
+	v < 10 ? '#5a8f5f' : v < 15 ? '#c7a24a' : v < 25 ? '#c4664f' : '#a03d3d';
 
 export async function postReport(body: {
 	lat: number;
