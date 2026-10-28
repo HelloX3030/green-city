@@ -1,13 +1,14 @@
 """Group reports that are close in space. Oldest report first: it anchors a cluster,
 every later report within RADIUS_M of an anchor joins that cluster, otherwise it
 anchors a new one. Anchors never move and the cluster id is the anchor's report id,
-so bubbles stay put and ids stay stable while reports come in. Each report has a
-weight that halves every HALF_LIFE_DAYS, so old reports fade out of the cluster
+so bubbles stay put and ids stay stable while reports come in. Per person and day
+only the latest report carries weight, so one phone cannot grow a bubble alone.
+That weight halves every HALF_LIFE_DAYS, so old reports fade out of the cluster
 size and the dominant type."""
 
 import math
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 RADIUS_M = 100
 HALF_LIFE_DAYS = 7
@@ -46,7 +47,16 @@ def cluster(reports: list[dict], me: int | None = None) -> list[dict]:
     now = datetime.now(timezone.utc)
     for c in clusters:
         members = c["members"]
-        weights = {r["id"]: weight(r["created_at"], now) for r in members}
+        # one voice per person and day: the latest report of a (person, day) pair has the weight, the rest 0
+        latest: dict[tuple, dict] = {}
+        for r in members:
+            key = (r.get("user_id") or ("anon", r["id"]), r["created_at"][:10])
+            if key not in latest or r["created_at"] > latest[key]["created_at"]:
+                latest[key] = r
+        counted = {r["id"] for r in latest.values()}
+        weights = {r["id"]: weight(r["created_at"], now) if r["id"] in counted else 0.0 for r in members}
+        people = len({k[0] for k in latest})
+        week = now - timedelta(days=HALF_LIFE_DAYS)
         types = Counter(t for r in members for t in r["types"])
         weighted = Counter()
         for r in members:
@@ -58,7 +68,8 @@ def cluster(reports: list[dict], me: int | None = None) -> list[dict]:
                 "lat": c["lat"],
                 "lon": c["lon"],
                 "count": len(members),
-                "recent": sum(1 for r in members if weights[r["id"]] >= 0.5),  # the last HALF_LIFE_DAYS
+                "people": people,
+                "recent": sum(1 for r in members if datetime.fromisoformat(r["created_at"]) >= week),
                 "mine": sum(1 for r in members if me is not None and r.get("user_id") == me),
                 "weight": round(sum(weights.values()), 2),
                 "types": dict(types.most_common()),

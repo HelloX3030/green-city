@@ -10,7 +10,7 @@
 	}: { cluster: Cluster; sent?: boolean; onclose: () => void; onreport: () => void } = $props();
 
 	const mine = $derived(cluster.mine > 0); // one of the reports here is from this device
-	const others = $derived(cluster.count - cluster.mine);
+	const others = $derived(cluster.people - 1); // other people, not other reports
 	const you = $derived(
 		others === 0
 			? cluster.mine === 1
@@ -19,6 +19,16 @@
 			: `Du und ${others} ${others === 1 ? 'andere Person' : 'andere'} in der Nähe`
 	);
 	const main = $derived(typeInfo(dominantType(cluster)));
+	const sub = $derived(
+		[
+			mine ? you : cluster.count > 1 ? `von ${cluster.people} ${cluster.people === 1 ? 'Person' : 'Personen'}` : null,
+			main.label,
+			cluster.recent < cluster.count ? `${cluster.recent === 0 ? 'keine' : cluster.recent} davon diese Woche` : null,
+			`letzte ${timeAgo(cluster.latest)}`
+		]
+			.filter(Boolean)
+			.join(' · ')
+	);
 </script>
 
 <div class="head">
@@ -31,11 +41,7 @@
 			<p>{you}.</p>
 		{:else}
 			<h2>{cluster.count} {cluster.count === 1 ? 'Meldung' : 'Meldungen'}</h2>
-			<p>
-				{#if mine}{you}{:else}{main.label}{/if}
-				{#if cluster.recent < cluster.count}· {cluster.recent === 0 ? 'keine' : cluster.recent} davon diese Woche{/if}
-				· letzte {timeAgo(cluster.latest)}
-			</p>
+			<p>{sub}</p>
 		{/if}
 	</div>
 	<button class="x" onclick={onclose} aria-label="Schließen"><Icon name="x" size={16} /></button>

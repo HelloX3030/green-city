@@ -368,7 +368,7 @@
 			const size = Math.round(30 + 6 * Math.sqrt(c.weight));
 			div.style.setProperty('--c', TYPES.find((t) => t.id === dominantType(c))?.color ?? '#8a8a8e');
 			div.style.setProperty('--s', `${size}px`);
-			div.textContent = String(c.count);
+			div.textContent = String(c.people);
 			div.classList.toggle('sel', c.id === selId);
 			div.classList.toggle('mine', c.mine > 0);
 		}

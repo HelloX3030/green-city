@@ -2,7 +2,7 @@
 import unittest
 from datetime import datetime, timedelta, timezone
 
-from clustering import cluster
+from clustering import cluster, weight
 
 
 def rep(id_, days_ago, lat=49.15, lon=9.22, user=1):
@@ -15,6 +15,23 @@ class Clustering(unittest.TestCase):
         (c,) = cluster([rep(1, 10), rep(2, 8), rep(3, 1), rep(4, 0)])
         self.assertEqual((c["count"], c["recent"]), (4, 2))
         self.assertEqual(c["id"], 1)  # the oldest anchors
+
+    def test_one_voice_per_person_and_day(self):
+        (c,) = cluster([rep(1, 0, user=7), rep(2, 0, user=7), rep(3, 0, user=7)])
+        self.assertEqual((c["count"], c["people"]), (3, 1))
+        self.assertAlmostEqual(c["weight"], 1.0, places=1)  # three taps, one voice
+        (c,) = cluster([rep(1, 1, user=7), rep(2, 0, user=7), rep(3, 0, user=8)])
+        self.assertEqual(c["people"], 2)
+        self.assertAlmostEqual(c["weight"], 2.9, places=1)  # yesterday counts again, 0.9 + 1 + 1
+
+    def test_dominant_type_is_by_voice_not_by_tap(self):
+        reps = [rep(1, 0, user=7), rep(2, 0, user=7), rep(3, 0, user=8)]
+        reps[0]["types"] = reps[1]["types"] = ["heat"]
+        reps[2]["types"] = ["noise"]
+        reps[2]["created_at"] = rep(3, 0.01)["created_at"]  # a bit older, so 2 is the latest of user 7
+        c = cluster(reps)[0]
+        self.assertEqual(c["types"], {"heat": 2, "noise": 1})  # raw counts stay
+        self.assertEqual(c["weight"], round(weight(reps[1]["created_at"]) + weight(reps[2]["created_at"]), 2))
 
     def test_mine_counts_the_callers_reports(self):
         reports = [rep(1, 1, user=7), rep(2, 1, user=8), rep(3, 0, user=7)]

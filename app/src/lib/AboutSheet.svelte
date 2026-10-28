@@ -6,7 +6,7 @@
 
 	const steps = [
 		['plus', 'Melden', 'Zu laut, zu heiß, schlechte Luft, kein Schatten. Ein Tipp auf die Karte reicht.'],
-		['map', 'Bündeln', 'Meldungen im Umkreis von 100 m werden zu einer Stelle. Alte verblassen nach ein paar Tagen.'],
+		['map', 'Bündeln', 'Meldungen im Umkreis von 100 m werden zu einer Stelle, die Zahl sind die Personen. Pro Person und Tag zählt eine Meldung, alte verblassen nach ein paar Tagen.'],
 		['radio', 'Prüfen', 'Jede Stelle wird mit den Sensoren der Stadt verglichen. Wo Daten fehlen, stellen wir unseren NoiseNode auf.']
 	] as const;
 </script>

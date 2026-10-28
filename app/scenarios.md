@@ -8,7 +8,7 @@ Per size
 - first open: home sheet with Melden, NoiseNode pin on the map
 - zoomed out to 11, Melden: flies to my position at zoom 16, circle green, Melden enabled
 - send a report (Zu laut): "Gemeldet" card with "Du …", the bubble gets the green dot, close, home sheet back
-- tap a bubble at zoom 15: cluster card ("n Meldungen", "Du und …" since one is mine, no "diese Woche" when all are fresh), bubble highlighted, its 100 m disc drawn, the faint discs of the others only from zoom 15
+- tap a bubble at zoom 15: cluster card ("n Meldungen", "Du und N andere" with N the other people since one is mine, no "diese Woche" when all are fresh), the number on the bubble is the people count of the API, bubble highlighted, its 100 m disc drawn, the faint discs of the others only from zoom 15
 - Meine Meldungen from the home sheet: the sent report is listed with type, time, bubble size and status, a Zurückziehen button; tap on it from zoom 12 flies to its bubble at 16 with the card
 - layers: Lärmkarte, Messräder, Feinstaub on at zoom 11 and 16, legend shows
 - about sheet via the title pill, open and close

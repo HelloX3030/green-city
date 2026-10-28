@@ -31,9 +31,10 @@ export interface Cluster {
 	lat: number;
 	lon: number;
 	count: number;
+	people: number; // distinct users
 	recent: number; // of the last 7 days
 	mine: number; // sent from this device (0 without a token)
-	weight: number; // count with decay, halves every 7 days
+	weight: number; // one voice per person and day, halves every 7 days: the bubble size
 	types: Record<string, number>;
 	dominant: ReportType; // by decayed weight
 	latest: string;

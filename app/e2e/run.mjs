@@ -194,6 +194,10 @@ for (const size of Object.keys(SIZES)) {
 		const sheet = await page.sheet();
 		expect(/^\d+ Meldung/m.test(sheet), 'no cluster card');
 		expect(/^Du /m.test(sheet), 'card of the bubble with my report does not say Du');
+		const n = await page.eval(`document.querySelector('.pin.cluster.sel')?.textContent`);
+		const api = (await fetch(`${API}/clusters`).then((r) => r.json())).find((c) => String(c.people) === n && c.count >= +n);
+		expect(api, `bubble says ${n}, no cluster has that many people`);
+		if (api && api.people > 1) expect(sheet.includes(`Du und ${api.people - 1} andere`), `card counts "${sheet.split('\n')[1]}", people ${api.people}`);
 		expect(!sheet.includes('diese Woche'), 'card says "diese Woche" though every report is fresh');
 		expect(await page.has('.pin.cluster.sel'), 'bubble not highlighted');
 		const drawn = (layer) => page.eval(`window.__map.queryRenderedFeatures({layers: ['${layer}']}).length`);
