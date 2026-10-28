@@ -1,0 +1,50 @@
+name: greencity
+
+services:
+  web:
+    build:
+      context: ./app
+    image: greencity-web:latest
+    container_name: greencity
+    restart: unless-stopped
+    ports:
+      - "8081:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  api:
+    build:
+      context: ./backend
+    image: greencity-api:latest
+    container_name: greencity-api
+    restart: unless-stopped
+    environment:
+      GREENCITY_DB_PATH: /data/reports.db
+      GREENCITY_HISTORY_PATH: /data/history.json
+    volumes:
+      - greencity-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=2)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  greencity-data:

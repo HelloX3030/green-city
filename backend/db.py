@@ -1,9 +1,10 @@
 import json
+import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "reports.db"
+DB_PATH = Path(os.environ.get("GREENCITY_DB_PATH", Path(__file__).parent / "reports.db"))
 
 # a user is a row, a device token is one way to prove you are that user (an account is a later one).
 # reports.author is the old client-chosen id, kept only for the migration in init()
