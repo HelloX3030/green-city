@@ -39,6 +39,19 @@ altura_carcasa = z_separacion + df_alto + 6.0 + 0.5  # +0.5 de techo: sin él la
 # dejaría la tapa montada sobre la placa en vez de sobre el borde
 altura_domo = 6.0
 
+# -- Constantes compartidas (varias secciones dependen de ellas) --
+dist_min_contorno = 55.0   # distancia mínima del contorno al origen (en los
+                           # vértices +-x); convierte holguras radiales en mm a
+                           # factores de escala homotéticos: f = 1 +- h / dist
+alto_torreta = 4.0         # las placas apoyan a grosor_base + alto_torreta
+r_torreta_m3 = 4.0         # torreta M3 con boca para inserto roscado
+r_boca_inserto = 2.0       # boca Ø4.0 x 4.5 para inserto M3 (p. ej. Ruthex M3 x 5.7)
+prof_boca_inserto = 4.5
+r_piloto = 1.4             # piloto Ø2.8: un M3 autorroscante agarra sin inserto
+r_media_cana = 3.0         # media caña pared-suelo (refuerzo)
+chaflan_inferior = 0.5     # chaflán anti "pata de elefante" en el canto inferior
+prof_surco = 0.8           # profundidad de las nervaduras grabadas en el domo
+
 # ---------------- CONTORNO POLIGONAL HOJA ----------------
 contorno = [
     (0, -L/2),
@@ -71,8 +84,9 @@ def crear_prisma(puntos, z, altura):
 def crear_objeto(nombre, forma, color, transparencia=0):
     obj = doc.addObject("Part::Feature", nombre)
     obj.Shape = forma
-    obj.ViewObject.ShapeColor = color
-    obj.ViewObject.Transparency = transparencia
+    if App.GuiUp:  # en freecadcmd (headless) no hay ViewObject
+        obj.ViewObject.ShapeColor = color
+        obj.ViewObject.Transparency = transparencia
     return obj
 
 def crear_wire_perfil(puntos, factor_x, z):
@@ -142,17 +156,17 @@ puntos_apoyo_sb = [
 ]
 
 for px, py in puntos_m3_sb:
-    torreta = Part.makeCylinder(4.0, 4.0, App.Vector(px, py, grosor_base))
+    torreta = Part.makeCylinder(r_torreta_m3, alto_torreta, App.Vector(px, py, grosor_base))
     cuerpo = cuerpo.fuse(torreta)
-    # Boca Ø4.0 x 4.5 para inserto roscado M3 (p. ej. Ruthex M3 x 5.7);
-    # debajo sigue un piloto Ø2.8 que deja 1 mm de suelo. Sin insertos, un
-    # tornillo M3 autorroscante agarra igualmente en el piloto.
-    boca_inserto = Part.makeCylinder(2.0, 6.0, App.Vector(px, py, grosor_base + 4.0 - 4.5))
-    piloto = Part.makeCylinder(1.4, 6.0, App.Vector(px, py, 1.0))
+    # Boca para inserto roscado; debajo sigue el piloto, que deja 1 mm de
+    # suelo. Sin insertos, un tornillo M3 autorroscante agarra igualmente.
+    boca_inserto = Part.makeCylinder(r_boca_inserto, 6.0,
+                                     App.Vector(px, py, grosor_base + alto_torreta - prof_boca_inserto))
+    piloto = Part.makeCylinder(r_piloto, 6.0, App.Vector(px, py, 1.0))
     cuerpo = cuerpo.cut(boca_inserto).cut(piloto)
 
 for px, py in puntos_apoyo_sb:
-    cuerpo = cuerpo.fuse(Part.makeCylinder(3.5, 4.0, App.Vector(px, py, grosor_base)))
+    cuerpo = cuerpo.fuse(Part.makeCylinder(3.5, alto_torreta, App.Vector(px, py, grosor_base)))
 
 # ============================================================
 # 2. RAÍLES GUÍA CONTINUOS (DE PARED A PARED)
@@ -191,22 +205,28 @@ cuerpo = cuerpo.fuse(railes_limpios)
 # 45° y 90°). Refuerza la unión más cargada y evita la grieta de esquina.
 # El perfil superior rebasa 0.3 mm dentro de la pared para que el corte y
 # la fusión no dejen caras coincidentes.
-cunna_molde = crear_prisma(contorno_interior, grosor_base, 3.0)
+cunna_molde = crear_prisma(contorno_interior, grosor_base, r_media_cana)
 cunna_nucleo = Part.makeLoft(
-    [wire_contorno(contorno, grosor_base, factor_interior - 3.0/55, factor_interior - 3.0/55),
-     wire_contorno(contorno, grosor_base + 0.88, factor_interior - 0.88/55, factor_interior - 0.88/55),
-     wire_contorno(contorno, grosor_base + 5.8, factor_interior + 0.3/55, factor_interior + 0.3/55)],
+    [wire_contorno(contorno, grosor_base,
+                   factor_interior - r_media_cana/dist_min_contorno,
+                   factor_interior - r_media_cana/dist_min_contorno),
+     wire_contorno(contorno, grosor_base + 0.88,
+                   factor_interior - 0.88/dist_min_contorno,
+                   factor_interior - 0.88/dist_min_contorno),
+     wire_contorno(contorno, grosor_base + 5.8,
+                   factor_interior + 0.3/dist_min_contorno,
+                   factor_interior + 0.3/dist_min_contorno)],
     True, False)
 cuerpo = cuerpo.fuse(cunna_molde.cut(cunna_nucleo))
 
 # Chaflán de 0.5 mm en el canto inferior exterior: compensa la pata de
 # elefante de la primera capa y la caja asienta plana aunque el borde rebose.
-f_chaflan = 1.0 - 0.5 / 55.0
-chaflan_molde = crear_prisma(contorno, -0.5, 1.0)
+f_chaflan = 1.0 - chaflan_inferior / dist_min_contorno
+chaflan_molde = crear_prisma(contorno, -chaflan_inferior, 2 * chaflan_inferior)
 chaflan_nucleo = Part.makeLoft(
-    [wire_contorno(contorno, -0.5, f_chaflan, f_chaflan),
+    [wire_contorno(contorno, -chaflan_inferior, f_chaflan, f_chaflan),
      wire_contorno(contorno, 0.0, f_chaflan, f_chaflan),
-     wire_contorno(contorno, 0.5, 1.001, 1.001)], True, False)
+     wire_contorno(contorno, chaflan_inferior, 1.001, 1.001)], True, False)
 cuerpo = cuerpo.cut(chaflan_molde.cut(chaflan_nucleo))
 
 # ============================================================
@@ -282,9 +302,9 @@ tapa = tapa.cut(agujero_mic)
 # semiesféricos encajan en huecos de la pared interior (cierre sin tornillos).
 falda_alto = 4.0
 grosor_falda = 2.0
-holgura_falda = 0.4  # holgura radial falda-pared; la distancia mínima del contorno al origen es ~55 mm
-falda_ext = factor_interior - holgura_falda / 55.0
-falda_int = falda_ext - grosor_falda / 55.0
+holgura_falda = 0.4  # holgura radial falda-pared
+falda_ext = factor_interior - holgura_falda / dist_min_contorno
+falda_int = falda_ext - grosor_falda / dist_min_contorno
 
 # Vaciado del domo: la tapa era un bloque macizo de plástico. Se resta un loft
 # interior con los mismos perfiles, escalado en planta al borde interior de la
@@ -344,7 +364,7 @@ tapa = tapa.cut(boca_capucha)
 def wire_xy(fx, fy, z):
     return wire_contorno(contorno, z, fx=fx, fy=fy)
 
-f_alero = 1.0 + 1.5 / 55.0  # ~1.5 mm de vuelo radial (distancia mínima del contorno ~55)
+f_alero = 1.0 + 1.5 / dist_min_contorno  # ~1.5 mm de vuelo radial
 alero = Part.makeLoft([wire_xy(f_alero, f_alero, altura_carcasa),
                        wire_xy(f_alero, f_alero, altura_carcasa + 0.6),
                        wire_xy(0.89, 0.995, altura_carcasa + 1.7)], True)
@@ -373,7 +393,7 @@ laminas = nervios[0]
 for n in nervios[1:]:
     laminas = laminas.fuse(n)
 tapa_bajada = tapa.copy()
-tapa_bajada.translate(App.Vector(0, 0, -0.8))
+tapa_bajada.translate(App.Vector(0, 0, -prof_surco))
 surcos = laminas.common(tapa).cut(tapa_bajada)
 tapa = tapa.cut(surcos)
 
@@ -426,5 +446,8 @@ crear_objeto("REF_senseBox_MCU", ref_sensebox, (0.25, 0.25, 0.25))
 crear_objeto("REF_DFRobot_SoundMeter", ref_dfrobot, (0.10, 0.40, 0.80))
 
 doc.recompute()
-Gui.activeDocument().activeView().viewAxonometric()
-Gui.activeDocument().activeView().fitAll()
+
+if App.GuiUp:
+    import FreeCADGui as Gui
+    Gui.activeDocument().activeView().viewAxonometric()
+    Gui.activeDocument().activeView().fitAll()
