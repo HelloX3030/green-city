@@ -177,6 +177,7 @@ for (const size of Object.keys(SIZES)) {
 		await type('.sheet .msg', `Baustelle ab 6 Uhr (${size})`);
 		await page.clickText('Melden');
 		await page.until('.sheet .badge', 6000); // post, then the clusters poll with the new report
+		await page.until('.sheet .voices li.me', 4000); // the card's own fetch of the texts
 		const sheet = await page.sheet();
 		expect(sheet.includes('Gemeldet'), `no Gemeldet card, sheet says "${sheet.split('\n')[0]}", Melden ${(await page.eval(`document.querySelector('.sheet .primary')?.disabled`)) ? 'disabled' : 'enabled'}, zoom ${(await page.zoom()).toFixed(3)}`);
 		expect(/^Du /m.test(sheet), 'card does not say Du');
@@ -184,6 +185,11 @@ for (const size of Object.keys(SIZES)) {
 		expect(await page.sheetHas(`Baustelle ab 6 Uhr (${size})`), 'my text is not on the card');
 		const first = await page.eval(`document.querySelector('.sheet .voices li')?.innerText`);
 		expect(first && first.includes('Du') && first.includes(`(${size})`), `the first text is not mine with a Du tag: "${first}"`);
+		// the chip of the type I named has a ring, also when the bubble has only that type
+		const ringed = await page.eval(`[...document.querySelectorAll('.sheet .type.me')].map((b) => b.getAttribute('aria-label'))`);
+		expect(ringed.some((l) => l.startsWith('Zu laut') && l.endsWith('von dir')), `my type is not ringed: ${JSON.stringify(ringed)}`);
+		const todays = await page.eval(`[...document.querySelectorAll('.sheet .voices li.me')].length`);
+		expect(todays < 2 || sheet.includes('Meldung hier heute'), `${todays} of mine, but the card does not count them`);
 		await page.shot(`${size}-sent`);
 		await page.click('[aria-label="Schließen"]');
 		await wait(300);
@@ -208,11 +214,13 @@ for (const size of Object.keys(SIZES)) {
 		expect(api, `bubble says ${n}, no cluster has that many reports`);
 		if (api && api.people > 1) expect(sheet.includes(`Du und ${api.people - 1} andere`), `card counts "${sheet.split('\n')[0]}", people ${api.people}`);
 		expect(await page.has('.sheet .voices li.me'), 'my report is not marked in the list');
-		expect(sheet.includes('Nochmal melden') && sheet.includes('Zählt einmal pro Tag'), 'reported today, but no Nochmal melden and the once-a-day hint');
-		// the type chips: icon and reports per type, only when there is more than one type; a tap filters the texts
+		expect(sheet.includes('Nochmal melden') && !sheet.includes('Zählt einmal'), 'reported today, but no Nochmal melden, or the old once-a-day hint');
+		// the type chips: icon and reports per type, always here since I reported; mine ringed; a tap filters the texts
 		const types = api ? Object.keys(api.types) : [];
 		const chips = await page.eval(`[...document.querySelectorAll('.sheet .type')].map((b) => b.textContent.trim())`);
-		expect(chips.length === (types.length > 1 ? types.length : 0), `${chips.length} chips for ${types.length} types`);
+		expect(chips.length === types.length, `${chips.length} chips for ${types.length} types`);
+		const ringed = await page.eval(`[...document.querySelectorAll('.sheet .type.me')].map((b) => b.getAttribute('aria-label'))`);
+		expect(ringed.length && ringed.every((l) => l.endsWith('von dir')), `ringed chips: ${JSON.stringify(ringed)}`);
 		if (chips.length) {
 			await page.click('.sheet .type');
 			await wait(300);

@@ -47,8 +47,11 @@
 		filter = null;
 	});
 	const voices = $derived(reports.filter((r) => r.message && (!filter || r.types.includes(filter))));
-	// one of mine from today: another one counts as the same voice
-	const today = $derived(reports.some((r) => r.mine && r.created_at.slice(0, 10) === new Date().toISOString().slice(0, 10)));
+	// mine from today: the button says Nochmal melden, the sent card counts them
+	const myToday = $derived(reports.filter((r) => r.mine && r.created_at.slice(0, 10) === new Date().toISOString().slice(0, 10)).length);
+	const today = $derived(myToday > 0);
+	// the types I named here get a ring on their chip
+	const myTypes = $derived(new Set<string>(reports.filter((r) => r.mine).flatMap((r) => r.types)));
 	function pick(t: string) {
 		filter = filter === t ? null : (t as ReportType);
 	}
@@ -61,7 +64,7 @@
 	<div>
 		{#if sent}
 			<h2>Gemeldet</h2>
-			<p>{you}.</p>
+			<p>{[you, myToday > 1 ? `deine ${myToday}. Meldung hier heute` : null].filter(Boolean).join(' · ')}.</p>
 		{:else}
 			<h2>{reports_(cluster.count)}</h2>
 			<p>{sub}</p>
@@ -73,14 +76,15 @@
 	<span class="status" style="background: {STATUS[cluster.status].color}">{STATUS[cluster.status].label}</span>
 	<p class="reason">{cluster.reason}</p>
 {/if}
-{#if Object.keys(cluster.types).length > 1}
+{#if Object.keys(cluster.types).length > 1 || myTypes.size}
 <div class="types">
 	{#each Object.entries(cluster.types) as [t, n]}
 		<button
 			class="type"
 			class:on={filter === t}
+			class:me={myTypes.has(t)}
 			style="--c: {typeInfo(t).color}"
-			aria-label="{typeInfo(t).label}, {reports_(n)}"
+			aria-label="{typeInfo(t).label}, {reports_(n)}{myTypes.has(t) ? ', von dir' : ''}"
 			aria-pressed={filter === t}
 			onclick={() => pick(t)}
 		>
@@ -103,9 +107,6 @@
 			</li>
 		{/each}
 	</ul>
-{/if}
-{#if today && (!sent || cluster.mine > 1)}
-	<p class="hint">Zählt einmal pro Tag, egal wie oft du meldest.</p>
 {/if}
 {#if !sent}
 	<button class="ghost" onclick={onreport}>{today ? 'Nochmal melden' : 'Hier auch melden'}</button>
@@ -135,11 +136,6 @@
 	}
 	.head p {
 		margin: 1px 0 0;
-		font-size: 12px;
-		color: var(--ink2);
-	}
-	.hint {
-		margin: 10px 0 0;
 		font-size: 12px;
 		color: var(--ink2);
 	}
@@ -196,6 +192,9 @@
 		font-size: 13px;
 		font-weight: 600;
 		font-variant-numeric: tabular-nums;
+	}
+	.type.me {
+		box-shadow: inset 0 0 0 2px var(--c); /* the ones you named */
 	}
 	.type.on {
 		background: var(--c);
