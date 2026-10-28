@@ -160,6 +160,37 @@ agujero_mic = Part.makeCylinder(
 
 tapa = tapa.cut(agujero_mic)
 
+# ---- Falda de registro + cierre a presión ----
+# La tapa solo apoyaba sobre el borde: nada la registraba en XY ni impedía
+# que se levantara. Una falda interior entra en la cavidad y cuatro resaltes
+# semiesféricos encajan en huecos de la pared interior (cierre sin tornillos).
+falda_alto = 4.0
+grosor_falda = 2.0
+holgura_falda = 0.4  # holgura radial falda-pared; la distancia mínima del contorno al origen es ~55 mm
+falda_ext = factor_interior - holgura_falda / 55.0
+falda_int = falda_ext - grosor_falda / 55.0
+
+falda = crear_prisma([(x * falda_ext, y * falda_ext) for x, y in contorno],
+                     altura_carcasa - falda_alto, falda_alto)
+falda = falda.cut(crear_prisma([(x * falda_int, y * falda_int) for x, y in contorno],
+                               altura_carcasa - falda_alto - 1.0, falda_alto + 2.0))
+tapa = tapa.fuse(falda)
+
+z_cierre = altura_carcasa - falda_alto + 1.5
+for idx in (1, 3, 9, 11):  # dos resaltes por lado, en vértices del contorno
+    vx, vy = contorno[idx]
+    r = math.hypot(vx, vy)
+    ux, uy = vx / r, vy / r
+    # centro sobre la pared interior de la cavidad, retraído 1 mm hacia dentro:
+    # el resalte sobresale 0.5 mm de la falda hacia la pared y el hueco (r+0.1)
+    # lo recibe con holgura, de modo que montada la tapa no hay interferencia
+    cx = vx * factor_interior - ux * 1.0
+    cy = vy * factor_interior - uy * 1.0
+    resalte = Part.makeSphere(1.5, App.Vector(cx, cy, z_cierre))
+    hueco = Part.makeSphere(1.6, App.Vector(cx, cy, z_cierre))
+    tapa = tapa.fuse(resalte)
+    cuerpo = cuerpo.cut(hueco)
+
 # ============================================================
 # 4. COMPONENTES VIRTUALES DE REFERENCIA
 # ============================================================
