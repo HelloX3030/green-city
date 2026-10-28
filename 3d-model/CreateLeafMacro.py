@@ -19,6 +19,7 @@ W = 130.0  # Ancho total
 sb_largo = 78.0
 sb_ancho = 72.0
 sb_alto = 11.0
+desfase_y_mcu = 7.0  # desplaza el MCU hacia la parte ancha de la hoja: centrado, sus esquinas inferiores chocan con la pared
 
 # 2. DFRobot Sound Level Meter V2.0 (Nivel Superior)
 df_largo = 60.25
@@ -29,7 +30,7 @@ grosor_pared = 3.2
 grosor_base = 2.5
 grosor_tapa = 2.5
 
-z_separacion = 12.0
+z_separacion = 15.5  # los raíles deben quedar por encima de los 11 mm del MCU (torretas 4 + placa 11 + 0.5 de holgura)
 altura_carcasa = z_separacion + df_alto + 6.0
 altura_domo = 6.0
 
@@ -75,34 +76,33 @@ def altura_superficie(x):
 # 1. BASE Y CUERPO PRINCIPAL DE LA CAJA
 # ============================================================
 exterior = crear_prisma(contorno, 0, altura_carcasa)
-factor_interior = 0.88
+factor_interior = 0.92  # con 0.88 la cavidad deja solo ~1.6 mm de holgura para los 72 mm de la placa
 contorno_interior = [(x * factor_interior, y * factor_interior) for x, y in contorno]
 cavidad = crear_prisma(contorno_interior, grosor_base, altura_carcasa)
 
 cuerpo = exterior.cut(cavidad)
 
-# Rebaje y orificio para puerto USB-C
-usb_x = -W/2 + 42.0 
-usb_y_pos = -L*0.35
+# Orificio para puerto USB-C: el puerto está en el lado corto (72 mm) de la placa,
+# con la abertura a 36 mm de una esquina y 26 mm de la otra, 10 mm de ancho
+# (ver 3d-model/measurements). El túnel atraviesa toda la pared izquierda.
+usb_ancho = 10.0
+usb_alto = 7.0
+usb_y0 = -sb_ancho/2 + desfase_y_mcu + 36.0   # 36 mm desde la esquina de la placa
+usb_z0 = grosor_base + 4.0    # la placa apoya sobre torretas de 4 mm
 
-rebaje_exterior = Part.makeBox(
-    18.0, grosor_pared * 3, 12.0,
-    App.Vector(usb_x - 4.0, usb_y_pos - grosor_pared * 1.5, grosor_base)
+tunel_usbc = Part.makeBox(
+    35.0, usb_ancho, usb_alto,
+    App.Vector(-W/2 - 5.0, usb_y0, usb_z0)
 )
 
-pasante_usbc = Part.makeBox(
-    11.0, grosor_pared * 5, 7.0,
-    App.Vector(usb_x, usb_y_pos - grosor_pared * 2.5, grosor_base + 1.5)
-)
-
-cuerpo = cuerpo.cut(rebaje_exterior).cut(pasante_usbc)
+cuerpo = cuerpo.cut(tunel_usbc)
 
 # Standoffs base (Fijación M3) para senseBox MCU
 puntos_m3_sb = [
-    (-sb_largo/2 + 5, -sb_ancho/2 + 5),
-    ( sb_largo/2 - 5, -sb_ancho/2 + 5),
-    (-sb_largo/2 + 5,  sb_ancho/2 - 5),
-    ( sb_largo/2 - 5,  sb_ancho/2 - 5)
+    (-sb_largo/2 + 5, desfase_y_mcu - sb_ancho/2 + 5),
+    ( sb_largo/2 - 5, desfase_y_mcu - sb_ancho/2 + 5),
+    (-sb_largo/2 + 5, desfase_y_mcu + sb_ancho/2 - 5),
+    ( sb_largo/2 - 5, desfase_y_mcu + sb_ancho/2 - 5)
 ]
 
 for px, py in puntos_m3_sb:
@@ -118,7 +118,7 @@ rail_ancho = 4.0
 rail_largo_total = W * 0.85 # Atraviesa toda la longitud interna en X
 rail_alto = 3.5
 z_rail = grosor_base + z_separacion
-sep_y = df_ancho / 2.0
+sep_y = df_ancho / 2.0 - 2.0  # la placa del sensor solapa 2 mm sobre cada raíl para apoyarse
 
 # Raíles continuos a todo lo largo
 rail_1 = Part.makeBox(rail_largo_total, rail_ancho, rail_alto, App.Vector(-rail_largo_total/2,  sep_y, z_rail))
@@ -165,7 +165,7 @@ tapa = tapa.cut(agujero_mic)
 # ============================================================
 ref_sensebox = Part.makeBox(
     sb_largo, sb_ancho, sb_alto,
-    App.Vector(-sb_largo/2, -sb_ancho/2, grosor_base + 4.0)
+    App.Vector(-sb_largo/2, desfase_y_mcu - sb_ancho/2, grosor_base + 4.0)
 )
 
 ref_dfrobot = Part.makeBox(
