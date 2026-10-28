@@ -104,6 +104,7 @@
 	// the report circle is the cluster radius on the ground, so it grows with the zoom
 	const metresPerPx = $derived((156543.03 * Math.cos((lat * Math.PI) / 180)) / 2 ** zoom);
 	const circlePx = $derived(Math.max(24, (2 * CLUSTER_RADIUS_M) / metresPerPx));
+	const far = $derived(zoom < 14); // zoomed out the bubbles shrink a bit, they crowd otherwise
 	const NOISE_TILES =
 		'https://datahub.uba.de/server/rest/services/VeLa/LK/MapServer/export?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&layers=show:4210&format=png32&transparent=true&f=image';
 	const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
@@ -365,9 +366,11 @@
 			}
 			m.setLngLat([c.lon, c.lat]);
 			const div = m.getElement();
-			const size = Math.round(30 + 6 * Math.sqrt(c.weight));
+			// grows with the log of the voices, 36 px for one, 64 at most; the big ones sit on top of the small
+			const size = Math.round(Math.min(64, 30 + 8 * Math.log(1 + c.weight)) * (far ? 0.8 : 1));
 			div.style.setProperty('--c', TYPES.find((t) => t.id === dominantType(c))?.color ?? '#8a8a8e');
 			div.style.setProperty('--s', `${size}px`);
+			div.style.zIndex = String(c.id === selId ? 100 : size);
 			div.textContent = String(c.people);
 			div.classList.toggle('sel', c.id === selId);
 			div.classList.toggle('mine', c.mine > 0);
@@ -549,6 +552,7 @@
 	.map {
 		position: absolute;
 		inset: 0;
+		z-index: 0; /* its own stacking context: bubble z-indexes stay under the sheet and the buttons */
 	}
 	.dim {
 		position: absolute;
@@ -637,12 +641,9 @@
 		place-items: center;
 		cursor: pointer;
 	}
-	/* reports above sensors, the selected one on top */
-	:global(.pin.cluster) {
-		z-index: 2;
-	}
-	:global(.pin.sel) {
-		z-index: 3;
+	/* bubbles above sensors (their z-index is set per bubble, the selected one on top) */
+	:global(.pin.sensor.sel) {
+		z-index: 1;
 	}
 	:global(.pin .i) {
 		width: 15px;
