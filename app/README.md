@@ -2,7 +2,7 @@
 
 SvelteKit + MapLibre. One page: map, one bottom sheet (report, cluster card, sensor card, layers).
 
-Look: CARTO Positron basemap, glass surfaces, one green for actions. Colours and icons per report type, sensor kind and layer live in `src/lib/api.ts`, the icon paths in `src/lib/icons.ts`. Sensors and clusters are DOM markers (`.pin` styles in `Map.svelte`), trees and bike rides are map layers.
+Look: CARTO Positron basemap, glass surfaces, one green for actions. Colours and icons per report type, sensor kind and layer live in `src/lib/api.ts`, the icon paths in `src/lib/icons.ts`. Sensors and clusters are DOM markers (`.pin` styles in `Map.svelte`), trees, bike rides and the 100 m discs of the bubbles are map layers. A bubble's disc is faint from zoom 15 up, the selected one has a line and shows the single reports from 15.5.
 
 Title pill top left opens a short about sheet (three steps, status colours). Layout: one bottom sheet on phones, a 400 px card bottom-left from 600 px width, the map centre shifts away from it.
 

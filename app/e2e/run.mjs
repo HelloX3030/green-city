@@ -101,6 +101,8 @@ const page = {
 		return false;
 	},
 	zoom: () => page.eval(`window.__map.getZoom()`),
+	// tiles and sources are rendered, or 3 s passed
+	idle: () => page.eval(`Promise.race([new Promise((r) => window.__map.once('idle', r)), new Promise((r) => setTimeout(r, 3000))]).then(() => 0)`),
 	center: () => page.eval(`JSON.stringify(window.__map.getCenter())`).then(JSON.parse),
 	setView: (lon, lat, zoom) => page.eval(`window.__map.jumpTo({center: [${lon}, ${lat}], zoom: ${zoom}}); 0`),
 	wait
@@ -177,6 +179,14 @@ for (const size of Object.keys(SIZES)) {
 		await wait(800);
 		expect(/^\d+ Meldung/m.test(await page.sheet()), 'no cluster card');
 		expect(await page.has('.pin.cluster.sel'), 'bubble not highlighted');
+		const drawn = (layer) => page.eval(`window.__map.queryRenderedFeatures({layers: ['${layer}']}).length`);
+		expect((await drawn('disc-sel')) === 1, 'selected disc not drawn');
+		expect((await drawn('discs')) > 0, 'faint discs not drawn at zoom 15');
+		await page.shot(`${size}-disc`);
+		await page.eval(`window.__map.zoomTo(14, {duration: 0}); 0`);
+		await page.idle();
+		expect((await drawn('disc-sel')) === 1, 'selected disc gone at zoom 14');
+		expect((await drawn('discs')) === 0, 'faint discs drawn at zoom 14');
 	});
 
 	await scenario(`${size}: layers on at zoom 11 and 16`, async () => {

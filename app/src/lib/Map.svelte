@@ -18,7 +18,7 @@
 	setWorkerUrl(workerUrl);
 	import { onMount } from 'svelte';
 	import { iconSvg } from './icons';
-	import { RING, CITY_BBOX, clampToCity, inCity, distanceM } from './city.ts';
+	import { RING, CITY_BBOX, clampToCity, inCity, distanceM, circle } from './city.ts';
 	import {
 		TYPES,
 		SENSOR_KIND,
@@ -220,6 +220,30 @@
 				layout: { visibility: 'none', 'line-cap': 'round', 'line-join': 'round' },
 				paint: { 'line-color': ['get', 'color'], 'line-width': 4, 'line-opacity': 0.85 }
 			});
+			// the 100 m of every bubble: faint from zoom 15 up, the selected one always, with a line
+			map.addSource('discs', { type: 'geojson', data: EMPTY });
+			map.addLayer({
+				id: 'discs',
+				type: 'fill',
+				source: 'discs',
+				minzoom: 15,
+				filter: ['!', ['get', 'sel']],
+				paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.08 }
+			});
+			map.addLayer({
+				id: 'disc-sel',
+				type: 'fill',
+				source: 'discs',
+				filter: ['get', 'sel'],
+				paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.16 }
+			});
+			map.addLayer({
+				id: 'disc-sel-line',
+				type: 'line',
+				source: 'discs',
+				filter: ['get', 'sel'],
+				paint: { 'line-color': ['get', 'color'], 'line-width': 1.5, 'line-opacity': 0.7 }
+			});
 			// the single reports inside a bubble, only when zoomed in close
 			map.addSource('members', { type: 'geojson', data: EMPTY });
 			map.addLayer({
@@ -305,6 +329,15 @@
 
 	$effect(() => {
 		if (!ready) return;
+		const selId = selected !== null && 'report_ids' in selected ? selected.id : null;
+		(map.getSource('discs') as GeoJSONSource).setData({
+			type: 'FeatureCollection',
+			features: clusters.map((c) => ({
+				type: 'Feature' as const,
+				properties: { color: typeInfo(dominantType(c)).color, sel: c.id === selId },
+				geometry: { type: 'Polygon' as const, coordinates: [circle(c.lat, c.lon, CLUSTER_RADIUS_M)] }
+			}))
+		});
 		(map.getSource('members') as GeoJSONSource).setData({
 			type: 'FeatureCollection',
 			features: clusters.flatMap((c) =>
@@ -336,7 +369,7 @@
 			div.style.setProperty('--c', TYPES.find((t) => t.id === dominantType(c))?.color ?? '#8a8a8e');
 			div.style.setProperty('--s', `${size}px`);
 			div.textContent = String(c.count);
-			div.classList.toggle('sel', selected !== null && 'report_ids' in selected && selected.id === c.id);
+			div.classList.toggle('sel', c.id === selId);
 		}
 		for (const [id, m] of clusterMarkers) {
 			if (!seen.has(id)) {
@@ -667,19 +700,8 @@
 		border: 2px solid #fff;
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
 	}
-	:global(.pin.cluster::before) {
-		content: '';
-		position: absolute;
-		inset: -11px;
-		border-radius: 50%;
-		background: var(--c);
-		opacity: 0.22;
-		z-index: -1;
-	}
-	/* outline, a box-shadow would hide under the halo */
 	:global(.pin.cluster.join) {
-		outline: 3px solid var(--accent);
-		outline-offset: 2px;
+		box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--accent), 0 4px 12px rgba(0, 0, 0, 0.25);
 	}
 	:global(.pin.cluster.sel) {
 		box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--c), 0 4px 12px rgba(0, 0, 0, 0.25);

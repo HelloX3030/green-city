@@ -71,3 +71,13 @@ export function distanceM(lat1: number, lon1: number, lat2: number, lon2: number
 	const a = Math.sin((p2 - p1) / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
 	return 2 * r * Math.asin(Math.sqrt(a));
 }
+
+// a circle of r metres around a point as a closed ring, [lon, lat]
+export function circle(lat: number, lon: number, r: number, n = 48): [number, number][] {
+	const dLat = r / 111320;
+	const dLon = r / (111320 * Math.cos((lat * Math.PI) / 180));
+	return Array.from({ length: n + 1 }, (_, i) => {
+		const a = (2 * Math.PI * i) / n;
+		return [lon + dLon * Math.sin(a), lat + dLat * Math.cos(a)];
+	});
+}
