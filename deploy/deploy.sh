@@ -41,5 +41,5 @@ done
 curl -fsS --max-time 10 "$PUBLIC_URL/healthz" >/dev/null
 curl -fsS --max-time 10 "$PUBLIC_URL/clusters" >/dev/null
 
-printf '%s %s\n' "$COMMIT" "$(date -Is)" | ssh "$HOST" "cat > '$REMOTE_DIR/.deployed'"
+printf '%s %s\n' "$COMMIT" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | ssh "$HOST" "cat > '$REMOTE_DIR/.deployed'"
 echo "==> live: $PUBLIC_URL ($COMMIT)"
