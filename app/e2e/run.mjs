@@ -440,6 +440,49 @@ await scenario('phone: zoomed out, touching bubbles merge and a tap on a group z
 	expect((await onScreen()) === (await apiCount()), `after the zoom the bubbles say ${await onScreen()} reports, the API ${await apiCount()}`);
 });
 
+await scenario('phone: filters narrow the bubbles, the home sheet says so, the × brings all back', async () => {
+	await page.goto();
+	await page.setView(CITY.longitude, CITY.latitude, 12); // the whole city: every bubble on screen
+	await wait(800);
+	const sum = (cs) => cs.reduce((n, c) => n + c.count, 0);
+	const onScreen = () => page.eval(`[...document.querySelectorAll('.pin.cluster')].reduce((n, p) => n + +p.textContent, 0)`);
+	const settle = async (want) => {
+		for (let i = 0; i < 10 && (await onScreen()) !== want; i++) await wait(300);
+		return onScreen();
+	};
+	// counted by the chosen type only, a report naming two types is still one
+	const noise = (cs) => cs.filter((c) => c.types.noise).map((c) => ({ ...c, count: Math.min(c.count, c.types.noise) }));
+	const api = await fetch(`${API}/clusters`).then((r) => r.json());
+	await page.click('[aria-label="Ebenen"]');
+	await wait(300);
+	await page.clickText('Zu laut');
+	let want = sum(noise(api));
+	expect((await settle(want)) === want, `only Zu laut: bubbles say ${await onScreen()}, the API ${want}`);
+	expect((await page.sheet()).includes('nur Zu laut'), 'the section does not say nur Zu laut');
+	await page.eval(`[...document.querySelectorAll('.sheet .seg button')].find((b) => b.textContent === '10').click(); 0`);
+	want = sum(noise(api).filter((c) => c.count >= 10));
+	expect((await settle(want)) === want, `mindestens 10: bubbles say ${await onScreen()}, the API ${want}`);
+	await page.shot('phone-filter-sheet');
+	await page.eval(`[...document.querySelectorAll('.sheet .seg button')].find((b) => b.textContent === '7').click(); 0`);
+	const api7 = await fetch(`${API}/clusters?days=7`).then((r) => r.json());
+	want = sum(noise(api7).filter((c) => c.count >= 10));
+	expect((await settle(want)) === want, `7 Tage: bubbles say ${await onScreen()}, the API ${want}`);
+	await page.click('[aria-label="Schließen"]');
+	await wait(300);
+	expect((await page.sheet()).includes('Zu laut · ab 10 Meldungen · 7 Tage'), `home sheet says "${await page.sheet()}"`);
+	expect(await page.has('.rb.dot'), 'no dot on the layers button');
+	await page.shot('phone-filter-home');
+	// kept over a reload
+	await page.goto();
+	await page.setView(CITY.longitude, CITY.latitude, 12);
+	await wait(800);
+	expect((await page.sheet()).includes('ab 10 Meldungen'), 'the filter did not survive a reload');
+	await page.click('[aria-label="Filter aufheben"]');
+	want = sum(api);
+	expect((await settle(want)) === want, `after the reset bubbles say ${await onScreen()}, the API ${want}`);
+	expect(!(await page.has('.rb.dot')) && !(await page.sheetHas('ab 10')), 'the filter line or the dot stayed');
+});
+
 await scenario('phone: a sensor under a big bubble is still tappable', async () => {
 	await page.goto();
 	// the NoiseNode is 30 m from the runner's bubble: at zoom 15 that is 19 px, inside the bubble
