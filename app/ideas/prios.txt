@@ -20,7 +20,8 @@ those users that reported in a certain radius around the new sensor. *1
 	- Other: https://hackathon.greencity.hn/resources
 - (Reports should possibly only last for a limited ammount of time.)
 - (Deployement of the sensors doesnt always hae to be done by the city, but also citizens.)
-- (Just an idea or motivation for the project: People are one of the best sensors that we have, and they are in abbundance.)
+- (Just an idea or motivation for the project: People are one of the best sensors that we have, and they are in abbundance.
+aka what better sensor to get live data around heilbronn than the 133,619 residents within it.)
 
 *1 Basically each active socket is identified by the cookie session, so when you 
 connect the server recieves the token, then uses that to identify that user, aka link their reports to their socket to notify exactly that user. It 
