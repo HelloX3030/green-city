@@ -254,7 +254,7 @@
 	}
 </script>
 
-<svelte:head><title>Heilbronn meldet</title></svelte:head>
+<svelte:head><title>Sag's Heilbronn</title></svelte:head>
 
 <Map
 	bind:this={map}
@@ -274,7 +274,7 @@
 	}}
 />
 
-<button class="title glass" class:on={aboutOpen} onclick={openAbout}><Icon name="leaf" size={17} />Heilbronn meldet</button>
+<button class="title glass" class:on={aboutOpen} onclick={openAbout}><Icon name="leaf" size={17} />Sag's Heilbronn</button>
 {#if offline}<div class="down">Server nicht erreichbar</div>{/if}
 {#if toast}<div class="toast glass">{toast}</div>{/if}
 

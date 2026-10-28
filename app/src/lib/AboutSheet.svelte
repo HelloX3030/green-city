@@ -12,7 +12,7 @@
 </script>
 
 <div class="head">
-	<h2>Heilbronn meldet</h2>
+	<h2>Sag's Heilbronn</h2>
 	<button class="x" onclick={onclose} aria-label="Schließen"><Icon name="x" size={16} /></button>
 </div>
 <p class="lead">Wo stört Lärm, Hitze oder schlechte Luft? Du meldest, die Sensoren bestätigen.</p>
