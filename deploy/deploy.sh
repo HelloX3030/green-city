@@ -40,6 +40,7 @@ for _ in $(seq 1 30); do
 done
 curl -fsS --max-time 10 "$PUBLIC_URL/healthz" >/dev/null
 curl -fsS --max-time 10 "$PUBLIC_URL/clusters" >/dev/null
+ssh "$HOST" "docker image prune -f >/dev/null"
 
 printf '%s %s\n' "$COMMIT" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" | ssh "$HOST" "cat > '$REMOTE_DIR/.deployed'"
 echo "==> live: $PUBLIC_URL ($COMMIT)"
