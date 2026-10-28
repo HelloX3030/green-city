@@ -24,6 +24,7 @@
 		NOISE_LEGEND,
 		PM_LEGEND,
 		dominantType,
+		typeInfo,
 		isLive,
 		pmColor,
 		type Cluster,
@@ -186,6 +187,21 @@
 				layout: { visibility: 'none', 'line-cap': 'round', 'line-join': 'round' },
 				paint: { 'line-color': ['get', 'color'], 'line-width': 4, 'line-opacity': 0.85 }
 			});
+			// the single reports inside a bubble, only when zoomed in close
+			map.addSource('members', { type: 'geojson', data: EMPTY });
+			map.addLayer({
+				id: 'members',
+				type: 'circle',
+				source: 'members',
+				minzoom: 15.5,
+				paint: {
+					'circle-color': ['get', 'color'],
+					'circle-radius': 5,
+					'circle-opacity': 0.9,
+					'circle-stroke-color': '#fff',
+					'circle-stroke-width': 1.5
+				}
+			});
 			map.on('click', (e: MapMouseEvent) => {
 				popup.remove();
 				onselect?.(null);
@@ -240,6 +256,16 @@
 
 	$effect(() => {
 		if (!ready) return;
+		(map.getSource('members') as GeoJSONSource).setData({
+			type: 'FeatureCollection',
+			features: clusters.flatMap((c) =>
+				c.points.map(([lat, lon, t]) => ({
+					type: 'Feature' as const,
+					properties: { color: typeInfo(t).color },
+					geometry: { type: 'Point' as const, coordinates: [lon, lat] }
+				}))
+			)
+		});
 		const seen = new Set<number>();
 		for (const c of clusters) {
 			seen.add(c.id);

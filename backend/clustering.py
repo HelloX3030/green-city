@@ -1,13 +1,15 @@
-"""Group reports that are close in space. A report joins the nearest cluster
-within RADIUS_M, otherwise it starts a new one. Simple greedy pass, fine for
-a few thousand reports. Each report has a weight that halves every HALF_LIFE_DAYS,
-so old reports fade out of the cluster size and the dominant type."""
+"""Group reports that are close in space. Oldest report first: it anchors a cluster,
+every later report within RADIUS_M of an anchor joins that cluster, otherwise it
+anchors a new one. Anchors never move and the cluster id is the anchor's report id,
+so bubbles stay put and ids stay stable while reports come in. Each report has a
+weight that halves every HALF_LIFE_DAYS, so old reports fade out of the cluster
+size and the dominant type."""
 
 import math
 from collections import Counter
 from datetime import datetime, timezone
 
-RADIUS_M = 150
+RADIUS_M = 100
 HALF_LIFE_DAYS = 7
 
 
@@ -28,7 +30,7 @@ def distance_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 
 def cluster(reports: list[dict]) -> list[dict]:
     clusters: list[dict] = []
-    for rep in reports:
+    for rep in sorted(reports, key=lambda r: r["created_at"]):
         best, best_d = None, RADIUS_M
         for c in clusters:
             d = distance_m(rep["lat"], rep["lon"], c["lat"], c["lon"])
@@ -38,13 +40,10 @@ def cluster(reports: list[dict]) -> list[dict]:
             best = {"lat": rep["lat"], "lon": rep["lon"], "members": []}
             clusters.append(best)
         best["members"].append(rep)
-        n = len(best["members"])
-        best["lat"] += (rep["lat"] - best["lat"]) / n
-        best["lon"] += (rep["lon"] - best["lon"]) / n
 
     out = []
     now = datetime.now(timezone.utc)
-    for i, c in enumerate(clusters):
+    for c in clusters:
         members = c["members"]
         weights = {r["id"]: weight(r["created_at"], now) for r in members}
         types = Counter(t for r in members for t in r["types"])
@@ -54,15 +53,16 @@ def cluster(reports: list[dict]) -> list[dict]:
                 weighted[t] += weights[r["id"]]
         out.append(
             {
-                "id": i,
-                "lat": round(c["lat"], 6),
-                "lon": round(c["lon"], 6),
+                "id": members[0]["id"],
+                "lat": c["lat"],
+                "lon": c["lon"],
                 "count": len(members),
                 "weight": round(sum(weights.values()), 2),
                 "types": dict(types.most_common()),
                 "dominant": weighted.most_common(1)[0][0],
                 "latest": max(r["created_at"] for r in members),
                 "report_ids": [r["id"] for r in members],
+                "points": [[r["lat"], r["lon"], r["types"][0]] for r in members],
                 "status": None,
                 "reason": None,
             }

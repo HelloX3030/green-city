@@ -34,6 +34,7 @@ export interface Cluster {
 	dominant: ReportType; // by decayed weight
 	latest: string;
 	report_ids: number[];
+	points: [number, number, string][]; // lat, lon, first type of each report
 	status: Status | null;
 	reason: string | null;
 }
