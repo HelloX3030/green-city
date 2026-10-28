@@ -80,7 +80,7 @@
 	let zoom = $state(13);
 	let lat = $state(49.15);
 	let lon = $state(9.22);
-	const tooFar = $derived(picking && zoom < PICK_ZOOM);
+	const tooFar = $derived(picking && zoom < PICK_ZOOM - 1e-6); // zoomTo(15) can land a hair under 15
 	// the bubble a report at the screen centre would join: nearest anchor within the radius, as the backend does it
 	const joins = $derived.by(() => {
 		if (!picking || tooFar) return null;
@@ -482,7 +482,7 @@
 	const fmt = (v: number) => v.toLocaleString('de-DE', { maximumFractionDigits: 1 });
 
 	function pick() {
-		if (map.getZoom() < PICK_ZOOM) return onpick?.(null);
+		if (map.getZoom() < PICK_ZOOM - 1e-6) return onpick?.(null);
 		const c = map.getCenter();
 		onpick?.({ lat: c.lat, lon: c.lng });
 	}

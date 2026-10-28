@@ -20,6 +20,7 @@ Phone only
 - zoom out in report mode: circle grey, hint "Näher ranzoomen", Melden disabled, enabled again after zooming in
 - drag past the city edge six times: centre stays inside the city limit, no jump after release
 - jump far outside at zoom 8: centre snaps to the city limit, zoom is the min zoom, the whole city is on screen
+- device token: 32 chars in localStorage, same token and same user after a reload, a cleared storage is a new user, a report without the header is refused
 - backend unreachable: "Server nicht erreichbar" after the next poll, gone when it is back
 
 Not covered, check by hand on a phone

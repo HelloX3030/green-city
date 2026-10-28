@@ -160,8 +160,9 @@ for (const size of Object.keys(SIZES)) {
 		await wait(3500);
 		await page.clickText('Zu laut');
 		await page.clickText('Melden');
-		await wait(1500);
-		expect((await page.sheet()).includes('Gemeldet'), 'no Gemeldet card');
+		await page.until('.sheet .badge', 6000); // post, then the clusters poll with the new report
+		const sheet = await page.sheet();
+		expect(sheet.includes('Gemeldet'), `no Gemeldet card, sheet says "${sheet.split('\n')[0]}", Melden ${(await page.eval(`document.querySelector('.sheet .primary')?.disabled`)) ? 'disabled' : 'enabled'}, zoom ${(await page.zoom()).toFixed(3)}`);
 		await page.click('[aria-label="Schließen"]');
 		await wait(300);
 		expect((await page.sheet()).includes('Melden'), 'home sheet not back');
@@ -329,15 +330,35 @@ await scenario('phone: jump far outside, centre snaps to the city limit, zoom-ou
 	await page.shot('phone-min-zoom');
 });
 
+await scenario('phone: the device token stays over reloads and makes one user, a cleared device is a new one', async () => {
+	await page.goto();
+	await page.eval(`localStorage.clear(); 0`);
+	await page.goto();
+	const token = () => page.eval(`localStorage.getItem('device')`);
+	const me = async () => (await fetch(`${API}/me`, { headers: { 'x-device': await token() } }).then((r) => r.json())).id;
+	const t1 = await token();
+	expect(t1 && t1.length === 32, `token is ${t1}`);
+	const id1 = await me();
+	await page.goto();
+	expect((await token()) === t1, 'token changed on reload');
+	expect((await me()) === id1, 'user changed on reload');
+	await page.eval(`localStorage.clear(); 0`);
+	await page.goto();
+	expect((await token()) !== t1, 'cleared device kept its token');
+	expect((await me()) !== id1, 'cleared device kept its user');
+	const noHeader = await fetch(`${API}/reports`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ lat: 49.15, lon: 9.22, types: ['noise'] }) });
+	expect(noHeader.status === 400, `report without a device token got ${noHeader.status}`);
+});
+
 await scenario('phone: backend down shows the offline note and recovers', async () => {
 	await page.goto();
 	await send('Network.enable');
 	await send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
 	await wait(6500);
-	expect(await page.has('.off'), 'no offline note');
+	expect(await page.has('.down'), 'no offline note');
 	await send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
 	await wait(6500);
-	expect(!(await page.has('.off')), 'offline note stays');
+	expect(!(await page.has('.down')), 'offline note stays');
 	await send('Network.disable');
 });
 

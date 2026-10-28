@@ -35,14 +35,21 @@
 	let toastTimer: ReturnType<typeof setTimeout>;
 	let map: Map;
 
+	// a poll that comes back after a newer one is dropped, a late failure must not undo a recovery
+	let polls = 0;
+	let done = 0;
 	async function refresh() {
+		const n = ++polls;
+		let next: Cluster[] | null = null;
 		try {
-			clusters = await getClusters();
-			if (selected) selected = clusters.find((c) => c.id === selected!.id) ?? null;
-			offline = false;
-		} catch {
-			offline = true;
-		}
+			next = await getClusters();
+		} catch {}
+		if (n <= done) return;
+		done = n;
+		if (!next) return (offline = true);
+		clusters = next;
+		if (selected) selected = clusters.find((c) => c.id === selected!.id) ?? null;
+		offline = false;
 	}
 
 	async function refreshSensors() {
@@ -182,7 +189,7 @@
 />
 
 <button class="title glass" class:on={aboutOpen} onclick={openAbout}><Icon name="leaf" size={17} />Heilbronn meldet</button>
-{#if offline}<div class="off">Server nicht erreichbar</div>{/if}
+{#if offline}<div class="down">Server nicht erreichbar</div>{/if}
 {#if toast}<div class="toast glass">{toast}</div>{/if}
 
 <div class="stack">
@@ -247,7 +254,7 @@
 	.title.on :global(svg) {
 		color: var(--on-accent);
 	}
-	.off {
+	.down {
 		z-index: 3;
 		position: absolute;
 		top: calc(60px + env(safe-area-inset-top));

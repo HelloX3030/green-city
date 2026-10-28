@@ -1,10 +1,11 @@
 import asyncio
 import json
+import re
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 
-from fastapi import FastAPI, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -28,7 +29,6 @@ class ReportType(str, Enum):
 
 class ReportIn(BaseModel):
     message: str | None = Field(default=None, max_length=500)
-    author: str | None = Field(default=None, max_length=64)
     lat: float = Field(ge=-90, le=90)
     lon: float = Field(ge=-180, le=180)
     types: list[ReportType] = Field(min_length=1)
@@ -37,6 +37,22 @@ class ReportIn(BaseModel):
 class Report(ReportIn):
     id: int
     created_at: datetime
+
+
+class Me(BaseModel):
+    id: int
+    name: str | None
+    created_at: datetime
+
+
+TOKEN = re.compile(r"^[A-Za-z0-9-]{32,64}$")
+
+
+def device(x_device: str | None = Header(default=None)) -> str:
+    """The random token the app keeps in localStorage and sends in the X-Device header."""
+    if not x_device or not TOKEN.match(x_device):
+        raise HTTPException(400, "X-Device header missing or not a 32-64 char token")
+    return x_device
 
 
 @asynccontextmanager
@@ -64,14 +80,21 @@ def fetch_reports(since: datetime | None) -> list[dict]:
         return [db.row_to_report(r) for r in con.execute(sql, args)]
 
 
+@app.get("/me", response_model=Me)
+def me(token: str = Depends(device)) -> dict:
+    with db.connect() as con:
+        uid = db.user_for(con, token)
+        return dict(con.execute("SELECT * FROM users WHERE id = ?", (uid,)).fetchone())
+
+
 @app.post("/reports", response_model=Report, status_code=201)
-def create_report(rep: ReportIn) -> dict:
+def create_report(rep: ReportIn, token: str = Depends(device)) -> dict:
     now = datetime.now(timezone.utc).isoformat()
     types = json.dumps([t.value for t in rep.types])
     with db.connect() as con:
         cur = con.execute(
-            "INSERT INTO reports (message, author, lat, lon, types, created_at) VALUES (?,?,?,?,?,?)",
-            (rep.message, rep.author, rep.lat, rep.lon, types, now),
+            "INSERT INTO reports (message, lat, lon, types, created_at, user_id) VALUES (?,?,?,?,?,?)",
+            (rep.message, rep.lat, rep.lon, types, now, db.user_for(con, token)),
         )
         row = con.execute("SELECT * FROM reports WHERE id = ?", (cur.lastrowid,)).fetchone()
     return db.row_to_report(row)

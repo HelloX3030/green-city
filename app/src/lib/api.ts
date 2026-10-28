@@ -20,7 +20,6 @@ export const typeInfo = (id: string) => TYPES.find((t) => t.id === id) ?? TYPES[
 export interface Report {
 	id: number;
 	message: string | null;
-	author: string | null;
 	lat: number;
 	lon: number;
 	types: ReportType[];
@@ -92,14 +91,31 @@ export function timeAgo(iso: string | null) {
 const base =
 	import.meta.env.VITE_API_URL ?? `${location.protocol}//${location.hostname}:8000`;
 
-export const getClusters = async (): Promise<Cluster[]> =>
-	(await fetch(`${base}/clusters`)).json();
+// who this phone is: a random token, kept in localStorage, sent in a header on every request.
+// the backend makes a user out of it on first contact. no login in v00.
+let memToken = '';
+export function deviceToken(): string {
+	try {
+		let t = localStorage.getItem('device') ?? localStorage.getItem('author'); // 'author' is the old key
+		if (!t) {
+			t = Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('');
+		}
+		localStorage.setItem('device', t);
+		return t;
+	} catch {
+		return (memToken ||= crypto.randomUUID());
+	}
+}
 
-export const getReports = async (): Promise<Report[]> =>
-	(await fetch(`${base}/reports`)).json();
+const req = (path: string, init: RequestInit = {}) =>
+	fetch(`${base}${path}`, { ...init, headers: { ...init.headers, 'x-device': deviceToken() } });
+
+export const getClusters = async (): Promise<Cluster[]> => (await req('/clusters')).json();
+
+export const getReports = async (): Promise<Report[]> => (await req('/reports')).json();
 
 export const getSensors = async (): Promise<Sensor[]> =>
-	(await fetch(`${base}/sensors`)).json();
+	(await req('/sensors')).json();
 
 export interface Ride {
 	id: string;
@@ -113,7 +129,7 @@ export interface Ride {
 }
 
 export const getBikes = async (): Promise<FeatureCollection<LineString, Ride>> =>
-	(await fetch(`${base}/bikes`)).json();
+	(await req('/bikes')).json();
 
 export type LayerId = 'noise' | 'trees' | 'bikes' | 'pm';
 
@@ -161,26 +177,13 @@ export async function postReport(body: {
 	types: ReportType[];
 	message?: string;
 }): Promise<Report> {
-	const res = await fetch(`${base}/reports`, {
+	const res = await req('/reports', {
 		method: 'POST',
 		headers: { 'content-type': 'application/json' },
-		body: JSON.stringify({ ...body, author: authorId() })
+		body: JSON.stringify(body)
 	});
 	if (!res.ok) throw new Error(await res.text());
 	return res.json();
-}
-
-export function authorId(): string {
-	try {
-		let id = localStorage.getItem('author');
-		if (!id) {
-			id = crypto.randomUUID();
-			localStorage.setItem('author', id);
-		}
-		return id;
-	} catch {
-		return 'anon';
-	}
 }
 
 export const dominantType = (c: Cluster): ReportType => c.dominant ?? 'other';
