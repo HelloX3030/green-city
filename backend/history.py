@@ -22,8 +22,30 @@ MAX_AGE = timedelta(hours=24)
 PHENOMENA = {
     "temp": (re.compile(r"^temperatur(e)?$", re.I), "max"),
     "pm25": (re.compile(r"^(finedust )?pm ?2[.,]?5$", re.I), "arithmeticMean"),
-    "noise": (re.compile(r"sound level|lärm|noise", re.I), "arithmeticMean"),
+    "noise": (re.compile(r"^laeq|sound level|lärm|noise", re.I), "arithmeticMean"),
 }
+
+
+def last_ts(sensor: dict) -> float:
+    """Unix time of the sensor's last measurement. The box list only carries the measurement's
+    ObjectId, whose first 4 bytes are that time."""
+    lm = sensor.get("lastMeasurement")
+    if isinstance(lm, dict):
+        return datetime.fromisoformat(lm["createdAt"].replace("Z", "+00:00")).timestamp()
+    if isinstance(lm, str) and len(lm) == 24:
+        return int(lm[:8], 16)
+    return 0.0
+
+
+def best_sensors(sensors: list[dict]) -> dict[str, dict]:
+    """One sensor per phenomenon key: the one that reported last (the NoiseNode has a dead
+    'Sound Level' channel next to the live 'LAeq_1min')."""
+    best: dict[str, dict] = {}
+    for s in sensors:
+        key = phenomenon_key(s["title"])
+        if key and (key not in best or last_ts(s) > last_ts(best[key])):
+            best[key] = s
+    return best
 
 _cache: dict = {"boxes": {}, "uba": {}}
 
@@ -88,9 +110,9 @@ async def refresh_box(client: httpx.AsyncClient, box: dict):
     lon, lat = box["currentLocation"]["coordinates"][:2]
     entry = _cache["boxes"].setdefault(box["_id"], {})
     entry.update({"name": box["name"], "lat": lat, "lon": lon, "phenomena": entry.get("phenomena", {})})
-    for s in box["sensors"]:
-        key = phenomenon_key(s["title"])
-        if not key or not _stale(entry["phenomena"].get(key)):
+    for key, s in best_sensors(box["sensors"]).items():
+        cached = entry["phenomena"].get(key)
+        if cached and cached.get("sensor_id") == s["_id"] and not _stale(cached):
             continue
         op = PHENOMENA[key][1]
         try:

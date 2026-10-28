@@ -15,14 +15,18 @@ BOXLIST_TTL = 600
 # sensor title -> (key, label) for the values we show
 LABELS = [
     ("temp", "Temperatur"), ("humidity", "Luftfeuchte"), ("pm25", "PM2,5"), ("pm10", "PM10"),
-    ("noise", "Lärm"), ("uv", "UV-Index"), ("wind", "Wind"),
+    ("noise", "Lärm Ø 1 min"), ("lmax", "Spitze 1 min"), ("events", "Laute Ereignisse"),
+    ("uv", "UV-Index"), ("wind", "Wind"),
 ]
 TITLE_KEYS = {
     "humidity": ("rel. luftfeuchte", "relative luftfeuchte", "luftfeuchtigkeit", "humid", "rel. humidity"),
     "pm10": ("pm10", "finedust pm10"),
+    "lmax": ("lmax_1min", "lmax"),
+    "events": ("eventcount_1min",),
     "uv": ("uv-index", "uv index"),
     "wind": ("windgeschwindigkeit", "windspeed", "wind"),
 }
+UNITS = {"count": "/min"}
 UBA_COMPONENTS = {1: ("pm10", "PM10", "µg/m³"), 5: ("no2", "NO₂", "µg/m³"), 9: ("pm25", "PM2,5", "µg/m³")}
 
 _state = {"boxes": [], "boxes_at": 0.0, "sensors": [], "at": 0.0}
@@ -54,16 +58,17 @@ async def fetch_box(client: httpx.AsyncClient, box: dict) -> dict:
     except Exception as e:  # noqa: BLE001
         log.warning("box %s: %s", box["name"], e)
         return out
-    seen = set()
+    best: dict[str, dict] = {}  # per key the sensor that reported last
     for s in sensors:
         key = value_key(s["title"])
         lm = s.get("lastMeasurement")
-        if not key or key in seen or not isinstance(lm, dict):
-            continue
-        seen.add(key)
-        label = dict(LABELS).get(key, s["title"])
-        out["values"].append({"key": key, "label": label, "value": float(lm["value"]), "unit": s.get("unit", ""),
-                              "time": lm["createdAt"]})
+        if key and isinstance(lm, dict) and (key not in best or lm["createdAt"] > best[key]["lastMeasurement"]["createdAt"]):
+            best[key] = s
+    for key, s in best.items():
+        lm = s["lastMeasurement"]
+        unit = s.get("unit", "")
+        out["values"].append({"key": key, "label": dict(LABELS)[key], "value": float(lm["value"]),
+                              "unit": UNITS.get(unit, unit), "time": lm["createdAt"]})
     out["values"].sort(key=lambda v: [k for k, _ in LABELS].index(v["key"]))
     out["last"] = max((v["time"] for v in out["values"]), default=None)
     return out
