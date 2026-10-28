@@ -8,7 +8,7 @@ FastAPI + SQLite. Stores reports, returns clusters with a sensor-data verdict, p
 - `GET /reports?since=<iso>`
 - `GET /clusters?days=14` – reports within 150 m grouped; `count` raw, `weight` with decay (a report halves every 7 days), `dominant` type by weight, `status` confirmed / unconfirmed / no_data for it, `reason` one line in German
 - `GET /sensors` – live values of the outdoor openSenseMap boxes in Heilbronn (incl. our NoiseNode) and UBA station DEBW015, cached 60 s
-- `GET /bikes` – GeoJSON lines of the senseBox:bike rides (grouptag heilbronn) in the last 7 days with mean PM2.5 per ride, cached 10 min
+- `GET /bikes` – GeoJSON lines of the senseBox:bike rides (grouptag heilbronn) in the last 7 days with mean PM2.5 per ride, cached 10 min. Points outside the city bbox are dropped.
 
 Docs at http://localhost:8000/docs
 

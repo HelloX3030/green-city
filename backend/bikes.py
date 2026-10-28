@@ -1,5 +1,6 @@
 """Rides of the senseBox:bike boxes tagged "heilbronn" in the last 7 days, as GeoJSON lines
-with the mean PM2.5 per ride. Pulled from openSenseMap every 10 min."""
+with the mean PM2.5 per ride. Pulled from openSenseMap every 10 min. Points outside the
+city bbox are dropped, so a ride out of town ends at the edge the map can reach."""
 import asyncio
 import logging
 import time
@@ -16,6 +17,7 @@ TTL = 600
 GAP = timedelta(minutes=10)  # longer pause = new ride
 MIN_POINTS = 20
 MAX_POINTS = 300  # per ride in the GeoJSON
+BBOX = (9.04, 49.09, 9.31, 49.21)  # city limit bbox, same as the map bounds
 
 _state = {"rides": [], "at": 0.0}
 _lock = asyncio.Lock()
@@ -25,8 +27,12 @@ def _iso(dt: datetime) -> str:
     return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _in_city(loc: list) -> bool:
+    return BBOX[0] < loc[0] < BBOX[2] and BBOX[1] < loc[1] < BBOX[3]
+
+
 def split_rides(box: dict, rows: list[dict]) -> list[dict]:
-    rows = sorted((r for r in rows if r.get("location")), key=lambda r: r["createdAt"])
+    rows = sorted((r for r in rows if r.get("location") and _in_city(r["location"])), key=lambda r: r["createdAt"])
     rides, cur = [], []
     for r in rows:
         t = datetime.fromisoformat(r["createdAt"].replace("Z", "+00:00"))
