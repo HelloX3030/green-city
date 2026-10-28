@@ -104,7 +104,52 @@
 	// the report circle is the cluster radius on the ground, so it grows with the zoom
 	const metresPerPx = $derived((156543.03 * Math.cos((lat * Math.PI) / 180)) / 2 ** zoom);
 	const circlePx = $derived(Math.max(24, (2 * CLUSTER_RADIUS_M) / metresPerPx));
-	const far = $derived(zoom < 14); // zoomed out the bubbles shrink a bit, they crowd otherwise
+	const far = $derived(zoom < 14); // zoomed out the bubbles shrink a bit and the ones that would touch merge
+	// the groups depend on the zoom only (pixel distances do), recomputed every quarter level while far
+	const zoomStep = $derived(far ? Math.round(zoom * 4) / 4 : 0);
+	const bubbleSize = (weight: number) => Math.round(Math.min(64, 30 + 8 * Math.log(1 + weight)) * (far ? 0.8 : 1));
+	// what is drawn: one bubble per cluster, or zoomed out one per group of bubbles that overlap on screen,
+	// sitting at the heaviest one, people and voices summed, coloured by the type most people name in the group
+	interface Bubble {
+		id: number; // the cluster id, of the heaviest member for a group
+		lat: number;
+		lon: number;
+		people: number;
+		weight: number;
+		mine: boolean;
+		type: string;
+		members: Cluster[];
+	}
+	function bubbles(): Bubble[] {
+		let out: Bubble[] = clusters.map((c) => ({ id: c.id, lat: c.lat, lon: c.lon, people: c.people, weight: c.weight, mine: c.mine > 0, type: dominantType(c), members: [c] }));
+		// heaviest first, each one joins the first bubble it overlaps; again while merging made bubbles grow
+		for (let pass = 0; far && pass < 4; pass++) {
+			const next: Bubble[] = [];
+			for (const b of out.sort((a, b) => b.weight - a.weight)) {
+				const p = map.project([b.lon, b.lat]);
+				const into = next.find((n) => {
+					const q = map.project([n.lon, n.lat]);
+					return Math.hypot(p.x - q.x, p.y - q.y) < (bubbleSize(b.weight) + bubbleSize(n.weight)) / 2 + 6; // 6 px: the rings
+				});
+				if (into) {
+					into.people += b.people;
+					into.weight += b.weight;
+					into.mine ||= b.mine;
+					into.members.push(...b.members);
+				} else next.push(b);
+			}
+			const done = next.length === out.length;
+			out = next;
+			if (done) break;
+		}
+		for (const b of out) {
+			if (b.members.length === 1) continue;
+			const heads: Record<string, number> = {};
+			for (const c of b.members) for (const [t, n] of Object.entries(c.types)) heads[t] = (heads[t] ?? 0) + n;
+			b.type = Object.entries(heads).sort((x, y) => y[1] - x[1])[0][0];
+		}
+		return out;
+	}
 	const NOISE_TILES =
 		'https://datahub.uba.de/server/rest/services/VeLa/LK/MapServer/export?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&layers=show:4210&format=png32&transparent=true&f=image';
 	const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
@@ -349,31 +394,41 @@
 				}))
 			)
 		});
+		void zoomStep;
 		const seen = new Set<number>();
-		for (const c of clusters) {
-			seen.add(c.id);
-			let m = clusterMarkers.get(c.id);
+		for (const b of bubbles()) {
+			seen.add(b.id);
+			let m = clusterMarkers.get(b.id);
 			if (!m) {
 				const div = document.createElement('div');
 				div.className = 'pin cluster';
 				div.onclick = (e) => {
 					e.stopPropagation();
 					popup.remove();
-					onselect?.(clusters.find((x) => x.id === c.id) ?? null);
+					const cur = bubbles().find((x) => x.id === b.id);
+					if (!cur) return;
+					// a group opens up when zoomed in; a single bubble shows its card
+					if (cur.members.length > 1) {
+						const lats = cur.members.map((c) => c.lat);
+						const lons = cur.members.map((c) => c.lon);
+						map.fitBounds([[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]], { padding: 80, maxZoom: 15, duration: 600 });
+					} else onselect?.(cur.members[0]);
 				};
-				m = new Marker({ element: div }).setLngLat([c.lon, c.lat]).addTo(map);
-				clusterMarkers.set(c.id, m);
+				m = new Marker({ element: div }).setLngLat([b.lon, b.lat]).addTo(map);
+				clusterMarkers.set(b.id, m);
 			}
-			m.setLngLat([c.lon, c.lat]);
+			m.setLngLat([b.lon, b.lat]);
 			const div = m.getElement();
 			// grows with the log of the voices, 36 px for one, 64 at most; the big ones sit on top of the small
-			const size = Math.round(Math.min(64, 30 + 8 * Math.log(1 + c.weight)) * (far ? 0.8 : 1));
-			div.style.setProperty('--c', TYPES.find((t) => t.id === dominantType(c))?.color ?? '#8a8a8e');
+			const size = bubbleSize(b.weight);
+			const sel = selId !== null && b.members.some((c) => c.id === selId);
+			div.style.setProperty('--c', TYPES.find((t) => t.id === b.type)?.color ?? '#8a8a8e');
 			div.style.setProperty('--s', `${size}px`);
-			div.style.zIndex = String(c.id === selId ? 100 : size);
-			div.textContent = String(c.people);
-			div.classList.toggle('sel', c.id === selId);
-			div.classList.toggle('mine', c.mine > 0);
+			div.style.zIndex = String(sel ? 100 : size);
+			div.textContent = String(b.people);
+			div.classList.toggle('sel', sel);
+			div.classList.toggle('mine', b.mine);
+			div.classList.toggle('group', b.members.length > 1);
 		}
 		for (const [id, m] of clusterMarkers) {
 			if (!seen.has(id)) {
@@ -701,6 +756,10 @@
 		font-size: 14px;
 		border: 2px solid #fff;
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+	}
+	/* several bubbles in one: a second ring */
+	:global(.pin.cluster.group) {
+		box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--c), 0 2px 6px rgba(0, 0, 0, 0.22);
 	}
 	:global(.pin.cluster.join) {
 		box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--accent), 0 4px 12px rgba(0, 0, 0, 0.25);

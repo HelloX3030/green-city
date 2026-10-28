@@ -387,6 +387,30 @@ await scenario('phone: jump far outside, centre snaps to the city limit, zoom-ou
 	await page.shot('phone-min-zoom');
 });
 
+await scenario('phone: zoomed out, touching bubbles merge and a tap on a group zooms in', async () => {
+	await page.goto();
+	// two people 150 m apart north of the runner's bubble: a group at zoom 12 for sure
+	for (const [i, dlon] of [[1, 0], [2, 0.0021]]) {
+		const tok = `e2e-group-${i}-`.padEnd(32, '0');
+		await fetch(`${API}/reports`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-device': tok }, body: JSON.stringify({ lat: CITY.latitude + 0.003, lon: CITY.longitude + dlon, types: ['air'] }) });
+	}
+	const apiPeople = async () => (await fetch(`${API}/clusters`).then((r) => r.json())).reduce((n, c) => n + c.people, 0);
+	const onScreen = () => page.eval(`[...document.querySelectorAll('.pin.cluster')].reduce((n, p) => n + +p.textContent, 0)`);
+	await page.setView(CITY.longitude, CITY.latitude, 12);
+	for (let i = 0; i < 16 && (await onScreen()) !== (await apiPeople()); i++) await wait(500); // the 5 s poll brings the two
+	const groups = await page.eval(`document.querySelectorAll('.pin.cluster.group').length`);
+	expect(groups > 0, 'no merged bubble at zoom 12');
+	expect((await onScreen()) === (await apiPeople()), `bubbles say ${await onScreen()} people, the API ${await apiPeople()}`);
+	await page.shot('phone-groups');
+	const group = await page.eval(`(() => { const r = document.querySelector('.pin.cluster.group').getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; })()`);
+	await page.tap(...group);
+	await page.settled();
+	await wait(500);
+	expect((await page.zoom()) >= 14 - 1e-6, `tap on the group left the zoom at ${(await page.zoom()).toFixed(2)}`);
+	expect(!(await page.has('.sheet .badge')), 'a group opened a card instead of zooming in');
+	expect((await onScreen()) === (await apiPeople()), `after the zoom the bubbles say ${await onScreen()} people, the API ${await apiPeople()}`);
+});
+
 await scenario('phone: withdraw a report, gone from the list and the server', async () => {
 	await page.goto();
 	const mine = async () => (await fetch(`${API}/reports/mine`, { headers: { 'x-device': await page.eval(`localStorage.getItem('device')`) } }).then((r) => r.json())).length;
