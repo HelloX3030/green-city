@@ -31,7 +31,9 @@ grosor_base = 2.5
 grosor_tapa = 2.5
 
 z_separacion = 15.5  # los raíles deben quedar por encima de los 11 mm del MCU (torretas 4 + placa 11 + 0.5 de holgura)
-altura_carcasa = z_separacion + df_alto + 6.0
+altura_carcasa = z_separacion + df_alto + 6.0 + 0.5  # +0.5 de techo: sin él la tapa
+# apoyaría exactamente sobre el sensor (cota justa) y cualquier sobre-extrusión
+# dejaría la tapa montada sobre la placa en vez de sobre el borde
 altura_domo = 6.0
 
 # ---------------- CONTORNO POLIGONAL HOJA ----------------
@@ -146,8 +148,14 @@ rail_2 = Part.makeBox(rail_largo_total, rail_ancho, rail_alto, App.Vector(-rail_
 tope_pos_x = df_largo / 2.0
 tope = Part.makeBox(3.0, df_ancho + 2*rail_ancho, rail_alto + 4.0, App.Vector(tope_pos_x, -sep_y - rail_ancho, z_rail))
 
+# Tope delantero espejado: el sensor entra desde arriba (drop-in) y queda
+# cautivo entre ambos topes con 0.3 mm de juego; sin él podía deslizarse
+# hacia -x y salirse de los raíles
+tope_delantero = Part.makeBox(3.0, df_ancho + 2*rail_ancho, rail_alto + 4.0,
+                              App.Vector(-df_largo/2.0 - 0.3 - 3.0, -sep_y - rail_ancho, z_rail))
+
 # Recorte de la unión para que solo se fusionen con las paredes internas
-railes_completos = rail_1.fuse(rail_2).fuse(tope)
+railes_completos = rail_1.fuse(rail_2).fuse(tope).fuse(tope_delantero)
 railes_limpios = railes_completos.common(cavidad) # Mantiene solo la parte interna
 
 cuerpo = cuerpo.fuse(railes_limpios)
