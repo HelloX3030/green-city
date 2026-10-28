@@ -7,6 +7,7 @@
 	import SensorCard from '#lib/SensorCard.svelte';
 	import LayerSheet from '#lib/LayerSheet.svelte';
 	import AboutSheet from '#lib/AboutSheet.svelte';
+	import { inCity } from '#lib/city.ts';
 	import {
 		getBikes,
 		getClusters,
@@ -30,6 +31,8 @@
 	let pick = $state<{ lat: number; lon: number } | null>(null);
 	let offline = $state(false);
 	let sheetHeight = $state(0);
+	let toast = $state('');
+	let toastTimer: ReturnType<typeof setTimeout>;
 	let map: Map;
 
 	async function refresh() {
@@ -76,13 +79,32 @@
 		};
 	});
 
-	function locate(then?: (lat: number, lon: number) => void) {
-		navigator.geolocation?.getCurrentPosition(
+	function say(msg: string) {
+		toast = msg;
+		clearTimeout(toastTimer);
+		toastTimer = setTimeout(() => (toast = ''), 3000);
+	}
+
+	// position of the phone: fly there, or say why not
+	function locate(then?: (lat: number, lon: number) => void, fail?: () => void) {
+		if (!navigator.geolocation) {
+			say('Standort nicht verfügbar');
+			return fail?.();
+		}
+		navigator.geolocation.getCurrentPosition(
 			(p) => {
-				map.showMe(p.coords.latitude, p.coords.longitude);
-				(then ?? map.flyTo)(p.coords.latitude, p.coords.longitude);
+				const { latitude: lat, longitude: lon } = p.coords;
+				if (!inCity(lat, lon)) {
+					say('Du bist außerhalb von Heilbronn');
+					return fail?.();
+				}
+				map.showMe(lat, lon);
+				(then ?? map.flyTo)(lat, lon);
 			},
-			() => {},
+			() => {
+				say('Standort nicht verfügbar');
+				fail?.();
+			},
 			{ enableHighAccuracy: true, timeout: 5000 }
 		);
 	}
@@ -93,8 +115,27 @@
 		layersOpen = false;
 		aboutOpen = false;
 		reporting = true;
-		if (at) map.flyTo(at.lat, at.lon, 16);
-		else locate();
+		if (at) return map.flyTo(at.lat, at.lon, 16);
+		// fly to the phone's position if it comes quickly, else zoom in where we are
+		let done = false;
+		const fallback = () => {
+			if (done) return;
+			done = true;
+			map.ensureZoom(15);
+		};
+		const timer = setTimeout(fallback, 2000);
+		locate(
+			(lat, lon) => {
+				clearTimeout(timer);
+				if (done) return map.flyTo(lat, lon, 16);
+				done = true;
+				map.flyTo(lat, lon, 16);
+			},
+			() => {
+				clearTimeout(timer);
+				fallback();
+			}
+		);
 	}
 
 	async function sent(r: Report) {
@@ -142,20 +183,21 @@
 
 <button class="title glass" class:on={aboutOpen} onclick={openAbout}><Icon name="leaf" size={17} />Heilbronn meldet</button>
 {#if offline}<div class="off">Server nicht erreichbar</div>{/if}
+{#if toast}<div class="toast glass">{toast}</div>{/if}
 
-{#if !reporting}
-	<div class="stack">
-		<button class="rb glass" onclick={() => locate()} aria-label="Mein Standort"><Icon name="locate" /></button>
+<div class="stack">
+	<button class="rb glass" onclick={() => locate()} aria-label="Mein Standort"><Icon name="locate" /></button>
+	{#if !reporting}
 		<button
 			class="rb glass"
 			class:on={layersOpen}
 			onclick={() => ((layersOpen = !layersOpen), (aboutOpen = false))}
 			aria-label="Ebenen"><Icon name="layers" /></button
 		>
-		<button class="rb glass zoom" onclick={() => map.zoomBy(1)} aria-label="Vergrößern"><Icon name="plus" /></button>
-		<button class="rb glass zoom" onclick={() => map.zoomBy(-1)} aria-label="Verkleinern"><Icon name="minus" /></button>
-	</div>
-{/if}
+	{/if}
+	<button class="rb glass zoom" onclick={() => map.zoomBy(1)} aria-label="Vergrößern"><Icon name="plus" /></button>
+	<button class="rb glass zoom" onclick={() => map.zoomBy(-1)} aria-label="Verkleinern"><Icon name="minus" /></button>
+</div>
 
 <div class="sheet glass" bind:clientHeight={sheetHeight}>
 	<div class="grab"></div>
@@ -215,6 +257,18 @@
 		padding: 5px 10px;
 		border-radius: 999px;
 		font-size: 12px;
+	}
+	.toast {
+		z-index: 4;
+		position: absolute;
+		top: calc(70px + env(safe-area-inset-top));
+		left: 50%;
+		transform: translateX(-50%);
+		padding: 8px 14px;
+		border-radius: 999px;
+		font-size: 13px;
+		font-weight: 500;
+		white-space: nowrap;
 	}
 	.stack {
 		z-index: 3;

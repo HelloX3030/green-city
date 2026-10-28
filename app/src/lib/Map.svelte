@@ -17,7 +17,7 @@
 	setWorkerUrl(workerUrl);
 	import { onMount } from 'svelte';
 	import { iconSvg } from './icons';
-	import boundary from './boundary.json';
+	import { RING, CITY_BBOX } from './city.ts';
 	import {
 		TYPES,
 		SENSOR_KIND,
@@ -52,7 +52,7 @@
 		layers?: Set<LayerId>;
 		picking?: boolean;
 		sheetHeight?: number;
-		onpick?: (c: { lat: number; lon: number }) => void;
+		onpick?: (c: { lat: number; lon: number } | null) => void;
 		onselect?: (c: Cluster | null) => void;
 		onselectsensor?: (s: Sensor) => void;
 	} = $props();
@@ -63,14 +63,16 @@
 
 	const HEILBRONN: [number, number] = [9.2185, 49.1427];
 	// city limit: grey wash outside the ring, panning stops a little beyond the city bbox
-	const RING = boundary.ring as [number, number][];
 	const PAD = 0.005; // ~400 m
 	const BOUNDS: [number, number, number, number] = [
-		Math.min(...RING.map((p) => p[0])) - PAD,
-		Math.min(...RING.map((p) => p[1])) - PAD,
-		Math.max(...RING.map((p) => p[0])) + PAD,
-		Math.max(...RING.map((p) => p[1])) + PAD
+		CITY_BBOX[0] - PAD,
+		CITY_BBOX[1] - PAD,
+		CITY_BBOX[2] + PAD,
+		CITY_BBOX[3] + PAD
 	];
+	const PICK_ZOOM = 14; // a report needs at least this zoom, the circle is ~50 m then
+	let zoom = $state(13);
+	const tooFar = $derived(picking && zoom < PICK_ZOOM);
 	const NOISE_TILES =
 		'https://datahub.uba.de/server/rest/services/VeLa/LK/MapServer/export?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&layers=show:4210&format=png32&transparent=true&f=image';
 	const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
@@ -237,11 +239,9 @@
 				map.on('mouseenter', id, () => (map.getCanvas().style.cursor = 'pointer'));
 				map.on('mouseleave', id, () => (map.getCanvas().style.cursor = ''));
 			}
+			map.on('zoom', () => (zoom = map.getZoom()));
 			map.on('moveend', () => {
-				if (picking) {
-					const c = map.getCenter();
-					onpick?.({ lat: c.lat, lon: c.lng });
-				}
+				if (picking) pick();
 			});
 			ready = true;
 		});
@@ -261,7 +261,10 @@
 	const padLeft = $derived(wide ? 414 : 0);
 	$effect(() => {
 		if (!ready) return;
-		map.setPadding({ top: 0, left: padLeft, right: 0, bottom: padBottom });
+		const pad = { top: 0, left: padLeft, right: 0, bottom: padBottom };
+		// setPadding cancels a running animation, so wait for it
+		if (map.isMoving()) map.once('moveend', () => map.setPadding(pad));
+		else map.setPadding(pad);
 	});
 
 	$effect(() => {
@@ -403,15 +406,22 @@
 
 	const fmt = (v: number) => v.toLocaleString('de-DE', { maximumFractionDigits: 1 });
 
+	function pick() {
+		if (map.getZoom() < PICK_ZOOM) return onpick?.(null);
+		const c = map.getCenter();
+		onpick?.({ lat: c.lat, lon: c.lng });
+	}
+
 	$effect(() => {
-		if (ready && picking) {
-			const c = map.getCenter();
-			onpick?.({ lat: c.lat, lon: c.lng });
-		}
+		if (ready && picking) pick();
 	});
 
 	export function flyTo(lat: number, lon: number, zoom = 15) {
 		map?.flyTo({ center: [lon, lat], zoom: Math.max(map.getZoom(), zoom) });
+	}
+
+	export function ensureZoom(zoom: number) {
+		if (map && map.getZoom() < zoom) map.zoomTo(zoom, { duration: 500 });
 	}
 
 	export function zoomBy(d: number) {
@@ -422,7 +432,7 @@
 		if (!me) {
 			const div = document.createElement('div');
 			div.className = 'pin me';
-			me = new Marker({ element: div }).addTo(map);
+			me = new Marker({ element: div }).setLngLat([lon, lat]).addTo(map);
 		}
 		me.setLngLat([lon, lat]);
 	}
@@ -431,8 +441,8 @@
 <div class="map" bind:this={el}></div>
 {#if picking}
 	<div class="dim" aria-hidden="true"></div>
-	<div class="crosshair" style="--bottom: {padBottom}px; --left: {padLeft}px" aria-hidden="true">
-		<span class="hint">Karte schieben, bis der Kreis passt</span>
+	<div class="crosshair" class:far={tooFar} style="--bottom: {padBottom}px; --left: {padLeft}px" aria-hidden="true">
+		<span class="hint">{tooFar ? 'Näher ranzoomen' : 'Karte schieben, bis der Kreis passt'}</span>
 	</div>
 {/if}
 <div class="legends" style="--bottom: {padBottom}px; --left: {padLeft}px">
@@ -489,6 +499,13 @@
 		background: var(--accent);
 		box-shadow: 0 0 0 3px #fff;
 	}
+	.crosshair.far {
+		border-color: var(--ink2);
+		background: rgba(0, 0, 0, 0.06);
+	}
+	.crosshair.far::after {
+		background: var(--ink2);
+	}
 	.hint {
 		position: absolute;
 		left: 50%;
@@ -537,6 +554,13 @@
 		display: grid;
 		place-items: center;
 		cursor: pointer;
+	}
+	/* reports above sensors, the selected one on top */
+	:global(.pin.cluster) {
+		z-index: 2;
+	}
+	:global(.pin.sel) {
+		z-index: 3;
 	}
 	:global(.pin .i) {
 		width: 15px;

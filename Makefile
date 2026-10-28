@@ -1,4 +1,4 @@
-.PHONY: setup dev backend app build check trees boundary pm
+.PHONY: setup dev backend app build check e2e trees boundary pm
 
 setup:            ## install everything (uv + npm)
 	cd backend && uv sync
@@ -19,6 +19,9 @@ build:            ## static app into app/build
 
 check:            ## type-check the app
 	cd app && npm run check
+
+e2e:              ## drive app/scenarios.md through headless Chrome (needs make dev running)
+	cd app && node e2e/run.mjs
 
 trees:            ## rebuild app/static/trees.json from the city tree register
 	python3 research/trees.py
