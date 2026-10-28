@@ -31,7 +31,7 @@ class Clustering(unittest.TestCase):
         reps[2]["types"] = ["noise"]
         c = cluster(reps)[0]
         self.assertEqual(c["dominant"], "heat")
-        self.assertEqual(c["types"], {"heat": 2, "noise": 1})  # people per type, dominant first
+        self.assertEqual(c["types"], {"heat": 3, "noise": 1})  # reports per type, the type most people name first
         self.assertEqual(c["count"], 4)
         self.assertAlmostEqual(c["weight"], 2.0, places=1)  # two voices, whatever the types
 
@@ -42,7 +42,7 @@ class Clustering(unittest.TestCase):
         reps[2]["types"] = ["noise"]  # user 8's later tap, noise now leads with 2 people
         c = cluster(reps)[0]
         self.assertEqual(c["dominant"], "noise")
-        self.assertEqual(c["types"], {"noise": 2, "heat": 1, "air": 1})
+        self.assertEqual(c["types"], {"noise": 2, "heat": 1, "air": 1})  # here one report each
 
     def test_mine_counts_the_callers_reports(self):
         reports = [rep(1, 1, user=7), rep(2, 1, user=8), rep(3, 0, user=7)]

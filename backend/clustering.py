@@ -58,15 +58,15 @@ def cluster(reports: list[dict], me: int | None = None) -> list[dict]:
             v["types"].update(r["types"])
         people = len({who for who, _ in voices})
         week = now - timedelta(days=HALF_LIFE_DAYS)
-        # types: people per type (not decayed), ordered by decayed voices, the first is the dominant
+        # types: reports per type; first the dominant (most decayed voices, one per person and day), then by reports
         by_type = Counter()
-        heads: dict[str, set] = {}
-        for (who, _), v in voices.items():
+        for v in voices.values():
             w = weight(v["at"], now)
             for t in v["types"]:
                 by_type[t] += w
-                heads.setdefault(t, set()).add(who)
-        types = {t: len(heads[t]) for t, _ in by_type.most_common()}
+        per_type = {t: sum(1 for r in members if t in r["types"]) for t in by_type}
+        lead = by_type.most_common(1)[0][0]
+        types = {lead: per_type.pop(lead), **dict(sorted(per_type.items(), key=lambda kv: -kv[1]))}
         out.append(
             {
                 "id": members[0]["id"],

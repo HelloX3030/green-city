@@ -109,19 +109,19 @@
 	const zoomStep = $derived(far ? Math.round(zoom * 4) / 4 : 0);
 	const bubbleSize = (weight: number) => Math.round(Math.min(64, 30 + 8 * Math.log(1 + weight)) * (far ? 0.8 : 1));
 	// what is drawn: one bubble per cluster, or zoomed out one per group of bubbles that overlap on screen,
-	// sitting at the heaviest one, people and voices summed, coloured by the type most people name in the group
+	// sitting at the heaviest one, reports and voices summed, coloured by the type with most reports in the group
 	interface Bubble {
 		id: number; // the cluster id, of the heaviest member for a group
 		lat: number;
 		lon: number;
-		people: number;
+		count: number;
 		weight: number;
 		mine: boolean;
 		type: string;
 		members: Cluster[];
 	}
 	function bubbles(): Bubble[] {
-		let out: Bubble[] = clusters.map((c) => ({ id: c.id, lat: c.lat, lon: c.lon, people: c.people, weight: c.weight, mine: c.mine > 0, type: dominantType(c), members: [c] }));
+		let out: Bubble[] = clusters.map((c) => ({ id: c.id, lat: c.lat, lon: c.lon, count: c.count, weight: c.weight, mine: c.mine > 0, type: dominantType(c), members: [c] }));
 		// heaviest first, each one joins the first bubble it overlaps; again while merging made bubbles grow
 		for (let pass = 0; far && pass < 4; pass++) {
 			const next: Bubble[] = [];
@@ -132,7 +132,7 @@
 					return Math.hypot(p.x - q.x, p.y - q.y) < (bubbleSize(b.weight) + bubbleSize(n.weight)) / 2 + 6; // 6 px: the rings
 				});
 				if (into) {
-					into.people += b.people;
+					into.count += b.count;
 					into.weight += b.weight;
 					into.mine ||= b.mine;
 					into.members.push(...b.members);
@@ -428,7 +428,7 @@
 			div.style.setProperty('--c', TYPES.find((t) => t.id === b.type)?.color ?? '#8a8a8e');
 			div.style.setProperty('--s', `${size}px`);
 			div.style.zIndex = layer(size, sel);
-			div.textContent = String(b.people);
+			div.textContent = String(b.count);
 			div.classList.toggle('sel', sel);
 			div.classList.toggle('mine', b.mine);
 			div.classList.toggle('group', b.members.length > 1);

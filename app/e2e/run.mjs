@@ -198,13 +198,13 @@ for (const size of Object.keys(SIZES)) {
 		await page.tap(...pin);
 		await wait(800);
 		const sheet = await page.sheet();
-		expect(/^\d+ Meldung/m.test(sheet), 'no cluster card');
+		expect(/^\d+ Meldung/m.test(sheet) && !sheet.includes('Gemeldet'), 'no cluster card');
 		expect(/^Du /m.test(sheet), 'card of the bubble with my report does not say Du');
 		const n = await page.eval(`document.querySelector('.pin.cluster.sel')?.textContent`);
-		const api = (await fetch(`${API}/clusters`).then((r) => r.json())).find((c) => String(c.people) === n && c.count >= +n);
-		expect(api, `bubble says ${n}, no cluster has that many people`);
+		const api = (await fetch(`${API}/clusters`).then((r) => r.json())).find((c) => String(c.count) === n && c.people <= +n);
+		expect(api, `bubble says ${n}, no cluster has that many reports`);
 		if (api && api.people > 1) expect(sheet.includes(`Du und ${api.people - 1} andere`), `card counts "${sheet.split('\n')[0]}", people ${api.people}`);
-		// the type chips: icon and people per type, only when there is more than one type; a tap filters the texts
+		// the type chips: icon and reports per type, only when there is more than one type; a tap filters the texts
 		const types = api ? Object.keys(api.types) : [];
 		const chips = await page.eval(`[...document.querySelectorAll('.sheet .type')].map((b) => b.textContent.trim())`);
 		expect(chips.length === (types.length > 1 ? types.length : 0), `${chips.length} chips for ${types.length} types`);
@@ -212,7 +212,7 @@ for (const size of Object.keys(SIZES)) {
 			await page.click('.sheet .type');
 			await wait(300);
 			const picked = await page.eval(`document.querySelector('.sheet .picked')?.textContent`);
-			expect(picked && picked.includes(`${api.types[types[0]]} Person`), `filter line says "${picked}"`);
+			expect(picked && picked.includes(`${api.types[types[0]]} Meldung`), `filter line says "${picked}"`);
 			const texts = await page.eval(`[...document.querySelectorAll('.sheet .voices li')].length`);
 			const expected = (await fetch(`${API}/clusters/${api.id}/reports`).then((r) => r.json())).filter((r) => r.message && r.types.includes(types[0])).length;
 			expect(texts === Math.min(expected, 5), `${texts} texts for ${types[0]}, api has ${expected}`);
@@ -396,13 +396,13 @@ await scenario('phone: zoomed out, touching bubbles merge and a tap on a group z
 		const tok = `e2e-group-${i}-`.padEnd(32, '0');
 		await fetch(`${API}/reports`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-device': tok }, body: JSON.stringify({ lat: CITY.latitude + 0.003, lon: CITY.longitude + dlon, types: ['air'] }) });
 	}
-	const apiPeople = async () => (await fetch(`${API}/clusters`).then((r) => r.json())).reduce((n, c) => n + c.people, 0);
+	const apiCount = async () => (await fetch(`${API}/clusters`).then((r) => r.json())).reduce((n, c) => n + c.count, 0);
 	const onScreen = () => page.eval(`[...document.querySelectorAll('.pin.cluster')].reduce((n, p) => n + +p.textContent, 0)`);
 	await page.setView(CITY.longitude, CITY.latitude, 12);
-	for (let i = 0; i < 16 && (await onScreen()) !== (await apiPeople()); i++) await wait(500); // the 5 s poll brings the two
+	for (let i = 0; i < 16 && (await onScreen()) !== (await apiCount()); i++) await wait(500); // the 5 s poll brings the two
 	const groups = await page.eval(`document.querySelectorAll('.pin.cluster.group').length`);
 	expect(groups > 0, 'no merged bubble at zoom 12');
-	expect((await onScreen()) === (await apiPeople()), `bubbles say ${await onScreen()} people, the API ${await apiPeople()}`);
+	expect((await onScreen()) === (await apiCount()), `bubbles say ${await onScreen()} reports, the API ${await apiCount()}`);
 	await page.shot('phone-groups');
 	const group = await page.eval(`(() => { const free = ${FREE}; for (const p of document.querySelectorAll('.pin.cluster.group')) { const at = free(p); if (at) return at; } return null; })()`);
 	expect(group, 'no free spot on the group to tap');
@@ -411,7 +411,7 @@ await scenario('phone: zoomed out, touching bubbles merge and a tap on a group z
 	await wait(500);
 	expect((await page.zoom()) >= 14 - 1e-6, `tap on the group left the zoom at ${(await page.zoom()).toFixed(2)}`);
 	expect(!(await page.has('.sheet .badge')), 'a group opened a card instead of zooming in');
-	expect((await onScreen()) === (await apiPeople()), `after the zoom the bubbles say ${await onScreen()} people, the API ${await apiPeople()}`);
+	expect((await onScreen()) === (await apiCount()), `after the zoom the bubbles say ${await onScreen()} reports, the API ${await apiCount()}`);
 });
 
 await scenario('phone: a sensor under a big bubble is still tappable', async () => {
@@ -515,13 +515,13 @@ await scenario('phone: a report from another device shows up without waiting for
 	await page.setView(CITY.longitude, CITY.latitude, 15);
 	for (let i = 0; i < 20 && !(await page.eval('window.__live')); i++) await wait(250);
 	expect(await page.eval('window.__live'), 'event stream not up');
-	const people = () => page.eval(`[...document.querySelectorAll('.pin.cluster')].reduce((n, p) => n + +p.textContent, 0)`);
-	const before = await people();
+	const count = () => page.eval(`[...document.querySelectorAll('.pin.cluster')].reduce((n, p) => n + +p.textContent, 0)`);
+	const before = await count();
 	const tok = `e2e-live-${Date.now()}`.padEnd(32, '0');
 	await fetch(`${API}/reports`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-device': tok }, body: JSON.stringify({ lat: CITY.latitude, lon: CITY.longitude, types: ['heat'] }) });
 	let after = before;
-	for (let i = 0; i < 10 && after === before; i++) (await wait(250)), (after = await people());
-	expect(after === before + 1, `bubbles went from ${before} to ${after} people within 2.5 s`);
+	for (let i = 0; i < 10 && after === before; i++) (await wait(250)), (after = await count());
+	expect(after === before + 1, `bubbles went from ${before} to ${after} reports within 2.5 s`);
 });
 
 await scenario('phone: backend down shows the offline note and recovers', async () => {

@@ -8,7 +8,7 @@ Per size
 - first open: home sheet with Melden, NoiseNode pin on the map
 - zoomed out to 11, Melden: flies to my position at zoom 16, circle green, Melden enabled
 - send a report (Zu laut, with a text): "Gemeldet" card with "Du …" and my text in the list, the bubble gets the green dot, close, home sheet back
-- tap a bubble at zoom 15: cluster card (headline "Du und N andere" with N the other people since one is mine, "n Meldungen" below, no "diese Woche" when all are fresh), the number on the bubble is the people count of the API, bubble highlighted, its 100 m disc drawn, the faint discs of the others only from zoom 15; type chips (icon and people) only when the bubble has more than one type, a tap on one filters the texts to that type and says "Zu laut · 3 Personen"
+- tap a bubble at zoom 15: cluster card (headline "n Meldungen", below it "Du und N andere" with N the other people since one is mine, no "diese Woche" when all are fresh), the number on the bubble is the report count of the API, bubble highlighted, its 100 m disc drawn, the faint discs of the others only from zoom 15; type chips (icon and reports) only when the bubble has more than one type, a tap on one filters the texts to that type and says "Zu laut · 3 Meldungen"
 - Meine Meldungen from the home sheet: the sent report is listed with type, time, bubble size and status, a Zurückziehen button; tap on it from zoom 12 flies to its bubble at 16 with the card
 - layers: Lärmkarte, Messräder, Feinstaub on at zoom 11 and 16, legend shows
 - about sheet via the title pill, open and close
@@ -24,7 +24,7 @@ Phone only
 - jump far outside at zoom 8: centre snaps to the city limit, zoom is the min zoom, the whole city is on screen
 - withdraw: Zurückziehen asks "Wirklich?", the second tap removes the row, the server has one report less, toast "Meldung zurückgezogen"
 - account: Name angeben → Speichern sets the name on the server and the sheet; Anderes Gerät verknüpfen shows a 6-char code, a wrong code typed here gives the toast, a second device claims the code through the API and this one comes back to the list by itself (polls /me while the code is shown) with the other's report and "(2)" devices
-- zoomed out to 12: bubbles that overlap merge (a `.group` bubble), the numbers on screen still add up to the people of all API clusters, a tap on a group zooms in to at least 14 where the numbers add up again
+- zoomed out to 12: bubbles that overlap merge (a `.group` bubble), the numbers on screen still add up to the reports of all API clusters, a tap on a group zooms in to at least 14 where the numbers add up again
 - live: a report sent from another device shows up on the bubble within 2.5 s while the event stream is up (the poll alone would take up to a minute)
 - device token: with it `/clusters` marks my bubbles (`mine`) and `/reports/mine` lists my reports, without it nothing is mine and `/reports/mine` is refused; 32 chars in localStorage, same token and same user after a reload, a cleared storage is a new user with no marked bubbles, a report without the header is refused
 - backend unreachable: "Server nicht erreichbar" after the next poll, gone when it is back

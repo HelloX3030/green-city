@@ -35,7 +35,7 @@ export interface Cluster {
 	recent: number; // of the last 7 days
 	mine: number; // sent from this device (0 without a token)
 	weight: number; // one voice per person and day, halves every 7 days: the bubble size
-	types: Record<string, number>; // people per type, the dominant first
+	types: Record<string, number>; // reports per type, the type most people name first
 	dominant: ReportType; // the type most people name
 	latest: string;
 	report_ids: number[];

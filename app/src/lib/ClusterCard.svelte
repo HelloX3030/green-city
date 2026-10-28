@@ -20,9 +20,10 @@
 			: `Du und ${others} ${others === 1 ? 'andere Person' : 'andere'} in der Nähe`
 	);
 	const main = $derived(typeInfo(dominantType(cluster)));
+	const reports_ = (n: number) => `${n} ${n === 1 ? 'Meldung' : 'Meldungen'}`;
 	const sub = $derived(
 		[
-			`${cluster.count} ${cluster.count === 1 ? 'Meldung' : 'Meldungen'}`,
+			mine ? you : `von ${persons(cluster.people)}`,
 			main.label,
 			cluster.recent < cluster.count ? `${cluster.recent === 0 ? 'keine' : cluster.recent} davon diese Woche` : null,
 			`letzte ${timeAgo(cluster.latest)}`
@@ -65,7 +66,7 @@
 			<h2>Gemeldet</h2>
 			<p>{you}.</p>
 		{:else}
-			<h2>{mine ? you : persons(cluster.people)}</h2>
+			<h2>{reports_(cluster.count)}</h2>
 			<p>{sub}</p>
 		{/if}
 	</div>
@@ -85,7 +86,7 @@
 			class="type"
 			class:on={filter === t}
 			style="--c: {typeInfo(t).color}"
-			aria-label="{typeInfo(t).label}, {persons(n)}"
+			aria-label="{typeInfo(t).label}, {reports_(n)}"
 			aria-pressed={filter === t}
 			onclick={() => pick(t)}
 		>
@@ -93,7 +94,7 @@
 		</button>
 	{/each}
 	{#if filter}
-		<span class="picked">{typeInfo(filter).label} · {persons(cluster.types[filter])}</span>
+		<span class="picked">{typeInfo(filter).label} · {reports_(cluster.types[filter])}</span>
 	{/if}
 </div>
 {/if}
@@ -219,7 +220,8 @@
 		width: 8px;
 		height: 8px;
 		border-radius: 50%;
-		align-self: center;
+		align-self: flex-start;
+		margin-top: 5px; /* on the first line, also when the text wraps */
 	}
 	.when {
 		flex: none;
