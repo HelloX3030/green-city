@@ -40,7 +40,7 @@
 		const id = cluster.id;
 		void cluster.count; // again when the poll brings a new report
 		clusterReports(id, days).then((r) => {
-			if (id === cluster.id) reports = r;
+			if (id === cluster?.id) reports = r; // the card may be closed by now
 		});
 	});
 	$effect(() => {

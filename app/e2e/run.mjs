@@ -237,7 +237,7 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		expect(pin, 'no bubble on screen');
 		if (!pin) return;
 		await page.tap(...pin);
-		await wait(800);
+		await page.until('.sheet .voices li.me', 6000); // the card's own fetch of the texts
 		const sheet = await page.sheet();
 		expect(/^\d+ Meldung/m.test(sheet) && !sheet.includes('Gemeldet'), 'no cluster card');
 		expect(/^Du /m.test(sheet), 'card of the bubble with my report does not say Du');
