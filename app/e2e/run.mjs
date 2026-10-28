@@ -493,6 +493,20 @@ await scenario('phone: the device token stays over reloads and makes one user, a
 	expect(noHeader.status === 400, `report without a device token got ${noHeader.status}`);
 });
 
+await scenario('phone: a report from another device shows up without waiting for the poll', async () => {
+	await page.goto();
+	await page.setView(CITY.longitude, CITY.latitude, 15);
+	for (let i = 0; i < 20 && !(await page.eval('window.__live')); i++) await wait(250);
+	expect(await page.eval('window.__live'), 'event stream not up');
+	const people = () => page.eval(`[...document.querySelectorAll('.pin.cluster')].reduce((n, p) => n + +p.textContent, 0)`);
+	const before = await people();
+	const tok = `e2e-live-${Date.now()}`.padEnd(32, '0');
+	await fetch(`${API}/reports`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-device': tok }, body: JSON.stringify({ lat: CITY.latitude, lon: CITY.longitude, types: ['heat'] }) });
+	let after = before;
+	for (let i = 0; i < 10 && after === before; i++) (await wait(250)), (after = await people());
+	expect(after === before + 1, `bubbles went from ${before} to ${after} people within 2.5 s`);
+});
+
 await scenario('phone: backend down shows the offline note and recovers', async () => {
 	await page.goto();
 	await send('Network.enable');

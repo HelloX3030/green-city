@@ -1,3 +1,4 @@
+import asyncio
 import tempfile
 import unittest
 from pathlib import Path
@@ -48,6 +49,23 @@ class Api(unittest.TestCase):
         self.assertNotIn("user_id", rows[0])
         self.assertEqual(self.c.get(f"/clusters/{far['id']}/reports").json()[0]["message"], "elsewhere")
         self.assertEqual(self.c.get("/clusters/999/reports").status_code, 404)
+
+    def test_events_stream_says_when_reports_change(self):
+        async def run():
+            ev = main.Events()
+            ev.loop = asyncio.get_running_loop()
+            gen = ev.stream()
+            first = await gen.__anext__()
+            await asyncio.to_thread(ev.publish, "reports")  # as the endpoints do, from a worker thread
+            line = await asyncio.wait_for(gen.__anext__(), 2)
+            await gen.aclose()
+            return first, line, ev.subs
+
+        first, line, subs = asyncio.run(run())
+        self.assertTrue(first.startswith("retry:"))
+        self.assertTrue(line.startswith("event: reports\ndata: "))
+        self.assertEqual(subs, set())  # gone after the close
+        main.events.publish("reports")  # no loop in the tests: a no-op, not an error
 
     def test_name_is_the_account(self):
         self.assertIsNone(self.c.get("/me", headers=A).json()["name"])

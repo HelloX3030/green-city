@@ -15,6 +15,7 @@ Every request may carry `X-Device: <32-64 chars>`, the app's random token. `user
 - `GET /clusters?days=14` – reports grouped: the oldest report anchors a cluster, later reports within 100 m of an anchor join it, anchors never move, `id` is the anchor's report id; `points` the member positions `[lat, lon, type]`; `count` raw, `people` distinct users, `recent` of the last 7 days, `mine` from the caller's device (0 without `X-Device`), `weight` with decay: one voice per person and day, halving every 7 days, `types` people per type with the dominant first (a person naming two types in a day is one voice for each), `dominant` the type most people name, `status` confirmed / unconfirmed / no_data for it, `reason` one line in German
 - `GET /sensors` – live values of the outdoor openSenseMap boxes in Heilbronn (incl. our NoiseNode) and UBA station DEBW015, cached 60 s
 - `GET /clusters/{id}/reports?days=14` – the reports of one bubble, newest first, no author
+- `GET /events` – server-sent events: `event: reports` whenever a report is sent, withdrawn or moves by a claim, `event: ping` every 25 s as a keep-alive. The app refetches on it and polls only once a minute while the stream is up.
 - `GET /bikes` – GeoJSON lines of the senseBox:bike rides (grouptag heilbronn) in the last 7 days with mean PM2.5 per ride, cached 10 min. Points outside the city bbox are dropped.
 
 Docs at http://localhost:8000/docs. `make test` runs the unit tests (clustering, db, api).

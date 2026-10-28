@@ -7,6 +7,7 @@ from enum import Enum
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 import bikes
@@ -74,8 +75,43 @@ def device_or_none(x_device: str | None = Header(default=None)) -> str | None:
     return device(x_device) if x_device else None
 
 
+PING_SECONDS = 25  # keeps the event stream alive through proxies
+
+
+class Events:
+    """Who is listening on GET /events. A write publishes a kind, the app refetches on it."""
+
+    def __init__(self) -> None:
+        self.loop: asyncio.AbstractEventLoop | None = None
+        self.subs: set[asyncio.Queue[str]] = set()
+
+    def publish(self, kind: str) -> None:
+        # the endpoints run in a worker thread, the queues belong to the loop
+        if self.loop:
+            self.loop.call_soon_threadsafe(lambda: [q.put_nowait(kind) for q in self.subs])
+
+    async def stream(self):
+        q: asyncio.Queue[str] = asyncio.Queue()
+        self.subs.add(q)
+        try:
+            yield "retry: 3000\n\n"
+            while True:
+                try:
+                    kind = await asyncio.wait_for(q.get(), PING_SECONDS)
+                except TimeoutError:
+                    yield "event: ping\ndata: \n\n"  # an event, not a comment: the app watches for it
+                    continue
+                yield f"event: {kind}\ndata: {datetime.now(timezone.utc).isoformat()}\n\n"
+        finally:
+            self.subs.discard(q)
+
+
+events = Events()
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
+    events.loop = asyncio.get_running_loop()
     db.init()
     history.load()
     tasks = [asyncio.create_task(history.refresh_loop()), asyncio.create_task(bikes.get_rides())]
@@ -130,7 +166,9 @@ def claim(body: CodeIn, token: str = Depends(device)) -> dict:
         uid = db.claim(con, token, body.code)
         if uid is None:
             raise HTTPException(400, "code unknown or expired")
-        return db.me(con, uid)
+        me = db.me(con, uid)
+    events.publish("reports")  # the other device's reports are this user's now
+    return me
 
 
 @app.post("/reports", response_model=Report, status_code=201)
@@ -143,6 +181,7 @@ def create_report(rep: ReportIn, token: str = Depends(device)) -> dict:
             (rep.message, rep.lat, rep.lon, types, now, db.user_for(con, token)),
         )
         row = con.execute("SELECT * FROM reports WHERE id = ?", (cur.lastrowid,)).fetchone()
+    events.publish("reports")
     return db.row_to_report(row)
 
 
@@ -165,6 +204,7 @@ def withdraw_report(rid: int, token: str = Depends(device)) -> None:
         gone = con.execute("DELETE FROM reports WHERE id = ? AND user_id = ?", (rid, db.user_of(con, token))).rowcount
     if not gone:
         raise HTTPException(404, "not your report")
+    events.publish("reports")
 
 
 @app.get("/clusters")
@@ -190,6 +230,16 @@ def cluster_reports(cid: int, days: int = Query(default=CLUSTER_WINDOW_DAYS, ge=
             ids = set(c["report_ids"])
             return [r for r in reports if r["id"] in ids]
     raise HTTPException(404, "no such bubble")
+
+
+@app.get("/events")
+async def event_stream() -> StreamingResponse:
+    """Server-sent events: `reports` whenever reports change, `ping` every 25 s. The app refetches on it."""
+    return StreamingResponse(
+        events.stream(),
+        media_type="text/event-stream",
+        headers={"cache-control": "no-cache", "x-accel-buffering": "no"},
+    )
 
 
 @app.get("/bikes")

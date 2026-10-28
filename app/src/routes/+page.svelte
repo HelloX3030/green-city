@@ -16,6 +16,7 @@
 		getMe,
 		getMine,
 		getSensors,
+		subscribe,
 		type Cluster,
 		type LayerId,
 		type Me,
@@ -38,6 +39,7 @@
 	let reporting = $state(false);
 	let pick = $state<{ lat: number; lon: number } | null>(null);
 	let offline = $state(false);
+	let live = false; // the event stream is up: changes come pushed, the poll is a once-a-minute fallback
 	let sheetHeight = $state(0);
 	let toast = $state('');
 	let toastTimer: ReturnType<typeof setTimeout>;
@@ -96,13 +98,36 @@
 		refresh();
 		refreshSensors();
 		refreshMine();
-		const t = setInterval(refresh, 5000);
+		const all = () => {
+			refresh();
+			refreshMine();
+		};
+		const stop = subscribe(all, (up) => {
+			if (up && !live) all(); // whatever happened while the stream was down
+			live = up;
+			if (import.meta.env.DEV) Object.assign(window, { __live: up });
+		});
+		let ticks = 0;
+		const t = setInterval(() => {
+			ticks++;
+			if (!live || ticks % 12 === 0) refresh();
+			if (!live && mineOpen) refreshMine();
+		}, 5000);
 		const u = setInterval(refreshSensors, 30000);
 		const v = setInterval(refreshBikes, 300000);
+		// back from another tab or a locked phone: everything fresh
+		const visible = () => {
+			if (document.visibilityState !== 'visible') return;
+			all();
+			refreshSensors();
+		};
+		document.addEventListener('visibilitychange', visible);
 		return () => {
+			stop();
 			clearInterval(t);
 			clearInterval(u);
 			clearInterval(v);
+			document.removeEventListener('visibilitychange', visible);
 		};
 	});
 

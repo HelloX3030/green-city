@@ -222,6 +222,36 @@ export async function postReport(body: {
 
 export const dominantType = (c: Cluster): ReportType => c.dominant ?? 'other';
 
+// server-sent events: `reports` whenever reports change anywhere, `ping` every 25 s. The browser
+// reconnects by itself. `live` says whether the stream is up: not after an error, not when the
+// network is gone, and not when a minute passed without a word from the server.
+export function subscribe(on: (kind: string) => void, live: (up: boolean) => void): () => void {
+	const es = new EventSource(`${base}/events`);
+	let watchdog: ReturnType<typeof setTimeout>;
+	const down = () => {
+		clearTimeout(watchdog);
+		live(false);
+	};
+	const alive = () => {
+		clearTimeout(watchdog);
+		watchdog = setTimeout(down, 60000);
+		live(true);
+	};
+	es.onopen = alive;
+	es.onerror = down;
+	es.addEventListener('ping', alive);
+	es.addEventListener('reports', () => {
+		alive();
+		on('reports');
+	});
+	addEventListener('offline', down);
+	return () => {
+		clearTimeout(watchdog);
+		removeEventListener('offline', down);
+		es.close();
+	};
+}
+
 // the reports of one bubble, newest first, no author
 export async function clusterReports(id: number): Promise<Report[]> {
 	const res = await req(`/clusters/${id}/reports`);

@@ -55,7 +55,8 @@ Report the deployed SHA and whether both containers are healthy.
 ## What runs on the Pi
 
 - `greencity` — nginx on host port 8081, public via the Cloudflare tunnel. Serves the
-  static SvelteKit build and proxies `/reports`, `/clusters`, `/sensors`, `/bikes`, `/me` to the API.
+  static SvelteKit build and proxies `/reports`, `/clusters`, `/sensors`, `/bikes`, `/me` to the API,
+  and `/events` (server-sent events) with buffering off and no read timeout.
 - `greencity-api` — FastAPI/uvicorn on internal port 8000. SQLite lives in the
   `greencity_greencity-data` volume at `/data/reports.db`; `history.json` is beside it.
 - The host has no Node or Python for this app; both exist only inside the images.
