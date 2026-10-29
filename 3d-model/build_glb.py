@@ -20,8 +20,8 @@ EXPORT = os.path.join(AQUI, "export")
 GLB_SRC = os.path.join(AQUI, "build", "glb-src")
 OUT = os.path.join(EXPORT, "case.glb")
 
-PRINTED = (0.86, 0.85, 0.82, 1.0)   # neutral light grey, like unpainted PETG
-BOARD = (0.23, 0.49, 0.36, 0.62)    # app accent green, slightly transparent
+PRINTED = (0.11, 0.31, 0.20, 1.0)   # dark enough that it renders as the app's leaf green #3a7d5c under the viewer's lights
+BOARD = (0.16, 0.17, 0.19, 0.7)     # dark board grey, slightly transparent
 
 PARTS = [  # (name, folder, material)
     ("body", EXPORT, "printed"),
