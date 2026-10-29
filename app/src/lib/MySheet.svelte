@@ -124,12 +124,12 @@
 				<span class="text">
 					<b>{r.types.map((x) => typeInfo(x).label).join(', ')}</b>
 					<small>
-						{timeAgo(r.created_at)}
+						<span>{timeAgo(r.created_at)}</span>
 						{#if c}
-							· {c.count === 1 ? 'nur du' : `${c.count} hier`}
+							· <span>{c.count === 1 ? 'nur du' : `${c.count} hier`}</span>
 							{#if c.status}· <span style="color: {STATUS[c.status].color}">{STATUS[c.status].label}</span>{/if}
 						{:else}
-							· nicht mehr auf der Karte
+							· <span>nicht mehr auf der Karte</span>
 						{/if}
 					</small>
 				</span>
@@ -220,6 +220,10 @@
 	.text small {
 		font-size: 12px;
 		color: var(--ink2);
+	}
+	/* each piece of the line wraps as a whole, never "Sensor / fehlt" */
+	.text small span {
+		white-space: nowrap;
 	}
 	.undo {
 		flex: none;

@@ -344,6 +344,11 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		const sheet = await page.sheet();
 		expect(sheet.includes('Meine Meldungen') && sheet.includes('Zu laut'), `list: "${sheet.split('\n').slice(0, 3).join(' / ')}"`);
 		expect(sheet.includes('Zurückziehen'), 'no Zurückziehen');
+		// "gerade eben · 56 hier · Sensor fehlt" may wrap between pieces, never inside one
+		const split = await page.eval(
+			`[...document.querySelectorAll('.sheet .text small span')].filter((s) => s.getClientRects().length > 1).map((s) => s.textContent)`
+		);
+		expect(split.length === 0, `row piece broken over two lines: ${JSON.stringify(split)}`);
 		await page.eval(`window.__map.jumpTo({zoom: 12}); 0`);
 		await page.click('.sheet .open');
 		await page.settled();
