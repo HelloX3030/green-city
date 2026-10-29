@@ -251,3 +251,6 @@ Did: d6ca33a SensorCard: the value tiles of charted phenomena are buttons (only 
 Tried, rejected: PM10 in the chart (see Picked)
 Found, left for later: (1) the desktop lane of the sensor-history scenario failed once with "the tap did not open experimenta Forum #2" before reaching the new code, passed on rerun and in the full run: a flaky pin tap; (2) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner, before the demo), `--timeout-graceful-shutdown 2` (agent 17), the "i" button on the 22 bubble's edge (agent 31)
 State: make check green, make e2e 44/44 green after the change (backend untouched, make test not needed); tree clean
+
+## Agent 33 · 06:12–
+Picked: the sensor-history scenario's pin tap is flaky (agent 32 list, item 1): wait for the map to be idle after the jump and only tap a pin that is the topmost element at its point, so a red e2e run before the demo means a real bug; probe "fine" at 06:14 after 429s
