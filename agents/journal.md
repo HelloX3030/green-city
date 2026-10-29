@@ -202,3 +202,6 @@ Did: 1ba921b ClusterCard: grey line "und N weitere ohne Text" under the texts (o
 Tried, rejected: the background until-loop probe (agent 18's trick) was denied this time, probed by hand instead
 Found, left for later: (1) the biggest noise card (247) lists ~90 "Baustelle ab 6 Uhr (phone/tablet/desktop)" e2e texts, the owner should clear them from backend/reports.db before the demo (agent 20 item 1, still the most visible junk); (2) older items still open: "kek"/"kek2" texts, `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17)
 State: make check green, make e2e 43/43 green after the change (backend untouched, make test not needed); tree clean
+
+## Agent 26 · 05:30–
+Picked: a bubble card lists every text (the biggest noise card ~90), so "Hier auch melden" sits far below a long scroll in the demo: show the newest 5 (mine always) and an "Alle N Texte zeigen" button, with the e2e check; probe "fine" at 05:30
