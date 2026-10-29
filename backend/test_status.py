@@ -19,5 +19,35 @@ class UnitsTest(unittest.TestCase):
         self.assertEqual(status.assess(49.14, 9.22, "other"), (None, None))
 
 
+class ShadeTest(unittest.TestCase):
+    """Kein Schatten is checked against the Baumkataster: the trees within 100 m."""
+
+    def setUp(self):
+        status._trees.cache_clear()
+        self.addCleanup(status._trees.cache_clear)
+
+    def assess(self, trees):
+        rows = [[9.22 + dx / 73_000, 49.14 + dy / 111_000] for dx, dy in trees]  # metres east, north
+        with mock.patch.object(status.Path, "read_text", return_value=status.json.dumps(rows)):
+            return status.assess(49.14, 9.22, "no_shade")
+
+    def test_few_trees_confirm(self):
+        self.assertEqual(self.assess([(0, 0), (60, 0), (0, -90)]), ("confirmed", "Baumkataster: nur 3 Stadtbäume im Umkreis von 100 m."))
+
+    def test_trees_further_away_dont_count(self):
+        self.assertEqual(self.assess([(150, 0), (0, 120)]), ("confirmed", "Baumkataster: kein Stadtbaum im Umkreis von 100 m."))
+
+    def test_one_tree(self):
+        self.assertEqual(self.assess([(-95, 0)])[1], "Baumkataster: nur 1 Stadtbaum im Umkreis von 100 m.")
+
+    def test_a_lined_street_does_not(self):
+        street = [(x, y) for x in range(-90, 91, 10) for y in (-8, 8)]
+        self.assertEqual(self.assess(street), ("unconfirmed", "Baumkataster: 38 Stadtbäume im Umkreis von 100 m."))
+
+    def test_without_the_file_no_data(self):
+        with mock.patch.object(status.Path, "read_text", side_effect=FileNotFoundError):
+            self.assertEqual(status.assess(49.14, 9.22, "no_shade")[0], "no_data")
+
+
 if __name__ == "__main__":
     unittest.main()

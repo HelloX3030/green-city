@@ -28,7 +28,7 @@ Nearest sensor within 800 m, daily values since March 2026:
 - heat: ≥ 5 days with max ≥ 30 °C → confirmed
 - air: ≥ 10 days with PM2.5 mean > 15 µg/m³ (WHO) → confirmed; UBA station as fallback within 3 km. A bike ride within 150 m in the last 7 days adds its PM2.5 to the reason, and turns no_data into unconfirmed
 - noise: NoiseNode days with mean LAeq ≥ 55 dB(A) → confirmed; no readings → no_data. Per phenomenon the channel that reported last is used, so the dead `Sound Level` channel loses against `LAeq_1min`
-- no_shade: always no_data
+- no_shade: the city's Baumkataster (`trees.json`, `[lon, lat]` of the 43 000 trees of the app's Stadtbäume layer): fewer than 10 within 100 m (the bubble's radius) → confirmed, else unconfirmed; without the file no_data. Rebuild from the app's file: `python3 -c "import json; json.dump([r[:2] for r in json.load(open('../app/static/trees.json'))], open('trees.json', 'w'), separators=(',', ':'))"`
 
 ## history.json
 

@@ -1,5 +1,8 @@
 """Does the history of the nearest sensor back a cluster up? One line of reason, in German."""
+import json
 import re
+from functools import cache
+from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import bikes
@@ -16,6 +19,36 @@ NOISE_DB = 55
 BIKE_NEAR_M = 150
 WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 TZ = ZoneInfo("Europe/Berlin")
+TREES_PATH = Path(__file__).parent / "trees.json"  # [lon, lat] of the Baumkataster, the app's Stadtbäume layer
+TREE_NEAR_M = 100  # the bubble's radius
+FEW_TREES = 10  # fewer within 100 m: no shade confirmed (a lined street has 30+)
+CELL = 0.001  # grid of ~110 m (lat) × ~70 m (lon) cells for the lookup
+
+
+@cache
+def _trees() -> dict[tuple[int, int], list[tuple[float, float]]] | None:
+    try:
+        rows = json.loads(TREES_PATH.read_text())
+    except (OSError, ValueError):
+        return None
+    grid: dict[tuple[int, int], list[tuple[float, float]]] = {}
+    for lon, lat in rows:
+        grid.setdefault((int(lat // CELL), int(lon // CELL)), []).append((lat, lon))
+    return grid
+
+
+def _trees_near(lat: float, lon: float) -> int | None:
+    grid = _trees()
+    if grid is None:
+        return None
+    i, j = int(lat // CELL), int(lon // CELL)
+    return sum(
+        1
+        for di in range(-1, 2)
+        for dj in range(-2, 3)
+        for t in grid.get((i + di, j + dj), ())
+        if distance_m(lat, lon, *t) <= TREE_NEAR_M
+    )
 
 
 def _nearest(lat: float, lon: float, key: str) -> tuple[dict | None, float]:
@@ -95,5 +128,10 @@ def _assess(lat: float, lon: float, type_: str) -> tuple[str | None, str | None]
         return "unconfirmed", f"{where}: an {len(daily)} Tagen im Mittel unter {NOISE_DB} dB(A)."
 
     if type_ == "no_shade":
-        return "no_data", "Kein Sensor misst Schatten. Hier fehlt eine Messung."
+        n = _trees_near(lat, lon)
+        if n is None:
+            return "no_data", "Kein Sensor misst Schatten. Hier fehlt eine Messung."
+        few = n < FEW_TREES
+        trees = "kein Stadtbaum" if n == 0 else "nur 1 Stadtbaum" if n == 1 else f"{'nur ' if few else ''}{n} Stadtbäume"
+        return "confirmed" if few else "unconfirmed", f"Baumkataster: {trees} im Umkreis von {TREE_NEAR_M} m."
     return None, None
