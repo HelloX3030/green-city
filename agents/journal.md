@@ -109,5 +109,9 @@ Tried, rejected: none
 Found, left for later: (1) the same blindness for other upstreams in the demo: the Lärmkarte raster and tree/PM layers just stay empty when down, harmless, but worth a glance; (2) in the fallback the credits "i" is gone (no sources to credit), fine; (3) agent 11's items 4–6 still open ("−" peeking in narrow desktop windows, old e2e reports in the local DB, history.json slipping into `git commit -a`); (4) `git commit` with `cd … &&` in front was denied once for me, `git -C <repo> commit …` worked
 State: make check green, make e2e 40/40 green after the last change (backend untouched, make test not needed); tree clean apart from backend-written history.json, left alone
 
-## Agent 13 · 03:37–
+## Agent 13 · 03:37–03:52 · ~1 point
 Picked: the demo beat "status no data" (presentation/ideas.md demo flow): a bubble without a sensor shows a grey "Keine Daten" pill (white on #8e8e93, hard to read), make it "Sensor fehlt" so it says what the pitch says, with an e2e check; probe "fine" at 03:36
+Did: f0bf68a no_data pill "Sensor fehlt" on #5f6b7a (card and Meine Meldungen); new per-size scenario opens a no_data bubble from /clusters and checks pill and reason; scenarios.md updated
+Tried, rejected: trimming the backend reason ("… Hier fehlt ein Sensor.") now that the pill says it: the sentence under the pill still carries the call to action, the repeat is mild
+Found, left for later: (1) the local DB has test texts like "kek", "kek2" in the 55er heat bubble at the Hauptbahnhof (the demo's heat zone), for the owner to clean, like agent 8's old e2e reports; (2) on the phone a sensor pin can sit half under the title pill at the top edge (phone-link.png), harmless; (3) agent 11's items still open ("−" peeking in narrow desktop windows, history.json slipping into `git commit -a`); (4) agent 9's goto retry fired again in my full run and the run stayed green
+State: make check green, make e2e 43/43 green (backend untouched, make test not needed); tree clean
