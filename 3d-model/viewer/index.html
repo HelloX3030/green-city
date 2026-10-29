@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>NoiseNode case</title>
+<meta name="description" content="3D viewer of the NoiseNode leaf-shaped sensor case: body, domed lid, microphone sled, USB plug and the two reference boards.">
+<style>
+  :root {
+    --bg: #ededeb;
+    --ink: #1f2a24;
+    --muted: #5d6b63;
+    --accent: #3a7d5c;
+    --accent-ink: #ffffff;
+    --panel: rgba(255, 255, 255, 0.72);
+    --line: rgba(31, 42, 36, 0.14);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); }
+  body {
+    font: 15px/1.4 -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  #scene { position: fixed; top: 0; left: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .ui { position: fixed; left: 0; right: 0; padding: 16px; pointer-events: none; }
+  .ui > * { pointer-events: auto; }
+  #head { top: 0; }
+  #head h1 { margin: 0; font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+  #head p { margin: 4px 0 0; color: var(--muted); max-width: 42em; font-size: 14px; }
+  #foot {
+    bottom: 0; padding-bottom: max(16px, env(safe-area-inset-bottom));
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  }
+  button {
+    appearance: none; border: 1px solid var(--line); border-radius: 999px;
+    background: var(--panel); color: var(--ink); font: inherit; font-size: 14px;
+    padding: 9px 14px; min-height: 40px; cursor: pointer;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  #dims { margin-left: auto; color: var(--muted); font-size: 13px; }
+  #status {
+    position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    color: var(--muted); font-size: 14px; pointer-events: none;
+  }
+  .hidden { display: none !important; }
+  @media (max-width: 560px) {
+    #head h1 { font-size: 19px; }
+    #head p { font-size: 13px; }
+    #dims { margin-left: 0; flex-basis: 100%; }
+  }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="status">Loading model …</div>
+<div class="ui" id="head">
+  <h1>NoiseNode case</h1>
+  <p>Leaf-shaped 3D-printed enclosure for the street-noise sensor: body, domed lid with QR pocket and rain hood, drop-in sled for the sound-meter board, USB plug. Boards shown in green for reference.</p>
+</div>
+<div class="ui" id="foot">
+  <button id="b-lid" aria-pressed="true">Lid</button>
+  <button id="b-boards" aria-pressed="true">Boards</button>
+  <button id="b-explode" aria-pressed="false">Explode</button>
+  <button id="b-reset" aria-pressed="false">Reset view</button>
+  <span id="dims"></span>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+// ---- URL parameters (used for scripted renders) --------------------------
+//   ?view=front|top|open|sled|side|explode   camera preset / what is shown
+//   ?explode=1   ?lid=0   ?boards=0   ?ui=0   ?parts=body,rails,sensor
+const q = new URLSearchParams(location.search);
+const flag = (k, dflt) => (q.has(k) ? q.get(k) !== '0' : dflt);
+const VIEW = q.get('view') || 'front';
+const SHOW_UI = flag('ui', true);
+if (!SHOW_UI) for (const el of document.querySelectorAll('.ui')) el.classList.add('hidden');
+
+// Camera directions in model space (X right, Y towards the wide end, Z up).
+// The leaf tip points to -Y, the USB opening sits on the -X side.
+const PRESETS = {
+  front:   { dir: [-0.62, -0.78, 0.52], lid: true,  boards: true,  explode: false },
+  side:    { dir: [-1.0, -0.42, 0.34],  lid: true,  boards: true,  explode: false },
+  top:     { dir: [0.0, -0.02, 1.0],    lid: true,  boards: true,  explode: false },
+  open:    { dir: [0.55, -0.72, 0.78],  lid: false, boards: true,  explode: false },
+  sled:    { dir: [0.62, -0.78, 0.46],  lid: false, boards: true,  explode: false, parts: ['rails', 'sensor'] },
+  explode: { dir: [-0.62, -0.78, 0.48], lid: true,  boards: true,  explode: true },
+};
+const preset = PRESETS[VIEW] || PRESETS.front;
+const state = {
+  lid: flag('lid', preset.lid),
+  boards: flag('boards', preset.boards),
+  explode: flag('explode', preset.explode),
+  parts: q.get('parts') ? q.get('parts').split(',') : preset.parts || null,
+};
+
+// ---- renderer / scene ----------------------------------------------------
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setClearColor(0x000000, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(30, 1, 1, 5000);
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.52;
+controls.minDistance = 120;
+controls.maxDistance = 1500;
+
+// soft studio lighting: ambient-ish hemisphere, a warm key with soft shadows, a cool fill
+scene.add(new THREE.HemisphereLight(0xffffff, 0xc8c6c0, 0.6));
+const key = new THREE.DirectionalLight(0xfff4e6, 2.2);
+key.position.set(-160, 260, 180);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.radius = 6;
+key.shadow.bias = -0.0005;
+key.shadow.normalBias = 0.6;
+const sc = key.shadow.camera; sc.near = 50; sc.far = 800; sc.left = sc.bottom = -170; sc.right = sc.top = 170;
+scene.add(key);
+const fill = new THREE.DirectionalLight(0xdfe9ff, 0.7);
+fill.position.set(220, 120, -160);
+scene.add(fill);
+
+// model group: FreeCAD is Z up, glTF/three are Y up
+const model = new THREE.Group();
+model.rotation.x = -Math.PI / 2;
+scene.add(model);
+
+// ground that only receives a soft shadow
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(1200, 1200), new THREE.ShadowMaterial({ opacity: 0.16 }));
+ground.rotation.x = -Math.PI / 2;
+ground.position.y = -0.05;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// ---- parts ----------------------------------------------------------------
+const parts = {};           // name -> Object3D
+const BOARDS = new Set(['mcu', 'sensor']);
+// exploded offsets in model mm (z up): lid lifts, sled + sensor lift, plug pulls out
+const EXPLODE = { lid: [0, 0, 42], rails: [0, 0, 20], sensor: [0, 0, 20], plug: [-18, 0, 0] };
+
+function visibleParts() {
+  const out = [];
+  for (const [name, obj] of Object.entries(parts)) {
+    let show = true;
+    if (state.parts) show = state.parts.includes(name);
+    else {
+      if (name === 'lid' && !state.lid) show = false;
+      if (BOARDS.has(name) && !state.boards) show = false;
+    }
+    out.push([obj, show]);
+  }
+  return out;
+}
+
+function applyState() {
+  for (const [obj, show] of visibleParts()) obj.visible = show;
+  const set = (id, v) => { const b = document.getElementById(id); if (b) b.setAttribute('aria-pressed', String(v)); };
+  set('b-lid', state.lid); set('b-boards', state.boards); set('b-explode', state.explode);
+}
+
+// ---- framing --------------------------------------------------------------
+const _box = new THREE.Box3();
+function frame(dir, animate) {
+  _box.makeEmpty();
+  for (const [obj, show] of visibleParts()) if (show) _box.expandByObject(obj);
+  if (_box.isEmpty()) return;
+  const center = _box.getCenter(new THREE.Vector3());
+  const sphere = _box.getBoundingSphere(new THREE.Sphere());
+  const aspect = camera.aspect;
+  const vfov = THREE.MathUtils.degToRad(camera.fov);
+  const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
+  const fov = Math.min(vfov, hfov);
+  const dist = (sphere.radius / Math.sin(fov / 2)) * 1.08;
+  // dir is given in model space (z up): rotate into world space (y up)
+  const d = new THREE.Vector3(dir[0], dir[2], -dir[1]).normalize();
+  controls.target.copy(center);
+  camera.position.copy(center).addScaledVector(d, dist);
+  camera.lookAt(center);
+  controls.update();
+}
+
+let userMoved = false;
+controls.addEventListener('start', () => { userMoved = true; });
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  // keep the preset framing until the user orbits (headless windows resize late)
+  if (!userMoved && Object.keys(parts).length) frame(preset.dir);
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ---- load -----------------------------------------------------------------
+const loader = new GLTFLoader();
+loader.load('../export/case.glb', (gltf) => {
+  gltf.scene.traverse((o) => {
+    if (!o.isMesh) return;
+    const name = o.name || (o.parent && o.parent.name) || 'part';
+    o.castShadow = true;
+    o.receiveShadow = true;
+    const m = o.material;
+    if (BOARDS.has(name)) { m.transparent = true; m.depthWrite = false; m.side = THREE.DoubleSide; }
+    o.userData.home = o.position.clone();
+    parts[name] = o;
+  });
+  model.add(gltf.scene);
+
+  // outer dimensions of the assembled printed parts (body + lid), from the mesh
+  const bb = new THREE.Box3();
+  for (const n of ['body', 'lid']) if (parts[n]) bb.expandByObject(parts[n]);
+  const s = bb.getSize(new THREE.Vector3()); // world: x, y(up), z
+  const dims = document.getElementById('dims');
+  if (dims) dims.textContent = `Outer ≈ ${s.x.toFixed(0)} × ${s.z.toFixed(0)} × ${s.y.toFixed(0)} mm (W × L × H, lid on, incl. mic hood)`;
+
+  applyState();
+  // start with the parts already in place so the first frame is final
+  for (const [name, off] of Object.entries(EXPLODE)) {
+    if (!parts[name]) continue;
+    const t = state.explode ? 1 : 0;
+    parts[name].position.copy(parts[name].userData.home).add(new THREE.Vector3(off[0] * t, off[1] * t, off[2] * t));
+  }
+  frame(preset.dir);
+  document.getElementById('status').classList.add('hidden');
+  renderer.render(scene, camera);
+  document.documentElement.dataset.ready = '1';
+  document.title = 'NoiseNode case';
+}, undefined, (err) => {
+  document.getElementById('status').textContent = 'Could not load ../export/case.glb — serve the 3d-model folder over HTTP (see viewer/README.md).';
+  console.error(err);
+});
+
+// ---- UI -------------------------------------------------------------------
+function toggle(id, key) {
+  const b = document.getElementById(id);
+  if (!b) return;
+  b.addEventListener('click', () => { state[key] = !state[key]; state.parts = null; applyState(); });
+}
+toggle('b-lid', 'lid');
+toggle('b-boards', 'boards');
+toggle('b-explode', 'explode');
+document.getElementById('b-reset')?.addEventListener('click', () => frame(PRESETS.front.dir));
+
+// ---- loop: ease exploded offsets, render -----------------------------------
+let explodeT = state.explode ? 1 : 0;
+function tick() {
+  const target = state.explode ? 1 : 0;
+  if (Math.abs(explodeT - target) > 0.001) {
+    explodeT += (target - explodeT) * 0.12;
+    const t = explodeT < 0.5 ? 2 * explodeT * explodeT : 1 - Math.pow(-2 * explodeT + 2, 2) / 2; // ease in-out
+    for (const [name, off] of Object.entries(EXPLODE)) {
+      const o = parts[name];
+      if (o) o.position.copy(o.userData.home).add(new THREE.Vector3(off[0] * t, off[1] * t, off[2] * t));
+    }
+  } else explodeT = target;
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
+tick();
+</script>
+</body>
+</html>
