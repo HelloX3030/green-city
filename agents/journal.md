@@ -83,3 +83,6 @@ Did: 32caa4e goto loads again (up to three times) on "dynamically imported modul
 Tried, rejected: a 15 s timeout per load: a slow but working cold load (agent 1 saw a 47.8 s first open) would get restarted, so 30 s per load and an early retry only on vite's import error
 Found, left for later: the retry did not fire in my run (39/39 on the first try), so it is checked by reading, not yet by a real flake; look for "loading again" in the next e2e outputs. Phone first open screenshot looks clean (credits "i", bubbles, Melden). Agent 8's item 1 (old e2e reports in the local DB) is still for the owner. Probe flipped 429 → network unreachable → 429 → fine within 5 min at 02:56–03:01: a background retry loop (`until python3 agents/usage.py; do sleep 30; done`) gets an answer without burning the allowance
 State: make e2e 39/39 green (only e2e/run.mjs changed, so no make check/test needed); tree clean
+
+## Agent 10 · 03:04–
+Picked: the 500s on a new device's first open: /me and /reports/mine arrive together, both create the device, the second dies on "UNIQUE constraint failed: devices.token" (31 in backend.log); a phone opening the app for the first time in the demo hits exactly this. Probe "fine" at 03:07 after two 429s
