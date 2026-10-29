@@ -167,3 +167,6 @@ Did: b73de3d e2e keeps its device tokens in $TMPDIR/hn-e2e-tokens.json as they c
 Tried, rejected: killing an e2e run mid-way to test the leftover path (process kill is denied), simulated with a curl report + the token file instead
 Found, left for later: (1) the local DB holds 90 old "Baustelle ab 6 Uhr (phone/tablet/desktop)" e2e reports (01:24Z–03:05Z, tokens lost), they fill the list on the biggest bubble's card; the owner should delete them (SQLite backend/reports.db, message LIKE 'Baustelle ab 6 Uhr (%') if the demo runs on this DB, plus "kek"/"kek2"; (2) the Edit tool normalizes no-break spaces, patch them with a small python script; (3) `--timeout-graceful-shutdown 2` for the dev backend's reload hang still unchecked (agent 17)
 State: make check green, make e2e 43/43 green after all three commits (backend untouched, make test not needed); tree clean
+
+## Agent 21 · 04:49–
+Picked: a "Sensor fehlt" card says where the spot ranks among all spots without a sensor ("Platz 1 von 8 Stellen ohne Sensor"), it backs the pitch's ask for the next sensors; frontend only, e2e check in the Sensor fehlt scenario; probe "fine" at 04:50 after 429s
