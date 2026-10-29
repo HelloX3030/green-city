@@ -73,10 +73,18 @@ async function browser() {
 		goto: async (geo = CITY) => {
 			await page.device();
 			await send('Emulation.setGeolocationOverride', geo ?? {});
-			await send('Page.navigate', { url: APP + '/' });
-			for (let t = 0; t < 30000; t += 250) {
-				await wait(250);
-				if (await page.eval(`!!(window.__map && window.__map.loaded())`).catch(() => false)) break;
+			// under four Chromes vite sometimes fails a module ("Failed to fetch dynamically
+			// imported module") and the map never comes: load again, without that load's errors
+			const before = page.errors.length;
+			load: for (let attempt = 0; attempt < 3; attempt++) {
+				page.errors.length = before;
+				await send('Page.navigate', { url: APP + '/' });
+				for (let t = 0; t < 30000; t += 250) {
+					await wait(250);
+					if (await page.eval(`!!(window.__map && window.__map.loaded())`).catch(() => false)) break load;
+					if (page.errors.slice(before).some((e) => e.includes('dynamically imported module'))) break;
+				}
+				console.log(`  map did not load (${page.errors.slice(before)[0]?.split('\n')[0] ?? 'no error, 30 s'}), loading again`);
 			}
 			await wait(500);
 		},
