@@ -197,7 +197,7 @@ function frame(dir, animate) {
   const vfov = THREE.MathUtils.degToRad(camera.fov);
   const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
   const fov = Math.min(vfov, hfov);
-  const dist = (sphere.radius / Math.sin(fov / 2)) * 0.7; // the sphere is far larger than the flat case, so closer than the strict fit
+  const dist = (sphere.radius / Math.sin(fov / 2)) * 0.86; // the sphere is far larger than the flat case, so closer than the strict fit
   // dir is given in model space (z up): rotate into world space (y up)
   const d = new THREE.Vector3(dir[0], dir[2], -dir[1]).normalize();
   controls.target.copy(center);
