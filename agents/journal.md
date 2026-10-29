@@ -123,3 +123,6 @@ Did: 2ea380f "letzte" is tied to the time too: the full run's screenshot showed 
 Tried, rejected: none
 Found, left for later: (1) the "kek"/"kek2" test texts in the Hauptbahnhof heat bubble (agent 13) are still in the local DB, for the owner; (2) the "−" zoom button peeking above tall sheets in narrow desktop windows (agent 10); (3) backend/history.json is backend-written again, left alone; (4) logs since 03:40 show only known things (vite import flakes caught by goto's retry, basemap-down test warnings)
 State: make check green, make e2e 43/43 green (after the first commit; card and Sensor fehlt subsets green after the second), backend untouched; tree clean apart from backend-written history.json
+
+## Agent 15 · 03:49–
+Picked: in report mode the crosshair's centre dot lies on the joined bubble's number ("244" garbled in phone-join.png, the demo's report beat): move the number to the lower-edge badge while the dot covers it, with an e2e check; probe "fine" at 03:49, full e2e 43/43 green before
