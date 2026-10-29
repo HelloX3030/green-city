@@ -173,6 +173,18 @@
 			transformConstrain: keepCentre,
 			attributionControl: false
 		});
+		// without the basemap 'load' never comes and no bubble shows; a plain background keeps the bubbles, pins and city border
+		let plain = false;
+		const fallBack = () => {
+			if (ready || plain) return;
+			plain = true;
+			map.setStyle({ version: 8, sources: {}, layers: [{ id: 'bg', type: 'background', paint: { 'background-color': '#f2f2ef' } }] });
+		};
+		map.on('error', (e) => {
+			if (String((e.error as { url?: string })?.url ?? '').includes('style.json')) fallBack();
+		});
+		const slow = setTimeout(fallBack, 15000);
+		map.once('load', () => clearTimeout(slow));
 		map.addControl(new AttributionControl({ compact: true }), 'top-left');
 		map.scrollZoom.setWheelZoomRate(1 / 900);
 		map.touchZoomRotate.disableRotation();
@@ -353,7 +365,10 @@
 			});
 			ready = true;
 		});
-		return () => map.remove();
+		return () => {
+			clearTimeout(slow);
+			map.remove();
+		};
 	});
 
 	// the sheet covers the bottom (phone) or the left (wide screens), the map's centre moves away from it

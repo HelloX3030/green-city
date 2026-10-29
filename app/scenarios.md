@@ -29,6 +29,7 @@ Phone only
 - zoomed out to 12: bubbles that overlap merge (a `.group` bubble), the numbers on screen still add up to the reports of all API clusters, a tap on a group zooms in (at least a level, fitBounds on its members) where the numbers add up again
 - live: a report sent from another device shows up on the bubble within 2.5 s while the event stream is up (the poll alone would take up to a minute)
 - device token: with it `/clusters` marks my bubbles (`mine`) and `/reports/mine` lists my reports, without it nothing is mine and `/reports/mine` is refused; 32 chars in localStorage, same token and same user after a reload, a cleared storage is a new user with no marked bubbles, a report without the header is refused
+- basemap unreachable (basemaps.cartocdn.com blocked): the map falls back to a plain background (on the style's load error, or after 15 s without one) and still shows the bubbles and sensor pins
 - backend unreachable: "Server nicht erreichbar" after the next poll, gone when it is back
 
 Not covered, check by hand on a phone

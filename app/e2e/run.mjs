@@ -719,6 +719,21 @@ const phone = async ({ page, send, expect, scenario, melden, type, nearlyZoom, s
 		expect(after > before, `bubbles say ${before} reports before and ${after} after, within 2.5 s`);
 	});
 
+	await scenario('phone: basemap down, the bubbles and sensor pins still show on a plain map', async () => {
+		await send('Network.enable');
+		await send('Network.setBlockedURLs', { urls: ['*basemaps.cartocdn.com*'] });
+		await page.goto();
+		await wait(1000);
+		const bubbles = await page.eval(`document.querySelectorAll('.pin.cluster').length`);
+		const pins = await page.eval(`document.querySelectorAll('.pin.sensor').length`);
+		const plain = await page.eval(`!!window.__map.getLayer('bg')`);
+		await send('Network.setBlockedURLs', { urls: [] });
+		await send('Network.disable');
+		expect(plain, 'no plain background style');
+		expect(bubbles > 0, 'no bubbles without the basemap');
+		expect(pins > 0, 'no sensor pins without the basemap');
+	});
+
 	await scenario('phone: backend down shows the offline note and recovers', async () => {
 		await page.goto();
 		await send('Network.enable');
