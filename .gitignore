@@ -1,0 +1,4 @@
+
+# overnight agent chain: logs, state, stashes
+agents/run/
+__pycache__/

@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "allow": [
+      "Read", "Glob", "Grep", "Edit", "Write", "MultiEdit", "NotebookEdit", "TodoWrite", "WebFetch", "WebSearch", "Agent",
+      "Bash(git *)", "Bash(make *)", "Bash(npm *)", "Bash(npx *)", "Bash(node *)", "Bash(uv *)",
+      "Bash(python3 *)", "Bash(python *)", "Bash(cd *)", "Bash(ls*)", "Bash(cat *)", "Bash(head *)", "Bash(tail *)",
+      "Bash(grep *)", "Bash(rg *)", "Bash(find *)", "Bash(sed *)", "Bash(awk *)", "Bash(wc *)", "Bash(sort *)", "Bash(sort)",
+      "Bash(uniq *)", "Bash(uniq)", "Bash(cut *)", "Bash(tr *)", "Bash(xargs *)", "Bash(diff *)", "Bash(mkdir *)", "Bash(cp *)",
+      "Bash(mv *)", "Bash(rm *)", "Bash(touch *)", "Bash(echo *)", "Bash(printf *)", "Bash(date*)", "Bash(sleep *)",
+      "Bash(curl *)", "Bash(jq *)", "Bash(sqlite3 *)", "Bash(ss *)", "Bash(lsof *)", "Bash(timeout *)", "Bash(env*)",
+      "Bash(true)", "Bash(test *)", "Bash(stat *)", "Bash(file *)", "Bash(which *)", "Bash(tee *)", "Bash(ps *)", "Bash(pwd)",
+      "Bash(du *)", "Bash(md5sum *)", "Bash(sha256sum *)", "Bash(base64 *)", "Bash(tac *)", "Bash(seq *)", "Bash(basename *)",
+      "Bash(dirname *)", "Bash(realpath *)", "Bash(readlink *)", "Bash(identify *)", "Bash(convert *)", "Bash(unzip *)", "Bash(zip *)",
+      "Bash(tar *)", "Bash(gzip *)", "Bash(gunzip *)", "Bash(nproc)", "Bash(free *)", "Bash(df *)", "Bash(ping *)", "Bash(wget *)"
+    ],
+    "deny": [
+      "Bash(git push*)", "Bash(git reset --hard*)", "Bash(git clean*)", "Bash(git checkout main*)", "Bash(git checkout app*)",
+      "Bash(git checkout hardware*)", "Bash(git checkout 3d-model*)", "Bash(git switch*)", "Bash(git branch -D*)",
+      "Bash(git branch -d*)", "Bash(git rebase*)", "Bash(git merge*)", "Bash(git pull*)", "Bash(git remote*)",
+      "Bash(git config*)", "Bash(git stash drop*)", "Bash(git stash clear*)", "Bash(git filter-branch*)",
+      "Bash(gh *)", "Bash(ssh *)", "Bash(scp *)", "Bash(rsync *)", "Bash(docker*)", "Bash(sudo *)", "Bash(su *)",
+      "Bash(kill *)", "Bash(pkill *)", "Bash(killall *)", "Bash(claude*)", "Bash(python3 agents/run.py*)",
+      "Bash(./deploy/*)", "Bash(deploy/*)", "Bash(bash deploy/*)", "Bash(sh deploy/*)", "Bash(bash ./deploy/*)",
+      "Bash(rm -rf /*)", "Bash(rm -rf ~*)", "Bash(rm -rf .)", "Bash(rm -rf ..*)", "Bash(rm -rf *.git*)",
+      "Bash(chmod -R *)", "Bash(crontab*)", "Bash(systemctl*)", "Bash(reboot*)", "Bash(shutdown*)",
+      "Edit(deploy/**)", "Write(deploy/**)", "Edit(.github/**)", "Write(.github/**)",
+      "Edit(NoiseNode/**)", "Write(NoiseNode/**)", "Edit(3d-model/**)", "Write(3d-model/**)",
+      "Edit(presentation/**)", "Write(presentation/**)", "Edit(resources/**)", "Write(resources/**)",
+      "Edit(docker-compose.yml)", "Write(docker-compose.yml)", "Edit(notes.md)", "Write(notes.md)",
+      "Edit(agents/run.py)", "Write(agents/run.py)", "Edit(agents/usage.py)", "Write(agents/usage.py)",
+      "Edit(agents/settings.json)", "Write(agents/settings.json)", "Edit(agents/worker-prompt.md)", "Write(agents/worker-prompt.md)",
+      "Edit(agents/report-prompt.md)", "Write(agents/report-prompt.md)", "Edit(agents/README.md)", "Write(agents/README.md)",
+      "Edit(agents/run/**)", "Write(agents/run/**)",
+      "Read(~/.claude/.credentials.json)", "Read(~/.claude/**)", "Read(~/.ssh/**)", "Read(~/.config/gh/**)"
+    ]
+  }
+}
