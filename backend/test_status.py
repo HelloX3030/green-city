@@ -19,6 +19,16 @@ class UnitsTest(unittest.TestCase):
         self.assertEqual(status.assess(49.14, 9.22, "other"), (None, None))
 
 
+class UnmeasuredTest(unittest.TestCase):
+    """Müll and a broken road: no sensor measures them, so the status says so instead of pretending."""
+
+    def test_trash(self):
+        self.assertEqual(status.assess(49.14, 9.22, "trash"), ("no_data", "Kein Sensor misst Müll. Hier fehlt eine Messung."))
+
+    def test_road(self):
+        self.assertEqual(status.assess(49.14, 9.22, "road"), ("no_data", "Kein Sensor misst den Straßenzustand. Hier fehlt eine Messung."))
+
+
 class ShadeTest(unittest.TestCase):
     """Kein Schatten is checked against the Baumkataster: the trees within 100 m."""
 

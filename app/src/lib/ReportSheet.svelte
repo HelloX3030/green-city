@@ -120,6 +120,15 @@
 	.tile :global(svg) {
 		color: var(--c);
 	}
+	/* seven tiles in three columns: the catch-all takes the whole last row, in one line */
+	.tile:last-child {
+		grid-column: 1 / -1;
+		flex-direction: row;
+		justify-content: center;
+		gap: 8px;
+		padding: 0 12px;
+		min-height: 44px;
+	}
 	.tile.on {
 		background: #fff;
 		border-color: var(--c);

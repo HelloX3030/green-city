@@ -25,6 +25,8 @@ class ReportType(str, Enum):
     heat = "heat"
     air = "air"
     no_shade = "no_shade"
+    trash = "trash"
+    road = "road"
     other = "other"
 
 

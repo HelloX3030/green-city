@@ -4,3 +4,4 @@ agents/run/
 __pycache__/
 agents/run-test-*/
 agents/run-*/
+.claude/worktrees/

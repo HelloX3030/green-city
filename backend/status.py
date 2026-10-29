@@ -134,4 +134,10 @@ def _assess(lat: float, lon: float, type_: str) -> tuple[str | None, str | None]
         few = n < FEW_TREES
         trees = "kein Stadtbaum" if n == 0 else "nur 1 Stadtbaum" if n == 1 else f"{'nur ' if few else ''}{n} Stadtbäume"
         return "confirmed" if few else "unconfirmed", f"Baumkataster: {trees} im Umkreis von {TREE_NEAR_M} m."
+
+    # nothing measures these, honest: no data, not "not confirmed"
+    if type_ == "trash":
+        return "no_data", "Kein Sensor misst Müll. Hier fehlt eine Messung."
+    if type_ == "road":
+        return "no_data", "Kein Sensor misst den Straßenzustand. Hier fehlt eine Messung."
     return None, None

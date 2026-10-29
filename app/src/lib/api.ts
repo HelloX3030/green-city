@@ -1,7 +1,7 @@
 import type { FeatureCollection, LineString } from 'geojson';
 import type { IconName } from './icons';
 
-export type ReportType = 'noise' | 'heat' | 'air' | 'no_shade' | 'other';
+export type ReportType = 'noise' | 'heat' | 'air' | 'no_shade' | 'trash' | 'road' | 'other';
 
 // one colour and icon per type, used on pins, tiles, badges and chips alike
 // same as RADIUS_M in backend/clustering.py: reports this close to a bubble join it
@@ -12,10 +12,12 @@ export const TYPES: { id: ReportType; label: string; color: string; icon: IconNa
 	{ id: 'heat', label: 'Zu heiß', color: '#c4664f', icon: 'heat' },
 	{ id: 'air', label: 'Schlechte Luft', color: '#4e7ea6', icon: 'air' },
 	{ id: 'no_shade', label: 'Kein Schatten', color: '#a18a4f', icon: 'no_shade' },
+	{ id: 'trash', label: 'Müll', color: '#4a8c86', icon: 'trash' },
+	{ id: 'road', label: 'Kaputte Straße', color: '#a1607c', icon: 'road' },
 	{ id: 'other', label: 'Anderes', color: '#8a8a8e', icon: 'other' }
 ];
 
-export const typeInfo = (id: string) => TYPES.find((t) => t.id === id) ?? TYPES[4];
+export const typeInfo = (id: string) => TYPES.find((t) => t.id === id) ?? TYPES[TYPES.length - 1]; // unknown: Anderes
 
 export interface Report {
 	id: number;
