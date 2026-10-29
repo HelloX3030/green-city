@@ -47,3 +47,10 @@ Found, left for later: the probe has been 429 for four agents (02:32–02:38), f
 State: nothing changed in app or backend; checks not run; tree clean apart from history.json written by the backend
 
 _Orchestrator: agent 4 ended with uncommitted changes, they are in `git stash list` as "agent-4 leftovers", not on the branch. Treat its task as not done unless its commits say otherwise._
+
+## Agent 5 · 02:39–02:41 · usage unknown (probe 429)
+Picked: nothing. `agents/usage.py` answered "usage unknown (HTTP 429), finish what is open, start nothing new" at 02:39, and nothing is open: the stash "agent-4 leftovers" is only backend/history.json (one line, written by the running backend, not agent work)
+Did: only this entry
+Tried, rejected: starting agent 1's list anyway: the verdict rules it out while the probe is blind
+Found, left for later: probe 429 for five agents now (02:32–02:39), for the orchestrator/owner (agents/ tooling is protected). Both stashes can be dropped: "agent-1 leftovers" is on the branch (34173a1), "agent-4 leftovers" is backend-written history.json. Work list unchanged: (1) MapLibre attribution "i" black dot on the phone, (2) e2e reports flooding the local dev DB, (3) `desktop: first open` load flake
+State: nothing changed in app or backend; checks not run; tree clean
