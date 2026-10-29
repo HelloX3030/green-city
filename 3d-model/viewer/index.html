@@ -197,7 +197,7 @@ function frame(dir, animate) {
   const vfov = THREE.MathUtils.degToRad(camera.fov);
   const hfov = 2 * Math.atan(Math.tan(vfov / 2) * aspect);
   const fov = Math.min(vfov, hfov);
-  const dist = (sphere.radius / Math.sin(fov / 2)) * 1.08;
+  const dist = (sphere.radius / Math.sin(fov / 2)) * 0.7; // the sphere is far larger than the flat case, so closer than the strict fit
   // dir is given in model space (z up): rotate into world space (y up)
   const d = new THREE.Vector3(dir[0], dir[2], -dir[1]).normalize();
   controls.target.copy(center);
@@ -221,7 +221,7 @@ resize();
 
 // ---- load -----------------------------------------------------------------
 const loader = new GLTFLoader();
-loader.load('../export/case.glb', (gltf) => {
+const onLoad = (gltf) => {
   gltf.scene.traverse((o) => {
     if (!o.isMesh) return;
     const name = o.name || (o.parent && o.parent.name) || 'part';
@@ -253,10 +253,13 @@ loader.load('../export/case.glb', (gltf) => {
   renderer.render(scene, camera);
   document.documentElement.dataset.ready = '1';
   document.title = 'NoiseNode case';
-}, undefined, (err) => {
+};
+const onError = (err) => {
   document.getElementById('status').textContent = 'Could not load ../export/case.glb — serve the 3d-model folder over HTTP (see viewer/README.md).';
   console.error(err);
-});
+};
+// fetched by hand and parsed from the bytes: the loader's own fetch failed in headless Chrome
+fetch('../export/case.glb').then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.arrayBuffer(); }).then((buf) => loader.parse(buf, '../export/', onLoad, onError)).catch(onError);
 
 // ---- UI -------------------------------------------------------------------
 function toggle(id, key) {
