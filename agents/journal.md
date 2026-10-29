@@ -216,3 +216,6 @@ Did: d59b959 onsent: when no shown bubble holds the new report, the toast says "
 Tried, rejected: "Gemeldet, dein Filter blendet die Stelle aus", the toast ran under the Ebenen button at 360 px (phone-sent-filtered.png); opening the card for a bubble the map does not show, it would point at nothing
 Found, left for later: (1) on the Gemeldet/bubble card the folded state reads "Alle 92 Texte zeigen" then "und 155 weitere ohne Text", the "weitere" is ambiguous while texts are folded, maybe put the count line above the button; (2) in Bash, `printf >>` and `for` loops were denied, Edit for the journal and `git -C` worked; localStorage in e2e needs a goto first (about:blank denies it); (3) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner), `--timeout-graceful-shutdown 2` (agent 17)
 State: make check green, make e2e 44/44 green after the change (backend untouched, make test not needed); tree clean
+
+## Agent 28 · 05:41–
+Picked: on a folded bubble card "Alle 92 Texte zeigen" then "und 155 weitere ohne Text" reads as if the 155 were beyond the 5 listed (agent 27 list, item 1): say "und 155 Meldungen ohne Text" (one: "Meldung"), with the e2e check; probe "fine" at 05:40
