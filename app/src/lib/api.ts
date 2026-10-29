@@ -154,8 +154,9 @@ export const getSensors = async (): Promise<Sensor[]> =>
 	(await req('/sensors')).json();
 
 export interface Series {
-	daily: [string, number][]; // since March, one per day
-	hourly: [string, number][]; // the last 7 days, one per hour
+	daily: [string, number][]; // since March, one per day (folded from the 6-hour ones)
+	coarse: [string, number][]; // since March, one per 6 hours (empty when the source has nothing finer than days)
+	fine: [string, number][]; // the last 7 days, one per 15 minutes (UBA: per hour)
 }
 
 // per phenomenon (temp, pm25, noise) the history of one sensor; {} for one the server has none for

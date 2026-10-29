@@ -9,10 +9,10 @@ import sensors
 
 CACHE = {
     "boxes": {"box1": {"name": "Kiliansplatz", "lat": 49.14, "lon": 9.22, "phenomena": {
-        "temp": {"title": "Temperatur", "hourly": {"2026-10-28T22:00Z": 9.5, "2026-10-28T23:00Z": 9.1}},
-        "noise": {"title": "LAeq_1min", "hourly": {"2026-10-28T23:00Z": None, "2026-10-28T22:00Z": 52.3}},
+        "temp": {"title": "Temperatur", "fine": {"2026-10-28T22:45Z": 9.5, "2026-10-28T23:00Z": 9.1}},
+        "noise": {"title": "LAeq_1min", "fine": {"2026-10-28T23:00Z": None, "2026-10-28T22:45Z": 52.3}},
     }}},
-    "uba": {"pm25": {"hourly": {"2026-10-28T23:00Z": 7}}},
+    "uba": {"pm25": {"fine": {"2026-10-28T23:00Z": 7}}},
 }
 
 
@@ -48,7 +48,7 @@ class Fallbacks(unittest.TestCase):
         box, uba = got["box1"], got["DEBW015"]
         self.assertEqual((box["name"], box["lat"], box["lon"], box["kind"]), ("Kiliansplatz", 49.14, 9.22, "noise"))
         self.assertEqual([(v["key"], v["value"], v["label"]) for v in box["values"]],
-                         [("temp", 9.1, "Temperatur"), ("noise", 52.3, "Lärm Ø 1 h")])
+                         [("temp", 9.1, "Temperatur"), ("noise", 52.3, "Lärm Ø 15 min")])
         self.assertEqual(box["last"], "2026-10-28T23:00:00+00:00")
         self.assertEqual([(v["key"], v["value"], v["unit"]) for v in uba["values"]], [("pm25", 7.0, "µg/m³")])
 

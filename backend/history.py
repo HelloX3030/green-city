@@ -1,5 +1,6 @@
-"""Daily statistics per sensor since March and hourly ones of the last days, from openSenseMap and UBA.
-The daily ones are slow to fetch (1 min+ per call), so everything is cached on disk."""
+"""Per sensor a 6-hour series since March (the daily values are folded from it) and a 15-minute one of the
+last days, from openSenseMap and UBA. A call over the months is slow (1 min+, whatever the window), so
+everything is cached on disk."""
 import asyncio
 import json
 import logging
@@ -19,8 +20,13 @@ NOISENODE = "6ae0d7aa4bc0370008dba0f7"
 UBA_STATION = {"id": "DEBW015", "name": "Messstation Heilbronn (UBA)", "lat": 49.1655, "lon": 9.2248}
 FROM = "2026-03-01T00:00:00Z"
 MAX_AGE = timedelta(hours=24)
-HOURLY_DAYS = 7
-HOURLY_MAX_AGE = timedelta(minutes=50)  # the refresh loop is hourly
+# the coarse series since March: Alles on the chart, the daily values for the status rules are folded from it
+COARSE = "6h"
+# the fine series of the last days: 24 h and 7 Tage on the chart (UBA has nothing finer than an hour)
+FINE = "15m"
+FINE_DAYS = 7
+FINE_MAX_AGE = timedelta(minutes=50)  # the refresh loop is hourly
+RESOLUTIONS = ("daily", "fine", "coarse")
 UTC_PLUS_1 = timezone(timedelta(hours=1))  # UBA times are CET all year
 
 # phenomenon key -> (title regex, daily operation)
@@ -87,25 +93,66 @@ def _stale(entry: dict | None, field: str = "fetched", max_age: timedelta = MAX_
     return datetime.now(timezone.utc) - datetime.fromisoformat(entry[field]) > max_age
 
 
-def _hourly_from() -> datetime:
-    return datetime.now(timezone.utc) - timedelta(days=HOURLY_DAYS)
+def _fine_from() -> datetime:
+    return datetime.now(timezone.utc) - timedelta(days=FINE_DAYS)
 
 
-def _rows(values: dict | None) -> list[list]:
-    return sorted([t, v] for t, v in (values or {}).items() if v is not None)
+def _clean(rows: dict, cut: int) -> dict:
+    """time -> value, the time cut to the minute ("2026-10-27T23:45Z") or the day, no gaps, 1 decimal"""
+    return {(k[:cut] + "Z" if cut > 10 else k[:10]): round(v, 1) for k, v in rows.items() if v is not None}
+
+
+def fold_days(coarse: dict, op: str) -> dict:
+    """The daily values from the 6-hour ones: the max of the day's windows for a max, else their mean."""
+    days: dict[str, list] = {}
+    for t, v in coarse.items():
+        days.setdefault(t[:10], []).append(v)
+    return {d: round(max(vs) if op == "max" else sum(vs) / len(vs), 1) for d, vs in sorted(days.items())}
+
+
+def fold_windows(hourly: dict) -> dict:
+    """6-hour means from hourly values (UBA has no coarser scope than the day)"""
+    windows: dict[str, list] = {}
+    for t, v in hourly.items():
+        windows.setdefault(f"{t[:10]}T{int(t[11:13]) // 6 * 6:02d}:00Z", []).append(v)
+    return {k: round(sum(vs) / len(vs), 1) for k, vs in sorted(windows.items())}
+
+
+def values(phenomenon: dict, resolution: str) -> dict:
+    """time -> value of one resolution of a cached phenomenon, without gaps. Synthetic demo values
+    under `seed` (seed_noise.py) lie under the real ones: a real value always wins, and the seed ends
+    at `seed.until`, the first real timestamp, so a refresh never erases or doubles it."""
+    # a box the rebuild has not reached yet still carries the old hourly series: it stands in for the fine one
+    rows = phenomenon.get(resolution) or (phenomenon.get("hourly") if resolution == "fine" else None) or {}
+    real = {t: v for t, v in rows.items() if v is not None}
+    seed = phenomenon.get("seed")
+    if not seed:
+        return real
+    until = seed.get("until", "")
+    return {**{t: v for t, v in (seed.get(resolution) or {}).items() if t < until and v is not None}, **real}
+
+
+def _rows(phenomenon: dict, resolution: str) -> list[list]:
+    return sorted([t, v] for t, v in values(phenomenon, resolution).items())
+
+
+def phenomena(sensor_id: str) -> dict | None:
+    """The cached phenomena of a sensor, None for one we do not know"""
+    cache = get()
+    if sensor_id == UBA_STATION["id"]:
+        return cache["uba"]
+    if sensor_id in cache["boxes"]:
+        return cache["boxes"][sensor_id].get("phenomena", {})
+    return None
 
 
 def series(sensor_id: str) -> dict[str, dict] | None:
-    """Per phenomenon the daily values since March and the hourly ones of the last days, each as a
-    sorted list of [time, value]. None for a sensor we do not know."""
-    cache = get()
-    if sensor_id == UBA_STATION["id"]:
-        phenomena = cache["uba"]
-    elif sensor_id in cache["boxes"]:
-        phenomena = cache["boxes"][sensor_id].get("phenomena", {})
-    else:
+    """Per phenomenon the daily and the 6-hour values since March and the 15-minute ones of the last
+    days (UBA: hourly), each as a sorted list of [time, value]. None for a sensor we do not know."""
+    ps = phenomena(sensor_id)
+    if ps is None:
         return None
-    return {key: {"daily": _rows(p.get("daily")), "hourly": _rows(p.get("hourly"))} for key, p in phenomena.items()}
+    return {key: {r: _rows(p, r) for r in RESOLUTIONS} for key, p in ps.items()}
 
 
 def _now() -> str:
@@ -155,15 +202,17 @@ async def refresh_box(client: httpx.AsyncClient, box: dict):
             cached = None
         op = PHENOMENA[key][1]
         try:
-            if _stale(cached):
-                rows = await _descriptive(client, box["_id"], s["title"], FROM, "1d", op)
-                cached = {"title": s["title"], "sensor_id": s["_id"], "fetched": _now(),
-                          "daily": {k[:10]: v for k, v in rows.items()}, "hourly": {}}
+            if cached is None or _stale(cached) or "coarse" not in cached:
+                coarse = _clean(await _descriptive(client, box["_id"], s["title"], FROM, COARSE, op), 16)
+                # the rest of the entry (the fine series, a seed) stays, the old hourly series goes
+                cached = {k: v for k, v in (cached or {}).items() if k not in ("hourly", "hourly_fetched")}
+                cached.update({"title": s["title"], "sensor_id": s["_id"], "fetched": _now(),
+                               "coarse": coarse, "daily": fold_days(coarse, op), "fine": cached.get("fine", {})})
                 entry["phenomena"][key] = cached
-                log.info("history %s %s: %d days", box["name"], key, len(rows))
-            if _stale(cached, "hourly_fetched", HOURLY_MAX_AGE):
-                rows = await _descriptive(client, box["_id"], s["title"], _hourly_from().strftime("%Y-%m-%dT%H:%M:%SZ"), "1h", op)
-                cached.update({"hourly_fetched": _now(), "hourly": {k[:16] + "Z": v for k, v in rows.items()}})
+                log.info("history %s %s: %d days", box["name"], key, len(cached["daily"]))
+            if _stale(cached, "fine_fetched", FINE_MAX_AGE):
+                rows = await _descriptive(client, box["_id"], s["title"], _fine_from().strftime("%Y-%m-%dT%H:%M:%SZ"), FINE, op)
+                cached.update({"fine_fetched": _now(), "fine": _clean(rows, 16)})
         except Exception as e:  # noqa: BLE001
             log.warning("history %s %s: %s", box["name"], s["title"], e)
             continue
@@ -190,12 +239,15 @@ def _uba_hour(cet: str) -> str:
 async def refresh_uba(client: httpx.AsyncClient):
     entry = _cache["uba"].get("pm25")
     try:
-        if _stale(entry):
+        if entry is None or _stale(entry) or "coarse" not in entry:
             daily = await _uba_measures(client, FROM[:10], 1)
-            entry = _cache["uba"]["pm25"] = {"fetched": _now(), "daily": {k[:10]: v for k, v in daily.items()}, "hourly": {}}
-        if _stale(entry, "hourly_fetched", HOURLY_MAX_AGE):
-            hourly = await _uba_measures(client, _hourly_from().strftime("%Y-%m-%d"), 2)
-            entry.update({"hourly_fetched": _now(), "hourly": {_uba_hour(k): v for k, v in hourly.items()}})
+            hourly = await _uba_measures(client, FROM[:10], 2)  # fast, half a second for the months
+            entry = _cache["uba"]["pm25"] = {"fetched": _now(), "daily": _clean(daily, 10),
+                                             "coarse": fold_windows({_uba_hour(k): v for k, v in hourly.items() if v is not None}),
+                                             "fine": (entry or {}).get("fine", {})}
+        if _stale(entry, "fine_fetched", FINE_MAX_AGE):
+            hourly = await _uba_measures(client, _fine_from().strftime("%Y-%m-%d"), 2)
+            entry.update({"fine_fetched": _now(), "fine": _clean({_uba_hour(k): v for k, v in hourly.items()}, 16)})
     except Exception as e:  # noqa: BLE001
         log.warning("history uba: %s", e)
         return

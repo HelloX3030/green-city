@@ -464,11 +464,11 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 	const WD = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 
 	await scenario(`${size}: sensor card shows the history, Alles and 7 Tage switch the chart, a touch reads a value`, async () => {
-		// a sensor the server has hourly and daily values for
+		// a sensor the server has fine and daily values for
 		const withHistory = [];
 		for (const s of await (await fetch(`${API}/sensors`)).json()) {
 			const h = Object.values(await (await fetch(`${API}/sensors/${s.id}/history`)).json());
-			if (h.length && h.every((x) => x.hourly.length > 2 && x.daily.length > 2)) withHistory.push(s);
+			if (h.length && h.every((x) => x.fine.length > 2 && x.daily.length > 2)) withHistory.push(s);
 		}
 		expect(withHistory.length, 'no sensor with history on the server');
 		await page.goto();
@@ -485,6 +485,13 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		const line = () => page.eval(`document.querySelector('.history path.line')?.getAttribute('d')`);
 		const week = await line();
 		expect(week, 'no line for 7 Tage');
+		// every value of the fine series in the week is a point of the line (15 min: hundreds), no dots per point
+		const h = await (await fetch(`${API}/sensors/${sensor.id}/history`)).json();
+		const k = sensor.values.map((v) => v.key).find((x) => x in h) ?? Object.keys(h)[0];
+		const inWeek = h[k].fine.filter(([t]) => Date.parse(t) >= Date.now() - 7 * 86400e3).length;
+		const drawn = (week.match(/[ML]/g) ?? []).length;
+		expect(Math.abs(drawn - inWeek) <= 2, `7 Tage draws ${drawn} points of ${inWeek} values`);
+		expect((await page.eval(`document.querySelectorAll('.history circle').length`)) <= 1, 'a dot per point');
 		await page.clickText('Alles');
 		await wait(200);
 		const all = await line();
@@ -525,7 +532,7 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		const young = [];
 		for (const s of await (await fetch(`${API}/sensors`)).json()) {
 			const h = Object.values(await (await fetch(`${API}/sensors/${s.id}/history`)).json());
-			if (h.length && h.every((x) => x.hourly.length > 1 && x.daily.length && Date.parse(x.daily[0][0]) > Date.now() - 6.5 * 86400e3)) young.push(s);
+			if (h.length && h.every((x) => x.fine.length > 1 && x.daily.length && Date.parse(x.daily[0][0]) > Date.now() - 6.5 * 86400e3)) young.push(s);
 		}
 		if (!young.length) return console.log(`  note, ${size}: no sensor younger than a week on the server, nothing checked`);
 		await page.goto();
@@ -816,6 +823,36 @@ const phone = async ({ page, send, expect, scenario, melden, type, nearlyZoom, s
 		await wait(500);
 		expect((await page.sheet()).includes('NoiseNode'), 'the tap opened the bubble, not the sensor');
 		await page.shot('phone-sensor-under-bubble');
+	});
+
+	await scenario('phone: the NoiseNode chart shows a whole week, the demo values end at its first real one', async () => {
+		// the team's box went live on 27 Oct; backend/seed_noise.py fills the days before (phenomena.noise.seed
+		// in history.json), a real value always wins: 7 Tage is a full week, Alles the 6-hour series since 17.10.
+		const node = (await (await fetch(`${API}/sensors`)).json()).find((s) => s.team);
+		expect(node, 'no team sensor');
+		const h = node && (await (await fetch(`${API}/sensors/${node.id}/history`)).json()).noise;
+		if (!h || h.daily.length < 8) return console.log('  note, phone: the NoiseNode has no seeded week (cd backend && uv run python seed_noise.py), nothing checked');
+		await page.goto();
+		await page.setView(node.lon, node.lat, 16);
+		await page.idle();
+		await wait(300);
+		const pin = await page.eval(`(() => { const r = document.querySelector('.pin.sensor.ours')?.getBoundingClientRect(); return r ? [r.x + r.width / 2, r.y + r.height / 2] : null; })()`);
+		expect(pin, 'no NoiseNode pin');
+		await page.tap(...pin);
+		expect(await page.sheetHas(node.name), 'the tap did not open the NoiseNode');
+		expect(await page.until('.history path.line', 6000), 'no chart');
+		const points = () => page.eval(`(document.querySelector('.history path.line')?.getAttribute('d').match(/[ML]/g) ?? []).length`);
+		const week = h.fine.filter(([t]) => Date.parse(t) >= Date.now() - 7 * 86400e3).length;
+		expect(week > 600 && Math.abs((await points()) - week) <= 2, `7 Tage draws ${await points()} points, the week has ${week} values`);
+		expect(!(await page.has('.history .start')), 'the seeded NoiseNode still shows a start line');
+		await page.shot('phone-noisenode-week');
+		await page.clickText('Alles');
+		await wait(200);
+		expect((await points()) === h.coarse.length, `Alles draws ${await points()} points of ${h.coarse.length} 6-hour values`);
+		const first = new Date(Date.parse(h.coarse[0][0]));
+		const label = await page.eval(`[...document.querySelectorAll('.history svg text')].find((t) => t.getAttribute('text-anchor') === 'start' && +t.getAttribute('y') > 100)?.textContent`);
+		expect(label === `${['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][first.getDay()]} ${first.getDate()}.`, `the Alles axis starts at "${label}", the series on ${first.toDateString()}`);
+		await page.shot('phone-noisenode-all');
 	});
 
 	await scenario('phone: withdraw a report, gone from the list and the server', async () => {

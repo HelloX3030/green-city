@@ -41,15 +41,15 @@ def _previous(sid: str) -> dict | None:
 
 
 def history_values(phenomena: dict) -> list[dict]:
-    """The last hourly value per phenomenon from history.json, for when the live API is down."""
+    """The last value of the fine series per phenomenon from history.json, for when the live API is down."""
     out = []
     for key, p in phenomena.items():
-        hourly = {t: v for t, v in (p.get("hourly") or {}).items() if v is not None}
-        if key in HISTORY_UNITS and hourly:
-            t = max(hourly)
-            label = "Lärm Ø 1 h" if key == "noise" else dict(LABELS)[key]
+        fine = history.values(p, "fine")
+        if key in HISTORY_UNITS and fine:
+            t = max(fine)
+            label = "Lärm Ø 15 min" if key == "noise" else dict(LABELS)[key]
             time_ = datetime.fromisoformat(t.replace("Z", "+00:00")).isoformat()
-            out.append({"key": key, "label": label, "value": float(hourly[t]), "unit": HISTORY_UNITS[key], "time": time_})
+            out.append({"key": key, "label": label, "value": float(fine[t]), "unit": HISTORY_UNITS[key], "time": time_})
     return out
 
 

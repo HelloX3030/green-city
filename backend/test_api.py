@@ -119,15 +119,17 @@ if __name__ == "__main__":
         history._cache = {
             "boxes": {"box1": {"name": "x", "lat": 49.1, "lon": 9.2, "phenomena": {
                 "temp": {"daily": {"2026-03-02": 7.5, "2026-03-01": 3, "2026-03-03": None},
-                         "hourly": {"2026-10-28T10:00Z": 12.0, "2026-10-28T09:00Z": 11.0}},
+                         "coarse": {"2026-03-01T06:00Z": 3, "2026-03-01T00:00Z": 1.5},
+                         "fine": {"2026-10-28T10:00Z": 12.0, "2026-10-28T09:45Z": 11.0}},
                 "pm25": {"daily": {}},
             }}},
-            "uba": {"pm25": {"daily": {"2026-03-01": 6}, "hourly": {"2026-10-27T23:00Z": 9}}},
+            "uba": {"pm25": {"daily": {"2026-03-01": 6}, "fine": {"2026-10-27T23:00Z": 9}}},
         }
         h = self.c.get("/sensors/box1/history").json()
         self.assertEqual(h["temp"]["daily"], [["2026-03-01", 3], ["2026-03-02", 7.5]])
-        self.assertEqual(h["temp"]["hourly"], [["2026-10-28T09:00Z", 11.0], ["2026-10-28T10:00Z", 12.0]])
-        self.assertEqual(h["pm25"], {"daily": [], "hourly": []})
-        self.assertEqual(self.c.get("/sensors/DEBW015/history").json(), {"pm25": {"daily": [["2026-03-01", 6]], "hourly": [["2026-10-27T23:00Z", 9]]}})
+        self.assertEqual(h["temp"]["coarse"], [["2026-03-01T00:00Z", 1.5], ["2026-03-01T06:00Z", 3]])
+        self.assertEqual(h["temp"]["fine"], [["2026-10-28T09:45Z", 11.0], ["2026-10-28T10:00Z", 12.0]])
+        self.assertEqual(h["pm25"], {"daily": [], "fine": [], "coarse": []})
+        self.assertEqual(self.c.get("/sensors/DEBW015/history").json(), {"pm25": {"daily": [["2026-03-01", 6]], "fine": [["2026-10-27T23:00Z", 9]], "coarse": []}})
         self.assertEqual(self.c.get("/sensors/nope/history").status_code, 404)
         self.assertEqual(history._uba_hour("2026-10-28 00:00:00"), "2026-10-27T23:00Z")
