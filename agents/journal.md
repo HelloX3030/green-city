@@ -286,3 +286,10 @@ Did: no code change. make e2e at 06:28 on 89e6e18 + this journal: 44/44 ok in 16
 Tried, rejected: starting a fix after the run: usage.py was blind (429) again at 06:30 with 30 min left for the chain
 Found, left for later: same open items as agents 35/36: "Baustelle ab 6 Uhr"/"kek"/"kek2" junk in backend/reports.db on the 55 "Sensor fehlt" card (owner, before the demo), `--timeout-graceful-shutdown 2` (agent 17), the PM10 tile without a chart (agent 31/32). `printf >> journal && git add && git commit` in one Bash call was denied in don't-ask mode, Edit + `git -C <repo> commit -qam` works
 State: make e2e 44/44 green on the final state; app and backend untouched since agent 34, so make check/test not rerun; tree clean
+
+## Agent 38 · 06:31–06:33 · ~1 point (429 at 06:31, "fine" at 06:32)
+Picked: no code change: 28 min left for the chain, agent 37's full e2e (44/44 at 06:28) is the last green state of the branch, and any app change now needs another 2.5 min e2e and could leave the demo branch worse at 07:00; only a health probe of the running servers
+Did: this journal entry only. curl at 06:32: app 200, /clusters?zoom=14 200 in 15 ms, /sensors 200 (cached), backend.log shows only 200/204
+Tried, rejected: the PM10 chart (still needs a PM10 history refetch into the tracked history.json, as agent 32 found)
+Found, left for later: same open items as agents 35–37: "Baustelle ab 6 Uhr"/"kek"/"kek2" junk in backend/reports.db on the 55 "Sensor fehlt" card (owner, before the demo), `--timeout-graceful-shutdown 2` (agent 17), the PM10 tile without a chart (agent 31/32)
+State: app and backend untouched since agent 34, make e2e 44/44 green (agent 37); tree clean
