@@ -303,7 +303,10 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		await type('.sheet .msg', `Baustelle ab 6 Uhr (${size})`);
 		const msgPx = await page.eval(`parseFloat(getComputedStyle(document.querySelector('.sheet .msg')).fontSize)`);
 		expect(msgPx >= 16, `message field is ${msgPx}px, iOS Safari zooms in on focus below 16px`);
-		await page.clickText('Melden');
+		expect(await page.eval(`document.querySelector('.sheet .msg').enterKeyHint`) === 'send', 'the keyboard key of the message field does not say send');
+		// on the phone the keyboard's send key sends, elsewhere the Melden button
+		if (size === 'phone') await page.eval(`document.querySelector('.sheet .msg').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); 0`);
+		else await page.clickText('Melden');
 		await page.until('.sheet .badge', 6000); // post, then the clusters poll with the new report
 		await page.until('.sheet .voices li.me', 4000); // the card's own fetch of the texts
 		const sheet = await page.sheet();
