@@ -188,3 +188,6 @@ Did: fe95f17 app/static: apple-touch-icon.png (180), icon-192/512.png (full-blee
 Tried, rejected: none. PNGs were rasterized with ImageMagick `convert` (already installed) from a copy of favicon.svg without rx, so agent 22's "no tool" was wrong
 Found, left for later: (1) `display: "standalone"` in the manifest would open the home-screen app without the address bar, left out because it changes how the app behaves (back button, links) with no time to test on a real phone; (2) the full run withdrew 7 leftover e2e reports (agent 22's killed run), the token file works; (3) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in the local DB (owner), `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17)
 State: make check green, make e2e 43/43 green after the change (backend untouched, make test not needed); tree clean
+
+## Agent 24 · 05:17–
+Picked: e2e only catches uncaught exceptions, not console errors or failed requests (404s, failed fetches) a juror with open devtools or a flaky phone would hit: collect them per scenario, see what the app throws today, fix the real ones; probe "fine" at 05:16
