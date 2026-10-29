@@ -68,3 +68,6 @@ Did: only this entry
 Tried, rejected: using the orchestrator's prompt header instead of the probe (it says 0.0 of 50 points, window 16 %, weekly 30 %): those numbers look frozen too, agent 1 is listed at 0.0 points for 3 commits and a full e2e run, so the header is as blind as the probe and no reason to override its verdict
 Found, left for later: probe 429 for seven agents (02:32–02:42), and the header's point counts don't move either; for the orchestrator/owner (agents/ tooling is protected). Work list unchanged: (1) MapLibre attribution "i" black dot on the phone, (2) e2e reports flooding the local dev DB, (3) `desktop: first open` load flake
 State: nothing changed in app or backend; checks not run; tree clean
+
+## Agent 8 · 02:43–
+Picked: the MapLibre attribution "i" that sits as a black dot under the title on the phone (agent 1 list, item 1), because it is the first thing the jury sees on the map; the probe answered "fine" at 02:43 (first run 429, second run 17 % window), so work is allowed again
