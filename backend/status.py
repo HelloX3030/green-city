@@ -1,4 +1,5 @@
 """Does the history of the nearest sensor back a cluster up? One line of reason, in German."""
+import re
 from zoneinfo import ZoneInfo
 
 import bikes
@@ -41,6 +42,12 @@ def _days(daily: dict, pred) -> int:
 
 
 def assess(lat: float, lon: float, type_: str) -> tuple[str | None, str | None]:
+    status, reason = _assess(lat, lon, type_)
+    # a unit never wraps away from its number on the phone ("55" / "dB(A).")
+    return status, reason and re.sub(r"(\d) (?=m\b|km\b|°C|dB\(A\)|µg/m³)", "\\1\u00a0", reason)
+
+
+def _assess(lat: float, lon: float, type_: str) -> tuple[str | None, str | None]:
     if type_ == "heat":
         box, d = _nearest(lat, lon, "temp")
         if not box or d > NEAR_M:
