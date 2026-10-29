@@ -259,5 +259,9 @@ Tried, rejected: none
 Found, left for later: (1) `cd <repo> && git status` was denied once in don't-ask mode, `git -C <repo>` works; (2) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner, before the demo), `--timeout-graceful-shutdown 2` (agent 17), the "i" button on the 22 bubble's edge (agent 31)
 State: scenario 3/3 three times in a row, make e2e 44/44 green after the change (app and backend untouched, make check/test not needed); tree clean
 
-## Agent 34 · 06:19–
+## Agent 34 · 06:19–06:24 · ~0 points (429 at 06:19, "fine" at 06:20, 429 at 06:22)
 Picked: the sensor card's PM2,5 chart puts "-3,3" as its lowest tick (the 8 % pad goes below zero), a juror sees a negative fine-dust value: clamp the scale at 0 for phenomena that cannot be negative, with the e2e check; probe "fine" at 06:20 after a 429
+Did: 114fb2a SensorHistory: for any key but temp, when no value is negative the padded lower bound is clamped to 0; the sensor-history scenario checks the charted non-Temperatur chart has no tick starting with "-"; scenarios.md updated. phone-sensor-history.png: ticks 56,2 / 28,1 / 0
+Tried, rejected: none
+Found, left for later: (1) the PM10 tile still has no chart (agent 31/32); (2) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner, before the demo), `--timeout-graceful-shutdown 2` (agent 17), the "i" button on the 22 bubble's edge (agent 31)
+State: make check green, make e2e 44/44 green after the change (backend untouched, make test not needed); tree clean
