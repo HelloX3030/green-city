@@ -118,7 +118,8 @@ async def lifespan(_: FastAPI):
     events.loop = asyncio.get_running_loop()
     db.init()
     history.load()
-    tasks = [asyncio.create_task(history.refresh_loop()), asyncio.create_task(bikes.get_rides())]
+    tasks = [asyncio.create_task(history.refresh_loop()), asyncio.create_task(bikes.get_rides()),
+             asyncio.create_task(sensors.get_sensors())]  # warm, so the first phone does not wait
     yield
     for t in tasks:
         t.cancel()

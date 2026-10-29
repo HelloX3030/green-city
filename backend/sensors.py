@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 import httpx
 
+import history
 from history import NOISENODE, OSEM, UBA, UBA_STATION, live_boxes, phenomenon_key
 
 log = logging.getLogger("sensors")
@@ -28,9 +29,44 @@ TITLE_KEYS = {
 }
 UNITS = {"count": "/min"}
 UBA_COMPONENTS = {1: ("pm10", "PM10", "µg/m³"), 5: ("no2", "NO₂", "µg/m³"), 9: ("pm25", "PM2,5", "µg/m³")}
+HISTORY_UNITS = {"temp": "°C", "pm25": "µg/m³", "noise": "dB(A)"}
 
 _state = {"boxes": [], "boxes_at": 0.0, "sensors": [], "at": 0.0}
 _lock = asyncio.Lock()
+_task: asyncio.Task | None = None
+
+
+def _previous(sid: str) -> dict | None:
+    return next((s for s in _state["sensors"] if s["id"] == sid), None)
+
+
+def history_values(phenomena: dict) -> list[dict]:
+    """The last hourly value per phenomenon from history.json, for when the live API is down."""
+    out = []
+    for key, p in phenomena.items():
+        hourly = {t: v for t, v in (p.get("hourly") or {}).items() if v is not None}
+        if key in HISTORY_UNITS and hourly:
+            t = max(hourly)
+            label = "Lärm Ø 1 h" if key == "noise" else dict(LABELS)[key]
+            time_ = datetime.fromisoformat(t.replace("Z", "+00:00")).isoformat()
+            out.append({"key": key, "label": label, "value": float(hourly[t]), "unit": HISTORY_UNITS[key], "time": time_})
+    return out
+
+
+def _fallback(out: dict, phenomena: dict) -> dict:
+    """Keep the last good values of this sensor, else the last hour from history.json."""
+    prev = _previous(out["id"])
+    out["values"] = prev["values"] if prev and prev["values"] else history_values(phenomena)
+    out["values"].sort(key=lambda v: [k for k, _ in LABELS].index(v["key"]))
+    out["last"] = max((v["time"] for v in out["values"]), default=None)
+    return out
+
+
+def history_boxes() -> list[dict]:
+    """The boxes of history.json in the shape of the box list, so the pins stay when it cannot be fetched."""
+    return [{"_id": bid, "name": b["name"], "currentLocation": {"coordinates": [b["lon"], b["lat"]]},
+             "sensors": [{"title": p["title"]} for p in b.get("phenomena", {}).values()]}
+            for bid, b in history.get()["boxes"].items()]
 
 
 def value_key(title: str) -> str | None:
@@ -57,7 +93,7 @@ async def fetch_box(client: httpx.AsyncClient, box: dict) -> dict:
         sensors = r.json()["sensors"]
     except Exception as e:  # noqa: BLE001
         log.warning("box %s: %s", box["name"], e)
-        return out
+        return _fallback(out, history.get()["boxes"].get(box["_id"], {}).get("phenomena", {}))
     best: dict[str, dict] = {}  # per key the sensor that reported last
     for s in sensors:
         key = value_key(s["title"])
@@ -92,6 +128,8 @@ async def fetch_uba(client: httpx.AsyncClient) -> dict:
                                   "time": row[3].replace(" ", "T") + "+01:00"})
         except Exception as e:  # noqa: BLE001
             log.warning("uba %s: %s", key, e)
+    if not out["values"]:  # down, or nothing yet today (UTC) in the small hours
+        return _fallback(out, history.get()["uba"])
     out["last"] = max((v["time"] for v in out["values"]), default=None)
     return out
 
@@ -104,16 +142,26 @@ async def _refresh():
                 _state["boxes_at"] = time.time()
             except Exception as e:  # noqa: BLE001
                 log.warning("box list: %s", e)
+                if not _state["boxes"]:
+                    _state["boxes"] = history_boxes()  # retried on the next refresh, boxes_at stays
         results = await asyncio.gather(*(fetch_box(client, b) for b in _state["boxes"]), fetch_uba(client))
     _state["sensors"] = list(results)
     _state["at"] = time.time()
 
 
+async def _locked_refresh():
+    async with _lock:
+        if time.time() - _state["at"] > TTL:
+            await _refresh()
+
+
 async def get_sensors() -> list[dict]:
+    """Waits for the upstream APIs only on the very first call, after that a stale answer comes at
+    once and the refresh runs in the background, so a slow openSenseMap never holds up the map."""
+    global _task
     if time.time() - _state["at"] > TTL:
-        if _lock.locked() and _state["sensors"]:
-            return _state["sensors"]  # refresh in progress, serve stale
-        async with _lock:
-            if time.time() - _state["at"] > TTL:
-                await _refresh()
+        if not _state["sensors"]:
+            await _locked_refresh()
+        elif not _task or _task.done():
+            _task = asyncio.create_task(_locked_refresh())
     return _state["sensors"]
