@@ -110,3 +110,21 @@ All 40 agents ended "finished"; none was killed. Points are as the stats recorde
 - `stash@{0}` "agent-4 leftovers": a one-line change to `backend/history.json` that the running backend wrote, not agent work.
 
 **What I verified myself:** `make check` and `make test`, the git log and diff stat, the stash contents (by stat). Everything else is from the journal and `agents/run/stats.json`.
+
+
+## Verification by the orchestrator, 06:35
+
+- `make check`: green
+```
+
+1793252163348 START "/home/hello_x/Desktop/Fun/green-city/app"
+1793252163349 COMPLETED 203 FILES 0 ERRORS 0 WARNINGS 0 FILES_WITH_PROBLEMS
+```
+- `make test`: green
+```
+Ran 29 tests in 0.787s
+
+OK
+```
+
+Agents: 40, budget used 15.0 of 50 points, start commit 5767321, head 38dd8f0.
