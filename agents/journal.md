@@ -217,5 +217,9 @@ Tried, rejected: "Gemeldet, dein Filter blendet die Stelle aus", the toast ran u
 Found, left for later: (1) on the Gemeldet/bubble card the folded state reads "Alle 92 Texte zeigen" then "und 155 weitere ohne Text", the "weitere" is ambiguous while texts are folded, maybe put the count line above the button; (2) in Bash, `printf >>` and `for` loops were denied, Edit for the journal and `git -C` worked; localStorage in e2e needs a goto first (about:blank denies it); (3) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner), `--timeout-graceful-shutdown 2` (agent 17)
 State: make check green, make e2e 44/44 green after the change (backend untouched, make test not needed); tree clean
 
-## Agent 28 · 05:41–
+## Agent 28 · 05:41–05:52 · ~1 point (probe "fine" at 05:40 and 05:47)
 Picked: on a folded bubble card "Alle 92 Texte zeigen" then "und 155 weitere ohne Text" reads as if the 155 were beyond the 5 listed (agent 27 list, item 1): say "und 155 Meldungen ohne Text" (one: "Meldung"), with the e2e check; probe "fine" at 05:40
+Did: bd4fa9f ClusterCard: "und N Meldungen ohne Text" (reports_ helper, singular for one); the tap-a-bubble scenario checks the new wording; scenarios.md updated. phone-sent.png: "Alle 90 Texte zeigen" / "und 155 Meldungen ohne Text" reads clearly
+Tried, rejected: moving the count line above the button (agent 27's idea), the wording alone removes the ambiguity and keeps the layout
+Found, left for later: (1) the "Baustelle ab 6 Uhr"/"kek" junk texts in backend/reports.db are still the most visible thing on the cards (owner, before the demo); (2) `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17) still unchecked
+State: make check green, make e2e 44/44 green after the change (backend untouched, make test not needed); tree clean
