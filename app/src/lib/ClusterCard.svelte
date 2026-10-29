@@ -232,7 +232,7 @@
 		flex: none;
 		font-size: 12px;
 		color: var(--ink2);
-		min-width: 52px;
+		min-width: 70px; /* "gerade eben" and "vor 12 Tagen" fit, the texts start in one line */
 	}
 	.text {
 		overflow-wrap: anywhere;
