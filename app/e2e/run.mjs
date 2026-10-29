@@ -224,6 +224,24 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 			return r.ok && (await r.text()).includes('#3a7d5c');
 		})()`);
 		expect(icon, 'tab icon missing or not ours');
+		// home screen: iOS takes the apple-touch-icon, Android the manifest's icons; each must load as a PNG of its size
+		const home = await page.eval(`(async () => {
+			const png = async (href, size) => {
+				const r = await fetch(href);
+				if (!r.ok || !(r.headers.get('content-type') || '').includes('png')) return false;
+				const img = await createImageBitmap(await r.blob());
+				return img.width === size && img.height === size;
+			};
+			const m = document.querySelector('link[rel=manifest]');
+			const mr = m && (await fetch(m.href));
+			if (!mr || !mr.ok) return 'manifest missing';
+			const man = await mr.json();
+			if (man.name !== "Sag's Heilbronn" || man.lang !== 'de') return 'manifest name or lang';
+			for (const i of man.icons) if (!(await png(new URL(i.src, m.href).href, +i.sizes.split('x')[0]))) return i.src;
+			const apple = document.querySelector('link[rel=apple-touch-icon]');
+			return apple && (await png(apple.href, 180)) ? 'ok' : 'apple-touch-icon';
+		})()`);
+		expect(home === 'ok', `home-screen icon broken: ${home}`);
 		expect(await page.until('.pin.sensor.ours', 15000), 'NoiseNode pin missing');
 		expect(await page.until('.pin.cluster span', 15000), 'no bubbles');
 		await wait(300);
