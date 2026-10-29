@@ -80,20 +80,20 @@ TEXT = {
   rank="Wo der Sensor fehlt, zählen die Meldungen: <b>„Platz 1 von 8 Stellen ohne Sensor“</b> – dort kommt der nächste Sensor hin.",
   today_h="Was es heute schon gibt",
   today=[
-    "<b>Die App</b>, live auf einem Raspberry Pi in Heilbronn.",
+    "<b>Die App</b>, live unter greencity.parsalotfi.com.",
     "<b>Daten</b> von openSenseMap (senseBox:home-Stationen und senseBox:bike-Fahrten) und der Umweltbundesamt-Station DEBW015.",
     "<b>Lärmkarte 2022</b> und <b>Baumkataster</b> der Stadt als Kartenebenen.",
-    "<b>Unser eigener Sensor „NoiseNode“</b>: senseBox MCU-S2 + Schallpegelmesser, 3D-gedrucktes Gehäuse, "
-    "ca. 100–150&nbsp;€ Bauteile. Seit 28.&nbsp;Oktober 2026 live auf openSenseMap: LAeq, Lmax und laute Ereignisse "
+    "<b>Unser eigener Sensor „NoiseNode“</b>: senseBox MCU-S2 + Schallpegelmesser, 3D-gedrucktes Gehäuse. "
+    "Seit 28.&nbsp;Oktober 2026 live auf openSenseMap: LAeq, Lmax und laute Ereignisse "
     "pro Minute. Es wird kein Audio aufgezeichnet.",
     f"<b>Open Source auf GitHub:</b> {GITHUB}",
   ],
   ask_h="Was wir brauchen",
   ask="Die nächsten <b>10 NoiseNodes</b> für die Straßen des Lärmaktionsplans – gemessen vor und nach dem geplanten "
-      "lärmarmen Asphalt (2,5&nbsp;Mio.&nbsp;€ im Plan).",
+      "lärmarmen Asphalt.",
   ask_2="Dann hat die Stadt <b>2027 eine gemessene Antwort</b> statt einer Neuberechnung 2029.",
   closing=("Eine grünere Stadt sammelt nicht nur mehr Daten.", "Sie hört ihren Menschen zu und handelt danach."),
-  team_l="Team", team="The Green Flags: Ethan, Alexia, Lukas, Fred, Seyedparsa",
+  team_l="Team", team="The Green Flags: Ethan, Alexia, Lukas, Fred, Parsa",
   event_l="Hackathon", event="Green City Hackathon Heilbronn, 27.–29. Oktober 2026",
   data_l="Daten", data="openSenseMap, Umweltbundesamt, Stadt Heilbronn",
   code_l="Code", code=f"Open Source auf GitHub · {GITHUB}",
@@ -135,20 +135,20 @@ TEXT = {
        "(no.&nbsp;1 of 8 spots without a sensor) – that is where the next sensor goes.",
   today_h="What exists today",
   today=[
-    "<b>The app</b>, live on a Raspberry Pi in Heilbronn.",
+    "<b>The app</b>, live at greencity.parsalotfi.com.",
     "<b>Data</b> from openSenseMap (senseBox:home stations and senseBox:bike rides) and the Umweltbundesamt station DEBW015.",
     "The city’s <b>noise map 2022</b> and <b>tree register</b> as map layers.",
-    "<b>Our own sensor “NoiseNode”</b>: senseBox MCU-S2 + sound level meter, 3D-printed case, "
-    "about 100–150&nbsp;€ in parts. Live on openSenseMap since 28&nbsp;October 2026, measuring LAeq, Lmax and "
+    "<b>Our own sensor “NoiseNode”</b>: senseBox MCU-S2 + sound level meter, 3D-printed case. "
+    "Live on openSenseMap since 28&nbsp;October 2026, measuring LAeq, Lmax and "
     "loud events per minute. No audio is recorded.",
     f"<b>Open source on GitHub:</b> {GITHUB}",
   ],
   ask_h="The ask",
   ask="The next <b>10 NoiseNodes</b> for the streets of the Lärmaktionsplan – measured before and after the planned "
-      "low-noise asphalt (2.5&nbsp;million&nbsp;€ in the plan).",
+      "low-noise asphalt.",
   ask_2="So the city has <b>a measured answer in 2027</b> instead of a recalculation in 2029.",
   closing=("A greener city isn’t just one that collects more data.", "It’s one that listens to its people and acts on what it learns."),
-  team_l="Team", team="The Green Flags: Ethan, Alexia, Lukas, Fred, Seyedparsa",
+  team_l="Team", team="The Green Flags: Ethan, Alexia, Lukas, Fred, Parsa",
   event_l="Hackathon", event="Green City Hackathon Heilbronn, 27–29 October 2026",
   data_l="Data", data="openSenseMap, Umweltbundesamt, Stadt Heilbronn",
   code_l="Code", code=f"Open source on GitHub · {GITHUB}",
