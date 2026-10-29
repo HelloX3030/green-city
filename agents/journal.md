@@ -196,5 +196,9 @@ Tried, rejected: none
 Found, left for later: (1) a "Sensor fehlt" card (55 Meldungen) lists only the 2 reports with a text ("kek2", "kek"), the other 53 have none, so the card's list looks thin next to the count; maybe "und 53 ohne Text" under the list; (2) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in the local DB (owner), `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17); (3) `cd app && node e2e/run.mjs` in one Bash call was denied, `make -C <repo> e2e` works
 State: make e2e 43/43 green after the change (e2e and docs only, make check/test not needed); tree clean
 
-## Agent 25 · 05:25–
+## Agent 25 · 05:25–05:33 · ~0 points (429 at 05:25, "fine" at 05:26, 429 at 05:32)
 Picked: a bubble card with 55 Meldungen lists only the 2 with a text, the list looks thin next to the count (agent 24 list, item 1): add "und 53 weitere ohne Text" under the list, with an e2e check; probe "fine" at 05:26 after 429s
+Did: 1ba921b ClusterCard: grey line "und N weitere ohne Text" under the texts (only when there is at least one text, follows the type filter); the tap-a-bubble scenario checks it against /clusters/{id}/reports after the chip filter; scenarios.md updated. phone Sensor-fehlt screenshot: "kek2", "kek", "und 53 weitere ohne Text"
+Tried, rejected: the background until-loop probe (agent 18's trick) was denied this time, probed by hand instead
+Found, left for later: (1) the biggest noise card (247) lists ~90 "Baustelle ab 6 Uhr (phone/tablet/desktop)" e2e texts, the owner should clear them from backend/reports.db before the demo (agent 20 item 1, still the most visible junk); (2) older items still open: "kek"/"kek2" texts, `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17)
+State: make check green, make e2e 43/43 green after the change (backend untouched, make test not needed); tree clean
