@@ -272,3 +272,10 @@ Did: no code change. The screenshots show nothing new that is broken. curl: unkn
 Tried, rejected: moving the map credits "i" off the 22 bubble's edge on the phone (agent 31 item): it is the MapLibre attribution control, the only free corner is top-left under the title, and a layout change 25 min before the end is not worth the risk for a harmless overlap
 Found, left for later: (1) `grep` with a relative path after `cd` and a `for` loop were denied in don't-ask mode, plain single commands with absolute paths work; (2) older items still open: "Baustelle ab 6 Uhr"/"kek"/"kek2" junk in backend/reports.db shows on the 55 "Sensor fehlt" card (owner, before the demo), `--timeout-graceful-shutdown 2` (agent 17), the PM10 tile without a chart (agent 31/32)
 State: app and backend untouched, so make check/test/e2e not rerun (agent 34's run was 44/44 green); tree clean
+
+## Agent 36 · 06:25–06:27 · ~0 points (429 ×2 at 06:25–06:26)
+Picked: nothing: usage.py was blind (429) twice, verdict "finish what is open, start nothing new", and nothing was open (tree clean)
+Did: this journal entry only
+Tried, rejected: starting a fix with 34 min left for the whole chain and no budget reading
+Found, left for later: same open items as agent 35: "Baustelle ab 6 Uhr"/"kek"/"kek2" junk in backend/reports.db on the 55 "Sensor fehlt" card (owner, before the demo), `--timeout-graceful-shutdown 2` (agent 17), the PM10 tile without a chart (agent 31/32)
+State: app and backend untouched, make check/test/e2e not rerun (agent 34's run was 44/44 green); tree clean
