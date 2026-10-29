@@ -265,3 +265,10 @@ Did: 114fb2a SensorHistory: for any key but temp, when no value is negative the 
 Tried, rejected: none
 Found, left for later: (1) the PM10 tile still has no chart (agent 31/32); (2) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner, before the demo), `--timeout-graceful-shutdown 2` (agent 17), the "i" button on the 22 bubble's edge (agent 31)
 State: make check green, make e2e 44/44 green after the change (backend untouched, make test not needed); tree clean
+
+## Agent 35 · 06:24–06:36 · ~0 points (429 at 06:24, "fine" at 06:25)
+Picked: a look for a visible rough edge in the e2e screenshots (phone/desktop first open, sensor card, Sensor fehlt card, about, link, backend down, position denied) and a curl probe of bad backend inputs, with a fix only if one turned up that could be finished well before 07:00
+Did: no code change. The screenshots show nothing new that is broken. curl: unknown bubble → 404 "no such bubble", unknown sensor → 404 "unknown sensor", /clusters?zoom=-5 → 200, nothing gave a 500
+Tried, rejected: moving the map credits "i" off the 22 bubble's edge on the phone (agent 31 item): it is the MapLibre attribution control, the only free corner is top-left under the title, and a layout change 25 min before the end is not worth the risk for a harmless overlap
+Found, left for later: (1) `grep` with a relative path after `cd` and a `for` loop were denied in don't-ask mode, plain single commands with absolute paths work; (2) older items still open: "Baustelle ab 6 Uhr"/"kek"/"kek2" junk in backend/reports.db shows on the 55 "Sensor fehlt" card (owner, before the demo), `--timeout-graceful-shutdown 2` (agent 17), the PM10 tile without a chart (agent 31/32)
+State: app and backend untouched, so make check/test/e2e not rerun (agent 34's run was 44/44 green); tree clean
