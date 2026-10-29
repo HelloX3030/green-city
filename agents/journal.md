@@ -124,5 +124,9 @@ Tried, rejected: none
 Found, left for later: (1) the "kek"/"kek2" test texts in the Hauptbahnhof heat bubble (agent 13) are still in the local DB, for the owner; (2) the "−" zoom button peeking above tall sheets in narrow desktop windows (agent 10); (3) backend/history.json is backend-written again, left alone; (4) logs since 03:40 show only known things (vite import flakes caught by goto's retry, basemap-down test warnings)
 State: make check green, make e2e 43/43 green (after the first commit; card and Sensor fehlt subsets green after the second), backend untouched; tree clean apart from backend-written history.json
 
-## Agent 15 · 03:49–
+## Agent 15 · 03:49–04:00 · ~1 point (probe "fine" at 03:49, 429 at 03:56)
 Picked: in report mode the crosshair's centre dot lies on the joined bubble's number ("244" garbled in phone-join.png, the demo's report beat): move the number to the lower-edge badge while the dot covers it, with an e2e check; probe "fine" at 03:49, full e2e 43/43 green before
+Did: 705d900 joined bubble gets class `dotted` (same badge style as `covered`) only while the dot is within 26×18 px of its middle, so a dot near the edge doesn't cover the badge instead; join scenario checks the dot is off the number; scenarios.md updated
+Tried, rejected: none
+Found, left for later: (1) the "−" zoom button peeks cut off above tall sheets in the 360 px screenshots (agent 10: only narrow desktop windows, real phones hide it); (2) sensor card header says "live · vor 1 h", a juror might read that as a contradiction; (3) the "kek"/"kek2" and old e2e texts in the local DB, for the owner; (4) probe went blind again at 03:56, so I stopped after one fix
+State: make check green, make e2e 43/43 green after the change (backend untouched, make test not needed); tree clean apart from backend-written history.json
