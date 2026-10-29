@@ -460,8 +460,11 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		let sensor, pin;
 		for (sensor of withHistory) {
 			await page.setView(sensor.lon, sensor.lat, 16);
-			await wait(600);
-			pin = await page.eval(`(() => { const p = window.__map.project([${sensor.lon}, ${sensor.lat}]); const box = document.querySelector('.map').getBoundingClientRect(); let best, bd = 1e9; for (const el of document.querySelectorAll('.pin.sensor')) { const r = el.getBoundingClientRect(); const d = Math.hypot(r.left + r.width / 2 - box.left - p.x, r.top + r.height / 2 - box.top - p.y); if (d < bd) (best = [r.left + r.width / 2, r.top + r.height / 2]), (bd = d); } return best; })()`);
+			// the jump has to be over before the pin is measured, and the pin has to be on top at
+			// that point (a neighbour pin or the bubble number can sit on it), else the tap misses
+			await page.idle();
+			await wait(300);
+			pin = await page.eval(`(() => { const p = window.__map.project([${sensor.lon}, ${sensor.lat}]); const box = document.querySelector('.map').getBoundingClientRect(); let best, bd = 1e9; for (const el of document.querySelectorAll('.pin.sensor')) { const r = el.getBoundingClientRect(); const d = Math.hypot(r.left + r.width / 2 - box.left - p.x, r.top + r.height / 2 - box.top - p.y); if (d < bd) (best = [el, r.left + r.width / 2, r.top + r.height / 2]), (bd = d); } if (!best || !best[0].contains(document.elementFromPoint(best[1], best[2]))) return null; return [best[1], best[2]]; })()`);
 			if (pin && pin[0] > 0 && pin[0] < page.w && pin[1] > 0 && pin[1] < page.h * 0.7) break; // above the sheet
 			pin = null;
 		}
