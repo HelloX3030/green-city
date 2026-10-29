@@ -68,10 +68,17 @@ async function browser() {
 		const m = JSON.parse(e.data);
 		if (m.id && pending.has(m.id)) pending.get(m.id)(m), pending.delete(m.id);
 		if (m.method === 'Runtime.exceptionThrown') page.errors.push(m.params.exceptionDetails.exception?.description ?? m.params.exceptionDetails.text);
+		// failed requests ("Failed to load resource: … 404") and console.error, which a phone with devtools shows in red
+		if (m.method === 'Log.entryAdded' && m.params.entry.level === 'error') page.logs.push(m.params.entry.text + (m.params.entry.url ? ' ' + m.params.entry.url : ''));
+		if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') page.logs.push('console.error: ' + m.params.args.map((a) => a.value ?? a.description).join(' '));
 	};
 	const send = (method, params = {}) => new Promise((r) => (pending.set(++id, r), ws.send(JSON.stringify({ id, method, params }))));
 	const page = {
 		errors: [],
+		logs: [],
+		// a console error this scenario provokes on purpose
+		allowed: [],
+		allowLog: (re) => page.allowed.push(re),
 		eval: async (expr) => {
 			const r = await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true });
 			if (r.result?.exceptionDetails) throw new Error('eval: ' + (r.result.exceptionDetails.exception?.description ?? r.result.exceptionDetails.text).split('\n')[0]);
@@ -92,8 +99,10 @@ async function browser() {
 			// under four Chromes vite sometimes fails a module ("Failed to fetch dynamically
 			// imported module") and the map never comes: load again, without that load's errors
 			const before = page.errors.length;
+			const logsBefore = page.logs.length;
 			load: for (let attempt = 0; attempt < 3; attempt++) {
 				page.errors.length = before;
+				page.logs.length = logsBefore;
 				await send('Page.navigate', { url: APP + '/' });
 				for (let t = 0; t < 30000; t += 250) {
 					await wait(250);
@@ -155,6 +164,7 @@ async function browser() {
 	};
 	await send('Page.enable');
 	await send('Runtime.enable');
+	await send('Log.enable');
 	await send('Browser.grantPermissions', { origin: APP, permissions: ['geolocation'] });
 	const close = async () => {
 		await page.device();
@@ -181,6 +191,8 @@ async function lane(run) {
 		if (!name.includes(filter)) return;
 		current = { name, fails: [] };
 		page.errors = [];
+		page.logs = [];
+		page.allowed = [];
 		const t0 = Date.now();
 		try {
 			await fn();
@@ -189,6 +201,12 @@ async function lane(run) {
 		}
 		await page.shot(name.replace(/[^a-z0-9]+/gi, '-'));
 		for (const e of page.errors) current.fails.push('page error: ' + e.split('\n')[0]);
+		// errors from the app and the backend fail the scenario, the basemap's tiles only get a note (their CDN, not us)
+		const logs = page.logs.filter((e) => !page.allowed.some((re) => re.test(e)));
+		for (const e of logs) {
+			if (e.includes(APP) || e.includes(API) || e.startsWith('console.error')) current.fails.push('console: ' + e.split('\n')[0]);
+			else console.log(`  note, ${name}: ${e.split('\n')[0]}`);
+		}
 		results.push(current);
 		console.log((current.fails.length ? 'FAIL ' : 'ok   ') + name + ` (${((Date.now() - t0) / 1000).toFixed(1)} s)` + current.fails.map((f) => '\n       ' + f).join(''));
 	};
@@ -753,6 +771,7 @@ const phone = async ({ page, send, expect, scenario, melden, type, nearlyZoom, s
 		await page.shot('phone-link');
 		// a wrong code typed on this device
 		await type('.sheet .claim input', 'ZZZZZZ');
+		page.allowLog(/400 \(Bad Request\) .*\/me\/claim/);
 		await page.clickText('Verknüpfen');
 		await wait(800);
 		expect((await page.eval(`document.querySelector('.toast')?.innerText`)) === 'Code unbekannt oder abgelaufen', 'no toast for a bad code');
@@ -829,6 +848,7 @@ const phone = async ({ page, send, expect, scenario, melden, type, nearlyZoom, s
 		await page.goto();
 		await send('Network.enable');
 		await send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
+		page.allowLog(/ERR_INTERNET_DISCONNECTED/);
 		await wait(6500);
 		expect(await page.has('.down'), 'no offline note');
 		await send('Network.emulateNetworkConditions', { offline: false, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
