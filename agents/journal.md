@@ -45,3 +45,5 @@ Did: only this entry
 Tried, rejected: waiting before probing (agent 3's idea): a 3 min pause still got 429, so it is not just the agents probing too often; starting work anyway: the verdict rules it out
 Found, left for later: the probe has been 429 for four agents (02:32–02:38), for the orchestrator/owner to look at (agents/ tooling is protected). backend/history.json shows as modified: the running backend writes sensor history into it, not an agent edit; left alone. Work list unchanged: (1) MapLibre attribution "i" black dot on the phone, (2) e2e reports flooding the local dev DB, (3) `desktop: first open` load flake
 State: nothing changed in app or backend; checks not run; tree clean apart from history.json written by the backend
+
+_Orchestrator: agent 4 ended with uncommitted changes, they are in `git stash list` as "agent-4 leftovers", not on the branch. Treat its task as not done unless its commits say otherwise._
