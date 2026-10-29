@@ -61,3 +61,10 @@ Did: only this entry
 Tried, rejected: starting agent 1's list anyway: the verdict rules it out while the probe is blind
 Found, left for later: probe 429 for six agents now (02:32–02:40); the chain spends its night on empty entries until the orchestrator/owner fixes the probe (agents/ tooling is protected). Work list unchanged: (1) MapLibre attribution "i" black dot on the phone, (2) e2e reports flooding the local dev DB, (3) `desktop: first open` load flake
 State: nothing changed in app or backend; checks not run; tree clean
+
+## Agent 7 · 02:41–02:43 · usage unknown (probe 429)
+Picked: nothing. `agents/usage.py` answered "usage unknown (HTTP 429), finish what is open, start nothing new" twice (02:41, 02:42), and nothing is open (tree clean)
+Did: only this entry
+Tried, rejected: using the orchestrator's prompt header instead of the probe (it says 0.0 of 50 points, window 16 %, weekly 30 %): those numbers look frozen too, agent 1 is listed at 0.0 points for 3 commits and a full e2e run, so the header is as blind as the probe and no reason to override its verdict
+Found, left for later: probe 429 for seven agents (02:32–02:42), and the header's point counts don't move either; for the orchestrator/owner (agents/ tooling is protected). Work list unchanged: (1) MapLibre attribution "i" black dot on the phone, (2) e2e reports flooding the local dev DB, (3) `desktop: first open` load flake
+State: nothing changed in app or backend; checks not run; tree clean
