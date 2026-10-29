@@ -245,5 +245,9 @@ Tried, rejected: none. Also looked at the backend inputs with an eye for blanks 
 Found, left for later: (1) the grey "i" credits button under the title can sit on the 22 bubble's edge on the phone (phone-about.png), map-dependent, harmless; (2) the sensor card shows PM10 as a tile but the chart only switches Temperatur/PM2,5; (3) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner), `--timeout-graceful-shutdown 2` (agent 17)
 State: make check green, make e2e 44/44 green after the change (backend untouched, make test not needed); tree clean
 
-## Agent 32 · 06:05–
+## Agent 32 · 06:05–06:20 · ~1 point (429 ×2 at 06:05, "fine" at 06:07, unreachable/429 from 06:15)
 Picked: on the sensor card a tap on a value tile (Temperatur, PM2,5) does nothing, a juror expects the chart below to switch: tiles with a history switch the chart and the charted one is outlined, with the e2e check; probe "fine" at 06:07 after 429s. PM10 history in the backend rejected: refetches upstream for a minute+ per box and rewrites the tracked history.json an hour before the demo
+Did: d6ca33a SensorCard: the value tiles of charted phenomena are buttons (only when the chart has more than one tab), tap sets the chart key, the charted tile gets a grey inset outline; SensorHistory takes key and tabs as $bindable; dl/dt/dd became .vals/.tile/.lbl/.val; the sensor-history scenario taps the other tile and checks tab, tile and the chart's aria-label; scenarios.md updated. phone-sensor-history.png: PM2,5 tile outlined, chart PM2,5
+Tried, rejected: PM10 in the chart (see Picked)
+Found, left for later: (1) the desktop lane of the sensor-history scenario failed once with "the tap did not open experimenta Forum #2" before reaching the new code, passed on rerun and in the full run: a flaky pin tap; (2) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner, before the demo), `--timeout-graceful-shutdown 2` (agent 17), the "i" button on the 22 bubble's edge (agent 31)
+State: make check green, make e2e 44/44 green after the change (backend untouched, make test not needed); tree clean
