@@ -26,8 +26,24 @@ for (const [url, what] of [[APP, 'dev server (cd app && npm run dev)'], [`${API}
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-// every device token the run sends reports with; at the end their reports are withdrawn
-const tokens = new Set();
+// every device token the run sends reports with; at the end their reports are withdrawn.
+// They are kept in a file as they come, so a run that dies (or whose backend hangs) leaves them
+// for the next run to withdraw, instead of test reports piling up in the bubbles for good
+const LEFT = path.join(os.tmpdir(), 'hn-e2e-tokens.json');
+const keep = (set) => fs.writeFileSync(LEFT, JSON.stringify([...set]));
+const tokens = new (class extends Set {
+	add(t) {
+		super.add(t);
+		keep(this);
+		return this;
+	}
+})((() => {
+	try {
+		return JSON.parse(fs.readFileSync(LEFT, 'utf8'));
+	} catch {
+		return [];
+	}
+})());
 
 // a headless Chrome of its own, the CDP connection and the page helpers
 async function browser() {
@@ -800,12 +816,20 @@ const results = (await Promise.all([...Object.keys(SIZES).map((size) => lane((t)
 const failed = results.filter((r) => r.fails.length);
 // the run's own reports go again, so the local map does not fill up with test bubbles
 let withdrawn = 0;
+const left = new Set();
 for (const t of tokens) {
 	const headers = { 'x-device': t };
-	for (const r of await fetch(`${API}/reports/mine`, { headers }).then((r) => r.json()).catch(() => [])) {
-		if ((await fetch(`${API}/reports/${r.id}`, { method: 'DELETE', headers })).ok) withdrawn++;
+	try {
+		const mine = await fetch(`${API}/reports/mine`, { headers }).then((r) => (r.ok ? r.json() : Promise.reject()));
+		for (const r of mine) {
+			if ((await fetch(`${API}/reports/${r.id}`, { method: 'DELETE', headers })).ok) withdrawn++;
+			else left.add(t);
+		}
+	} catch {
+		left.add(t);
 	}
 }
-console.log(`\n${withdrawn} test reports withdrawn`);
+keep(left);
+console.log(`\n${withdrawn} test reports withdrawn${left.size ? `, ${left.size} devices left for the next run` : ''}`);
 console.log(`\n${results.length - failed.length}/${results.length} ok in ${((Date.now() - t0) / 1000).toFixed(0)} s, screenshots in e2e/out/`);
 process.exit(failed.length ? 1 : 0);
