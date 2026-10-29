@@ -2,3 +2,4 @@
 # overnight agent chain: logs, state, stashes
 agents/run/
 __pycache__/
+agents/run-test-*/

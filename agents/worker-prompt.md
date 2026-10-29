@@ -39,6 +39,7 @@ As soon as you have picked: append your journal entry header with the `Picked:` 
 - Verify before every commit: `make check` (svelte types), `make test` (backend), `make e2e` (four headless Chromes against the running servers; `cd app && node e2e/run.mjs <filter>` runs a subset). A change to a flow gets its flow in app/scenarios.md and app/e2e/run.mjs in the same commit, that is a project rule. Look at the screenshots, the checks only catch what they assert.
 - Commit only green work, one commit per finished change, message in the style of the log: lowercase, what changed and why, UI words as they appear in German. Never push.
 - Keep the code style, the German UI texts and the tone of the app; it is for Heilbronn citizens, not for developers.
+- Edit files with the Edit and Write tools and keep shell commands simple: a compound command with a heredoc (`cat >> file <<EOF`) is denied by the permission mode, single commands joined with `&&` are fine.
 - Stop when: usage.py says wrap up or stop, or your soft minutes are over, or your task is done and the rest of the allowance is not enough for another one.
 - Before you finish: `git status --short` must be empty (commit what is green, revert the rest with `git checkout -- <file>` or `rm`), the journal entry is complete and committed, and your last message is a summary of at most 10 lines (it is recorded for the next agent and the report).
 
