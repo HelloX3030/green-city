@@ -489,10 +489,11 @@
 		void quarterZoom; // pixel distances depend on the zoom only
 		void clusters;
 		void zoomStep; // after the bubbles were redrawn
+		void selected; // the selected bubble lies over the pins, nothing covers it
 		const pins = sensors.map((s) => map.project([s.lon, s.lat]));
 		for (const m of clusterMarkers.values()) {
 			const p = map.project(m.getLngLat());
-			const covered = pins.some((q) => Math.abs(q.x - p.x) < SENSOR_PX / 2 + 12 && Math.abs(q.y - p.y) < SENSOR_PX / 2 + 8);
+			const covered = !m.getElement().classList.contains('sel') && pins.some((q) => Math.abs(q.x - p.x) < SENSOR_PX / 2 + 12 && Math.abs(q.y - p.y) < SENSOR_PX / 2 + 8);
 			m.getElement().classList.toggle('covered', covered);
 		}
 	});
