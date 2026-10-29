@@ -361,13 +361,21 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 			await wait(300);
 			const picked = await page.eval(`document.querySelector('.sheet .picked')?.textContent`);
 			expect(picked && picked.includes(`${api.types[types[0]]} Meldung`), `filter line says "${picked}"`);
-			let texts, expected;
+			// the newest five (mine besides), the rest behind "Alle N Texte zeigen"
+			let texts, expected, more;
 			await same(async () => {
 				texts = await page.eval(`[...document.querySelectorAll('.sheet .voices li')].length`);
+				more = await page.eval(`document.querySelector('.sheet .more')?.textContent ?? null`);
 				expected = (await fetch(`${API}/clusters/${api.id}/reports`).then((r) => r.json())).filter((r) => r.message && r.types.includes(types[0])).length;
-				return texts === expected;
+				return expected > 5 ? texts < expected && more === `Alle ${expected} Texte zeigen` : texts === expected && more === null;
 			});
-			expect(texts === expected, `${texts} texts for ${types[0]}, api has ${expected}`);
+			expect(expected > 5 ? texts < expected && more === `Alle ${expected} Texte zeigen` : texts === expected && more === null, `${texts} texts for ${types[0]}, api has ${expected}, the button says "${more}"`);
+			if (more) {
+				await page.click('.sheet .more');
+				await wait(200);
+				texts = await page.eval(`[...document.querySelectorAll('.sheet .voices li')].length`);
+				expect(texts === expected && !(await page.has('.sheet .more')), `unfolded, ${texts} texts for ${types[0]}, api has ${expected}`);
+			}
 			// the reports without a text are counted under the list, not left out silently
 			const rows = (await fetch(`${API}/clusters/${api.id}/reports`).then((r) => r.json())).filter((r) => r.types.includes(types[0]));
 			const silent = rows.filter((r) => !r.message).length;

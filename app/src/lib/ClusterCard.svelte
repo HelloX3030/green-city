@@ -61,6 +61,14 @@
 	const voices = $derived(shown.filter((r) => r.message));
 	// most reports come without a text, the list says so, or two texts look thin next to "55 Meldungen"
 	const silent = $derived(shown.length - voices.length);
+	// the newest few (mine first, all of them), the rest behind a tap, or "Hier auch melden" ends up under 90 texts
+	const FEW = 5;
+	let unfolded = $state(false);
+	$effect(() => {
+		void cluster.id;
+		unfolded = false;
+	});
+	const listed = $derived(unfolded ? voices : voices.filter((r, i) => i < FEW || r.mine));
 	// mine from today: the button says Nochmal melden, the sent card counts them
 	const myToday = $derived(reports.filter((r) => r.mine && r.created_at.slice(0, 10) === new Date().toISOString().slice(0, 10)).length);
 	const today = $derived(myToday > 0);
@@ -113,7 +121,7 @@
 {/if}
 {#if voices.length}
 	<ul class="voices">
-		{#each voices as r (r.id)}
+		{#each listed as r (r.id)}
 			<li class:me={r.mine}>
 				<i style="background: {typeInfo(filter ?? r.types[0]).color}"></i>
 				<span class="when">{timeAgo(r.created_at)}</span>
@@ -122,6 +130,9 @@
 			</li>
 		{/each}
 	</ul>
+	{#if listed.length < voices.length}
+		<button class="more" onclick={() => (unfolded = true)}>Alle {voices.length} Texte zeigen</button>
+	{/if}
 	{#if silent}<p class="silent">und {silent} weitere ohne Text</p>{/if}
 {/if}
 <button class="ghost" onclick={onreport}>{today ? 'Nochmal melden' : 'Hier auch melden'}</button>
@@ -246,6 +257,13 @@
 		border-radius: 50%;
 		align-self: flex-start;
 		margin-top: 5px; /* on the first line, also when the text wraps */
+	}
+	.more {
+		margin: 4px 0 0 16px; /* under the times, past the dots */
+		height: 30px;
+		font-size: 13px;
+		font-weight: 600;
+		color: var(--accent);
 	}
 	.silent {
 		margin: 6px 0 0 16px; /* under the times, past the dots */
