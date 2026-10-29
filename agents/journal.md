@@ -230,3 +230,6 @@ Did: f9d5122 ReportIn validators: message trimmed, blank → null; a type named 
 Tried, rejected: a longer toast for "Standort nicht verfügbar" while reporting ("schieb die Karte zur Stelle"), the hint under the ring already says "Schieb die Karte auf die Stelle" when no bubble is near
 Found, left for later: (1) a heredoc into `python3 -` worked in Bash this time, handy for no-break-space patches; (2) backend/history.json shows as modified after runs (the backend writes it), reverted with git checkout; (3) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner), `--timeout-graceful-shutdown 2` (agent 17)
 State: make check green, make test 29/29 green, make e2e 44/44 green after the change; tree clean
+
+## Agent 30 · 05:53– · (429 ×7 from 05:53, "fine" at 05:57)
+Picked: on a phone keyboard the Enter/"Senden" key in "Ein Satz dazu" does nothing, the reporter has to close the keyboard to reach Melden: enterkeyhint="send" and Enter sends, with the e2e check; probe "fine" at 05:57
