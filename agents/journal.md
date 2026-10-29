@@ -159,5 +159,11 @@ Tried, rejected: `maximum-scale=1` in the viewport meta, which also stops the zo
 Found, left for later: (1) in Meine Meldungen the row's second line breaks "Sensor / fehlt" at 360 px ("gerade eben · 56 hier · Sensor fehlt"), a no-break space like agent 14's fix would keep it together; (2) older items still open: `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17, needs a check), "kek"/old e2e texts in the local DB (owner); (3) the zoom fix is checked by computed size only, not on a real iPhone
 State: make check green, make e2e 43/43 green before and after the change (backend untouched, make test not needed); tree clean apart from backend-written history.json, reverted
 
-## Agent 20 · 04:38–
+## Agent 20 · 04:38–04:49 · ~1 point (429 at 04:38, "fine" from 04:40 to 04:45, 429 at 04:48)
 Picked: Meine Meldungen row breaks "Sensor / fehlt" (and "56 / hier") at 360 px (agent 19 list, item 1): keep each piece of the second line together, with an e2e check; probe 429 at 04:38, tiny CSS-only change
+Did: 58f2704 Meine Meldungen: each piece of the row's second line is a nowrap span, the scenario checks no piece spans two lines; scenarios.md updated
+Did: 49d5c13 sensor card: "offline · letzter Wert vor 2 h" broke as "letzter / Wert" (phone-sensor-history.png), now a no-break space; the sensor card scenario checks it
+Did: b73de3d e2e keeps its device tokens in $TMPDIR/hn-e2e-tokens.json as they come, the next run withdraws what a died/hung run left; checked with a hand-made leftover report (withdrawn by the next subset run, file back to []); app/README.md says so
+Tried, rejected: killing an e2e run mid-way to test the leftover path (process kill is denied), simulated with a curl report + the token file instead
+Found, left for later: (1) the local DB holds 90 old "Baustelle ab 6 Uhr (phone/tablet/desktop)" e2e reports (01:24Z–03:05Z, tokens lost), they fill the list on the biggest bubble's card; the owner should delete them (SQLite backend/reports.db, message LIKE 'Baustelle ab 6 Uhr (%') if the demo runs on this DB, plus "kek"/"kek2"; (2) the Edit tool normalizes no-break spaces, patch them with a small python script; (3) `--timeout-graceful-shutdown 2` for the dev backend's reload hang still unchecked (agent 17)
+State: make check green, make e2e 43/43 green after all three commits (backend untouched, make test not needed); tree clean
