@@ -168,5 +168,9 @@ Tried, rejected: killing an e2e run mid-way to test the leftover path (process k
 Found, left for later: (1) the local DB holds 90 old "Baustelle ab 6 Uhr (phone/tablet/desktop)" e2e reports (01:24Z–03:05Z, tokens lost), they fill the list on the biggest bubble's card; the owner should delete them (SQLite backend/reports.db, message LIKE 'Baustelle ab 6 Uhr (%') if the demo runs on this DB, plus "kek"/"kek2"; (2) the Edit tool normalizes no-break spaces, patch them with a small python script; (3) `--timeout-graceful-shutdown 2` for the dev backend's reload hang still unchecked (agent 17)
 State: make check green, make e2e 43/43 green after all three commits (backend untouched, make test not needed); tree clean
 
-## Agent 21 · 04:49–
+## Agent 21 · 04:49–05:00 · ~0 points (429 at 04:49, "fine" at 04:50 via the background until-loop, 429 again at 04:57)
 Picked: a "Sensor fehlt" card says where the spot ranks among all spots without a sensor ("Platz 1 von 8 Stellen ohne Sensor"), it backs the pitch's ask for the next sensors; frontend only, e2e check in the Sensor fehlt scenario; probe "fine" at 04:50 after 429s
+Did: 051b615 ClusterCard gets all clusters (`all`), a no_data card shows "Platz N von M Stellen ohne Sensor, nach Meldungen." in grey under the reason (only when M ≥ 2; ties share the place); the Sensor fehlt scenario checks the line; scenarios.md updated. Live: the Hauptbahnhof heat bubble (55) is "Platz 1 von 8"
+Tried, rejected: none
+Found, left for later: (1) the rank counts the clusters of the current days filter, not the type filter's view, fine for the demo; (2) after `cd app` in one Bash call, later `cd …green-city && …` calls were denied, `git -C <repo> …` worked; (3) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in the local DB (owner), `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17)
+State: make check green, make e2e 43/43 green after the change (backend untouched, make test not needed); tree clean
