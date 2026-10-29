@@ -182,6 +182,12 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		await page.goto();
 		expect((await page.sheet()).includes('Melden'), 'no Melden button');
 		expect(await page.until('.pin.sensor.ours', 15000), 'NoiseNode pin missing');
+		const attrib = `document.querySelector('.maplibregl-ctrl-attrib')`;
+		expect(await page.eval(`!${attrib}.classList.contains('maplibregl-compact-show')`), 'credits open on start');
+		await page.eval(`${attrib}.querySelector('.maplibregl-ctrl-attrib-button').click(); 0`);
+		await wait(200);
+		expect(await page.eval(`${attrib}.classList.contains('maplibregl-compact-show') && ${attrib}.innerText.includes('OpenStreetMap')`), 'the "i" does not open the credits');
+		await page.eval(`${attrib}.querySelector('.maplibregl-ctrl-attrib-button').click(); 0`);
 	});
 
 	await scenario(`${size}: zoomed out, Melden flies to my position`, async () => {

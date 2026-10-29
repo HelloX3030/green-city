@@ -792,11 +792,18 @@
 	}
 	:global(.maplibregl-ctrl-top-left) {
 		top: 56px;
+		z-index: 101; /* the opened credits over the pins, which go up to 100 */
 	}
 	:global(.maplibregl-ctrl-attrib) {
 		background: var(--glass) !important;
 		border-radius: 999px;
+		box-shadow: var(--shadow);
 		font-size: 11px;
+	}
+	/* MapLibre's own button is a filled black circle, a grey "i" fits the glass buttons */
+	:global(.maplibregl-ctrl-attrib-button) {
+		background-color: transparent !important;
+		background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 20 20' fill='%236e6e73'%3E%3Cpath d='M9 7a1 1 0 1 0 2 0 1 1 0 1 0-2 0m0 3a1 1 0 1 1 2 0v3a1 1 0 1 1-2 0'/%3E%3C/svg%3E") !important;
 	}
 	:global(.maplibregl-popup-content) {
 		background: var(--glass-strong);
