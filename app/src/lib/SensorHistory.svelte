@@ -78,6 +78,8 @@
 		if (hi === lo) (hi += 1), (lo -= 1);
 		const pad = (hi - lo) * 0.08;
 		(lo -= pad), (hi += pad);
+		// fine dust and noise are never below zero, so the pad must not draw a negative tick
+		if (key !== 'temp' && Math.min(...vs) >= 0) lo = Math.max(lo, 0);
 		const t0 = points[0].t;
 		const t1 = points[points.length - 1].t;
 		const x = (t: number) => ((t - t0) / (t1 - t0)) * (w - PAD.r);

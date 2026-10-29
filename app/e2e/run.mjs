@@ -502,6 +502,10 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 			const on = await page.eval(`[document.querySelector('.history .tabs button.on')?.textContent, document.querySelector('button.tile.on .lbl')?.textContent, document.querySelector('.history svg').getAttribute('aria-label')]`);
 			expect(on[0] === other[2] && on[1] === other[2] && on[2] === `Verlauf ${other[2]}`, `tap on the ${other[2]} tile: tab ${on[0]}, tile ${on[1]}, chart "${on[2]}"`);
 		}
+		// fine dust is never negative, so its scale stops at 0 (the pad once drew a "-3,3" tick)
+		const charted = await page.eval(`document.querySelector('.history .tabs button.on')?.textContent ?? ''`);
+		const ticks = await page.eval(`[...document.querySelectorAll('.history svg text')].map((t) => t.textContent)`);
+		expect(charted === 'Temperatur' || !ticks.some((t) => /^-\d/.test(t)), `the ${charted} chart has ticks ${ticks}`);
 		await page.shot(`${size}-sensor-history`);
 	});
 
