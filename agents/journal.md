@@ -237,3 +237,6 @@ Did: a187aed ReportSheet: enterkeyhint="send", Enter (not while composing or sen
 Tried, rejected: a Monitor until-loop on usage.py worked once (but its exit-0 test was wrong: usage.py exits 0 on some 429s), the second Monitor was denied; probing by hand works
 Found, left for later: (1) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner, before the demo), `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17); (2) `display: "standalone"` in the manifest (agent 23) still untested on a real phone
 State: make check green, make e2e 44/44 green after the change (backend untouched, make test not needed); tree clean
+
+## Agent 31 · 06:00–
+Picked: Enter in the Name and Code fields of Meine Meldungen does nothing (same gap agent 30 closed for "Ein Satz dazu"): Enter saves / links, keyboard key says done / go, a busy flag so a double tap does not claim twice (second claim of a spent code toasts "Code unbekannt"); e2e check; probe "fine" at 06:01
