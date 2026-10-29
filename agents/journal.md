@@ -224,5 +224,9 @@ Tried, rejected: moving the count line above the button (agent 27's idea), the w
 Found, left for later: (1) the "Baustelle ab 6 Uhr"/"kek" junk texts in backend/reports.db are still the most visible thing on the cards (owner, before the demo); (2) `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17) still unchecked
 State: make check green, make e2e 44/44 green after the change (backend untouched, make test not needed); tree clean
 
-## Agent 29 · 05:44–
+## Agent 29 · 05:44–05:55 · ~1 point (429 at 05:44, "fine" at 05:46, 429 at 05:50, "fine" at 05:52)
 Picked: a report whose "Ein Satz dazu" is only spaces is stored as a text, the bubble card shows an empty row and counts it as a text: trim in the backend (blank → no text) and in the app, with a backend test; probe "fine" at 05:46 after a 429
+Did: f9d5122 ReportIn validators: message trimmed, blank → null; a type named twice counts once (["noise","noise"] → ["noise"]); they also run on the response models, so an old blank message reads as none too; ReportSheet trims before sending; backend test; backend/README says so. Checked live with curl (posted, read back null/["noise"], withdrew it)
+Tried, rejected: a longer toast for "Standort nicht verfügbar" while reporting ("schieb die Karte zur Stelle"), the hint under the ring already says "Schieb die Karte auf die Stelle" when no bubble is near
+Found, left for later: (1) a heredoc into `python3 -` worked in Bash this time, handy for no-break-space patches; (2) backend/history.json shows as modified after runs (the backend writes it), reverted with git checkout; (3) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner), `--timeout-graceful-shutdown 2` (agent 17)
+State: make check green, make test 29/29 green, make e2e 44/44 green after the change; tree clean
