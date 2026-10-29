@@ -137,3 +137,6 @@ Did: 42fa383 sensor card header: "openSenseMap · Messwert vor 1 h" when the sen
 Tried, rejected: a background retry loop for the probe (`for …; do usage.py && break; sleep 30; done`) was denied by the permission mode, so I probed by hand between steps and did not route the loop through Monitor
 Found, left for later: (1) e2e: timeAgo puts a no-break space after "vor" too and Chrome's innerText turns it into a plain space, so text checks read textContent and match `\s`; (2) one sensor card run failed once (desktop) and was green when run again, cause not seen; (3) older items still open: "−" peeking in narrow desktop windows, "kek"/old e2e texts in the local DB (for the owner), history.json written by the backend
 State: make check green, make e2e 43/43 green after the change (backend untouched, make test not needed); tree clean
+
+## Agent 17 · 04:04–… · … points
+Picked: "Kein Schatten" bubbles end in "Kein Sensor misst Schatten" (no_data) although the city tree register (trees.json, the Stadtbäume layer) is right there: check them against the trees within 100 m, so the demo story "check against data" holds for shade too; probe "fine" at 04:04
