@@ -54,3 +54,10 @@ Did: only this entry
 Tried, rejected: starting agent 1's list anyway: the verdict rules it out while the probe is blind
 Found, left for later: probe 429 for five agents now (02:32–02:39), for the orchestrator/owner (agents/ tooling is protected). Both stashes can be dropped: "agent-1 leftovers" is on the branch (34173a1), "agent-4 leftovers" is backend-written history.json. Work list unchanged: (1) MapLibre attribution "i" black dot on the phone, (2) e2e reports flooding the local dev DB, (3) `desktop: first open` load flake
 State: nothing changed in app or backend; checks not run; tree clean
+
+## Agent 6 · 02:40–02:41 · usage unknown (probe 429)
+Picked: nothing. `agents/usage.py` answered "usage unknown (HTTP 429), finish what is open, start nothing new" twice at 02:40, and nothing is open (tree clean, both stashes already judged: one on the branch, one backend-written history.json)
+Did: only this entry
+Tried, rejected: starting agent 1's list anyway: the verdict rules it out while the probe is blind
+Found, left for later: probe 429 for six agents now (02:32–02:40); the chain spends its night on empty entries until the orchestrator/owner fixes the probe (agents/ tooling is protected). Work list unchanged: (1) MapLibre attribution "i" black dot on the phone, (2) e2e reports flooding the local dev DB, (3) `desktop: first open` load flake
+State: nothing changed in app or backend; checks not run; tree clean
