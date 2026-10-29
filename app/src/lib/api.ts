@@ -50,7 +50,7 @@ export type Status = 'confirmed' | 'unconfirmed' | 'no_data';
 export const STATUS: Record<Status, { label: string; color: string }> = {
 	confirmed: { label: 'Bestätigt', color: '#3a7d5c' },
 	unconfirmed: { label: 'Nicht bestätigt', color: '#c38b2f' },
-	no_data: { label: 'Keine Daten', color: '#8e8e93' }
+	no_data: { label: 'Sensor fehlt', color: '#5f6b7a' }
 };
 
 export interface SensorValue {

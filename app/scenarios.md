@@ -13,6 +13,7 @@ Per size
 - layers: Lärmkarte, Messräder, Feinstaub on at zoom 11 and 16, legend shows
 - filters in the Ebenen sheet: only "Zu laut" leaves the bubbles with noise reports, numbered by them; "mindestens 3" drops the small ones; "die letzten 30 Tage" refetches with that window; "Nur Bestätigte"; while set the layers button has a dot and the home sheet shows the filter line with an ×; "Zurücksetzen" or the × brings everything back, the choice survives a reload
 - sensor card on a sensor the API has history for: the chart with the readout (latest value and time), "Alles" draws another line than "7 Tage", a touch on the chart reads the value under the finger with a cursor line
+- a bubble the API marks `no_data` (no sensor of its kind nearby): its card shows the pill "Sensor fehlt" and the reason ("… Hier fehlt ein Sensor."), the demo's "no data" beat
 - about sheet via the title pill, open and close
 
 Phone only

@@ -406,6 +406,30 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		await page.shot(`${size}-sensor-history`);
 	});
 
+	await scenario(`${size}: a bubble without a sensor nearby says Sensor fehlt`, async () => {
+		// the demo's "no data" beat: the pill names what is missing, the reason says where
+		const none = (await (await fetch(`${API}/clusters`)).json()).filter((c) => c.status === 'no_data');
+		expect(none.length, 'no bubble without a sensor on the server');
+		if (!none.length) return;
+		await page.goto();
+		let c, pin;
+		for (c of none) {
+			await page.setView(c.lon, c.lat, 16);
+			await wait(600);
+			pin = await page.eval(`(() => { const p = window.__map.project([${c.lon}, ${c.lat}]); const box = document.querySelector('.map').getBoundingClientRect(); const free = ${FREE}; let best, bd = 1e9; for (const el of document.querySelectorAll('.pin.cluster:not(.group)')) { const r = el.getBoundingClientRect(); const d = Math.hypot(r.left + r.width / 2 - box.left - p.x, r.top + r.height / 2 - box.top - p.y); if (d < bd) (best = el), (bd = d); } return best && bd < 30 ? free(best) : null; })()`);
+			if (pin && pin[1] < page.h * 0.7) break;
+			pin = null;
+		}
+		expect(pin, 'no bubble without a sensor comes on screen');
+		if (!pin) return;
+		await page.tap(...pin);
+		await page.until('.sheet .status', 6000);
+		const status = await page.eval(`document.querySelector('.sheet .status')?.textContent`);
+		expect(status === 'Sensor fehlt', `the pill says "${status}"`);
+		expect(await page.sheetHas('Hier fehlt'), 'no reason under the pill');
+		await page.shot(`${size}-no-sensor`);
+	});
+
 	await scenario(`${size}: about sheet opens and closes`, async () => {
 		await page.goto();
 		await page.click('.title');
