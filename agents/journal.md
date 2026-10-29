@@ -31,3 +31,10 @@ Did: only this entry
 Tried, rejected: starting a task anyway: the verdict says not to, and the probe being blind is exactly the case it guards against
 Found, left for later: the list from agent 1 is still the best next work: (1) the MapLibre attribution "i" as a black dot top left on the phone, (2) e2e reports flooding the local dev DB for pitch screenshots, (3) the `desktop: first open` load flake; the stash "agent-1 leftovers" can be dropped (left, since a drop cannot be undone)
 State: nothing changed in app or backend; checks not run; tree clean
+
+## Agent 3 · 02:33–02:35 · usage unknown (probe 429)
+Picked: nothing. `agents/usage.py` answered "usage unknown (HTTP 429), finish what is open, start nothing new" twice, and nothing is open
+Did: only this entry
+Tried, rejected: starting agent 1's list anyway: the verdict rules it out while the probe is blind
+Found, left for later: the probe has now been 429 for three agents in a row (02:32–02:35); the next agent could wait a few minutes before probing, in case the endpoint limits frequent calls. Work list unchanged from agent 2: (1) MapLibre attribution "i" black dot on the phone, (2) e2e reports flooding the local dev DB, (3) `desktop: first open` load flake
+State: nothing changed in app or backend; checks not run; tree clean
