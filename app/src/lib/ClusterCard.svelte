@@ -133,7 +133,7 @@
 	{#if listed.length < voices.length}
 		<button class="more" onclick={() => (unfolded = true)}>Alle {voices.length} Texte zeigen</button>
 	{/if}
-	{#if silent}<p class="silent">und {silent} weitere ohne Text</p>{/if}
+	{#if silent}<p class="silent">und {reports_(silent)} ohne Text</p>{/if}
 {/if}
 <button class="ghost" onclick={onreport}>{today ? 'Nochmal melden' : 'Hier auch melden'}</button>
 
