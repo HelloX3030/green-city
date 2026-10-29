@@ -387,6 +387,9 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		expect(pin, `none of ${withHistory.map((s) => s.name).join(', ')} comes on screen`);
 		await page.tap(...pin);
 		expect(await page.sheetHas(sensor.name), `the tap did not open ${sensor.name}`);
+		// the header says how old the value is ("Messwert vor 1 h"), not "live · vor 1 h"
+		const age = await page.eval(`[...document.querySelectorAll('.head p')].map((p) => p.textContent.replace(/[ \\t\\n]+/g, ' ')).find((t) => /openSenseMap|Messstation|Lärmsensor/.test(t))`);
+		expect(age && /· (Messwert|offline · letzter Wert) (gerade\seben|vor\s)|· noch kein Messwert/.test(age) && !/live/.test(age), `sensor header reads "${age}"`);
 		expect(await page.until('.history .read b', 6000), 'no history readout');
 		const read = () => page.eval(`document.querySelector('.history .read').innerText`);
 		const line = () => page.eval(`document.querySelector('.history path.line')?.getAttribute('d')`);
