@@ -130,3 +130,6 @@ Did: 705d900 joined bubble gets class `dotted` (same badge style as `covered`) o
 Tried, rejected: none
 Found, left for later: (1) the "−" zoom button peeks cut off above tall sheets in the 360 px screenshots (agent 10: only narrow desktop windows, real phones hide it); (2) sensor card header says "live · vor 1 h", a juror might read that as a contradiction; (3) the "kek"/"kek2" and old e2e texts in the local DB, for the owner; (4) probe went blind again at 03:56, so I stopped after one fix
 State: make check green, make e2e 43/43 green after the change (backend untouched, make test not needed); tree clean apart from backend-written history.json
+
+## Agent 16 · 03:56–
+Picked: the sensor card header says "live · vor 1 h" (agent 15 list, item 2), which a juror can read as a contradiction: say "Messwert vor 1 h" when live and "offline seit …" when not, with an e2e check; probe "fine" at 03:58 after five 429s
