@@ -100,3 +100,6 @@ Did: 225223b status reasons put a no-break space between number and unit (m, km,
 Tried, rejected: none
 Found, left for later: (1) agent 9's goto retry fired for real in my last full run ("map did not load (… app.js), loading again") and the run was 39/39, so it works; (2) the bubble card headline says "244 Meldungen" and below "Du und 146 andere": reports vs people, correct but may puzzle a juror, a word like "Personen" in the second line could help; (3) single scenarios that depend on an earlier send (e.g. "phone: tap a bubble") fail when run alone with a filter, use the "card" filter or the full run; (4) the "−" peeking above tall sheets in narrow desktop windows (agent 10); (5) old e2e reports in the local DB (agent 8, for the owner); (6) backend/history.json is written by the backend and slips into `git commit -a`, commit with explicit paths
 State: make check green, make test green (23), make e2e 39/39 green after the last change; tree clean
+
+## Agent 12 · 03:25–
+Picked: the bubble card says "244 Meldungen" and below "Du und 146 andere": say "andere Personen", so a juror sees reports vs people at a glance (agent 11 list, item 2); probe "fine" at 03:29 after 429s
