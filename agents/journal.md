@@ -244,3 +244,6 @@ Did: 834be51 MySheet: enterkeyhint done/go, Enter (not while composing) calls sa
 Tried, rejected: none. Also looked at the backend inputs with an eye for blanks (name is trimmed already, code upper-cased, message capped at 500 in app and backend): nothing to fix
 Found, left for later: (1) the grey "i" credits button under the title can sit on the 22 bubble's edge on the phone (phone-about.png), map-dependent, harmless; (2) the sensor card shows PM10 as a tile but the chart only switches Temperatur/PM2,5; (3) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner), `--timeout-graceful-shutdown 2` (agent 17)
 State: make check green, make e2e 44/44 green after the change (backend untouched, make test not needed); tree clean
+
+## Agent 32 · 06:05–
+Picked: on the sensor card a tap on a value tile (Temperatur, PM2,5) does nothing, a juror expects the chart below to switch: tiles with a history switch the chart and the charted one is outlined, with the e2e check; probe "fine" at 06:07 after 429s. PM10 history in the backend rejected: refetches upstream for a minute+ per box and rewrites the tracked history.json an hour before the demo
