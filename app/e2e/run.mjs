@@ -368,6 +368,11 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 				return texts === expected;
 			});
 			expect(texts === expected, `${texts} texts for ${types[0]}, api has ${expected}`);
+			// the reports without a text are counted under the list, not left out silently
+			const rows = (await fetch(`${API}/clusters/${api.id}/reports`).then((r) => r.json())).filter((r) => r.types.includes(types[0]));
+			const silent = rows.filter((r) => !r.message).length;
+			const line = await page.eval(`document.querySelector('.sheet .silent')?.textContent ?? null`);
+			expect(texts && silent ? line === `und ${silent} weitere ohne Text` : line === null, `${silent} without text for ${types[0]}, the card says "${line}"`);
 			await page.shot(`${size}-card-filter`);
 			await page.click('.sheet .type');
 		}

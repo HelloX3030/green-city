@@ -57,7 +57,10 @@
 		filter = null;
 	});
 	// with a type filter on the map the bubble carries only those types, the texts follow
-	const voices = $derived(reports.filter((r) => r.message && (filter ? r.types.includes(filter) : r.types.some((t) => t in cluster.types))));
+	const shown = $derived(reports.filter((r) => (filter ? r.types.includes(filter) : r.types.some((t) => t in cluster.types))));
+	const voices = $derived(shown.filter((r) => r.message));
+	// most reports come without a text, the list says so, or two texts look thin next to "55 Meldungen"
+	const silent = $derived(shown.length - voices.length);
 	// mine from today: the button says Nochmal melden, the sent card counts them
 	const myToday = $derived(reports.filter((r) => r.mine && r.created_at.slice(0, 10) === new Date().toISOString().slice(0, 10)).length);
 	const today = $derived(myToday > 0);
@@ -119,6 +122,7 @@
 			</li>
 		{/each}
 	</ul>
+	{#if silent}<p class="silent">und {silent} weitere ohne Text</p>{/if}
 {/if}
 <button class="ghost" onclick={onreport}>{today ? 'Nochmal melden' : 'Hier auch melden'}</button>
 
@@ -242,6 +246,11 @@
 		border-radius: 50%;
 		align-self: flex-start;
 		margin-top: 5px; /* on the first line, also when the text wraps */
+	}
+	.silent {
+		margin: 6px 0 0 16px; /* under the times, past the dots */
+		font-size: 12px;
+		color: var(--ink2);
 	}
 	.when {
 		flex: none;
