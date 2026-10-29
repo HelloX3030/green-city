@@ -18,7 +18,7 @@
 			? cluster.mine === 1
 				? 'Du bist hier der Erste'
 				: 'Alle von dir'
-			: `Du und ${others} ${others === 1 ? 'andere Person' : 'andere'} in der Nähe`
+			: `Du und ${others} ${others === 1 ? 'andere Person' : 'andere Personen'} in der Nähe`
 	);
 	const main = $derived(typeInfo(dominantType(cluster)));
 	const reports_ = (n: number) => `${n} ${n === 1 ? 'Meldung' : 'Meldungen'}`;

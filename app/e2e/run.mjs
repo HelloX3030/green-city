@@ -285,7 +285,8 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 			return api && (api.people < 2 || (await page.sheet()).includes(`Du und ${api.people - 1} andere`));
 		});
 		expect(api, `bubble says ${n}, no cluster has that many reports`);
-		if (api && api.people > 1) expect((await page.sheet()).includes(`Du und ${api.people - 1} andere`), `card counts "${(await page.sheet()).split('\n')[0]}", people ${api.people}`);
+		const people = api && `Du und ${api.people - 1} ${api.people === 2 ? 'andere Person' : 'andere Personen'}`;
+		if (api && api.people > 1) expect((await page.sheet()).includes(people), `card counts "${(await page.sheet()).split('\n')[0]}", people ${api.people}`);
 		expect(await page.has('.sheet .voices li.me'), 'my report is not marked in the list');
 		expect(sheet.includes('Nochmal melden') && !sheet.includes('Zählt einmal'), 'reported today, but no Nochmal melden, or the old once-a-day hint');
 		// the type chips: icon and reports per type, always here since I reported; mine ringed; a tap filters the texts
