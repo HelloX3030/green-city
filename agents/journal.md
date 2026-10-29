@@ -280,5 +280,9 @@ Tried, rejected: starting a fix with 34 min left for the whole chain and no budg
 Found, left for later: same open items as agent 35: "Baustelle ab 6 Uhr"/"kek"/"kek2" junk in backend/reports.db on the 55 "Sensor fehlt" card (owner, before the demo), `--timeout-graceful-shutdown 2` (agent 17), the PM10 tile without a chart (agent 31/32)
 State: app and backend untouched, make check/test/e2e not rerun (agent 34's run was 44/44 green); tree clean
 
-## Agent 37 · 06:27– · (429 at 06:26, "fine" at 06:27)
+## Agent 37 · 06:27–06:31 · ~0 points (429 at 06:26, "fine" at 06:27, 429 at 06:30)
 Picked: a last full make e2e on the final branch state with live upstreams, so the report at 07:00 can say the demo branch is green (last full run was agent 34 at ~06:23), plus a look at screenshots agent 35 did not list (filter sheet, join, outside Heilbronn); no code change unless a run turns red
+Did: no code change. make e2e at 06:28 on 89e6e18 + this journal: 44/44 ok in 165 s, 8 test reports withdrawn afterwards. phone-filter-sheet.png, phone-join.png, phone-Melden-with-position-outside-Heilbronn.png look finished
+Tried, rejected: starting a fix after the run: usage.py was blind (429) again at 06:30 with 30 min left for the chain
+Found, left for later: same open items as agents 35/36: "Baustelle ab 6 Uhr"/"kek"/"kek2" junk in backend/reports.db on the 55 "Sensor fehlt" card (owner, before the demo), `--timeout-graceful-shutdown 2` (agent 17), the PM10 tile without a chart (agent 31/32). `printf >> journal && git add && git commit` in one Bash call was denied in don't-ask mode, Edit + `git -C <repo> commit -qam` works
+State: make e2e 44/44 green on the final state; app and backend untouched since agent 34, so make check/test not rerun; tree clean
