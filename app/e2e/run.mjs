@@ -439,6 +439,8 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		await page.click('.title');
 		await wait(300);
 		expect((await page.sheet()).includes('Prüfen'), 'about sheet missing');
+		expect((await page.sheet()).includes('Baumkataster'), 'about sheet does not say what shade is checked against');
+		await page.shot(`${size}-about`);
 		await page.click('.title');
 		await wait(300);
 		expect((await page.sheet()).includes('Melden'), 'home sheet not back');
