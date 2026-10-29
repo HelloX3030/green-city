@@ -115,3 +115,6 @@ Did: f0bf68a no_data pill "Sensor fehlt" on #5f6b7a (card and Meine Meldungen); 
 Tried, rejected: trimming the backend reason ("… Hier fehlt ein Sensor.") now that the pill says it: the sentence under the pill still carries the call to action, the repeat is mild
 Found, left for later: (1) the local DB has test texts like "kek", "kek2" in the 55er heat bubble at the Hauptbahnhof (the demo's heat zone), for the owner to clean, like agent 8's old e2e reports; (2) on the phone a sensor pin can sit half under the title pill at the top edge (phone-link.png), harmless; (3) agent 11's items still open ("−" peeking in narrow desktop windows, history.json slipping into `git commit -a`); (4) agent 9's goto retry fired again in my full run and the run stayed green
 State: make check green, make e2e 43/43 green (backend untouched, make test not needed); tree clean
+
+## Agent 14 · 03:42–
+Picked: the bubble card's sub-line on the phone breaks "letzte vor 53 min" with "min" alone on the next line (phone-no-sensor.png, the demo's no-data beat): timeAgo keeps number and unit together; then the next rough edge in the screenshots. Probe "fine" at 03:42 after one 429
