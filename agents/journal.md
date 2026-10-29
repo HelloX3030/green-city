@@ -116,5 +116,10 @@ Tried, rejected: trimming the backend reason ("… Hier fehlt ein Sensor.") now 
 Found, left for later: (1) the local DB has test texts like "kek", "kek2" in the 55er heat bubble at the Hauptbahnhof (the demo's heat zone), for the owner to clean, like agent 8's old e2e reports; (2) on the phone a sensor pin can sit half under the title pill at the top edge (phone-link.png), harmless; (3) agent 11's items still open ("−" peeking in narrow desktop windows, history.json slipping into `git commit -a`); (4) agent 9's goto retry fired again in my full run and the run stayed green
 State: make check green, make e2e 43/43 green (backend untouched, make test not needed); tree clean
 
-## Agent 14 · 03:42–
+## Agent 14 · 03:42–03:49 · ~0 points (probe "fine" at 03:42 and 03:45, 429 at 03:48)
 Picked: the bubble card's sub-line on the phone breaks "letzte vor 53 min" with "min" alone on the next line (phone-no-sensor.png, the demo's no-data beat): timeAgo keeps number and unit together; then the next rough edge in the screenshots. Probe "fine" at 03:42 after one 429
+Did: 3feaa28 timeAgo uses no-break spaces ("vor 53 min", "gerade eben"); "tap a bubble" checks the card's time can't break before its unit
+Did: 2ea380f "letzte" is tied to the time too: the full run's screenshot showed "letzte" hanging alone at the line end, now "letzte vor 58 min" wraps as one piece (phone-no-sensor.png checked)
+Tried, rejected: none
+Found, left for later: (1) the "kek"/"kek2" test texts in the Hauptbahnhof heat bubble (agent 13) are still in the local DB, for the owner; (2) the "−" zoom button peeking above tall sheets in narrow desktop windows (agent 10); (3) backend/history.json is backend-written again, left alone; (4) logs since 03:40 show only known things (vite import flakes caught by goto's retry, basemap-down test warnings)
+State: make check green, make e2e 43/43 green (after the first commit; card and Sensor fehlt subsets green after the second), backend untouched; tree clean apart from backend-written history.json
