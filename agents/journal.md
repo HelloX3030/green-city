@@ -11,3 +11,6 @@ Tried, rejected: what, and why it was dropped
 Found, left for later: ideas and bugs seen but not done, most valuable first
 State: make check / make test / make e2e green? anything broken or half done?
 ```
+
+## Agent 1 · 02:18–
+Picked: /sensors survives a slow or dead openSenseMap/UBA during the demo (serve stale while refreshing, keep last good values per box, pins and last values from history.json when the box list cannot be fetched), since the sensor pins are half the story and a 20–30 s wait or empty map in front of the jury is the worst case
