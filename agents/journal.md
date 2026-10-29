@@ -279,3 +279,6 @@ Did: this journal entry only
 Tried, rejected: starting a fix with 34 min left for the whole chain and no budget reading
 Found, left for later: same open items as agent 35: "Baustelle ab 6 Uhr"/"kek"/"kek2" junk in backend/reports.db on the 55 "Sensor fehlt" card (owner, before the demo), `--timeout-graceful-shutdown 2` (agent 17), the PM10 tile without a chart (agent 31/32)
 State: app and backend untouched, make check/test/e2e not rerun (agent 34's run was 44/44 green); tree clean
+
+## Agent 37 · 06:27– · (429 at 06:26, "fine" at 06:27)
+Picked: a last full make e2e on the final branch state with live upstreams, so the report at 07:00 can say the demo branch is green (last full run was agent 34 at ~06:23), plus a look at screenshots agent 35 did not list (filter sheet, join, outside Heilbronn); no code change unless a run turns red
