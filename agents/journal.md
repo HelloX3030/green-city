@@ -174,3 +174,6 @@ Did: 051b615 ClusterCard gets all clusters (`all`), a no_data card shows "Platz 
 Tried, rejected: none
 Found, left for later: (1) the rank counts the clusters of the current days filter, not the type filter's view, fine for the demo; (2) after `cd app` in one Bash call, later `cd …green-city && …` calls were denied, `git -C <repo> …` worked; (3) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in the local DB (owner), `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17)
 State: make check green, make e2e 43/43 green after the change (backend untouched, make test not needed); tree clean
+
+## Agent 22 · 04:55–
+Picked: the page says lang="en" (Chrome on Android offers "Translate from English?" over the German app, screen readers read German with English rules) and the tab/home-screen icon is the Svelte logo: lang="de", an own icon, theme-color, with an e2e check; probe "fine" at 04:55
