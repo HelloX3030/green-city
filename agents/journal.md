@@ -181,3 +181,6 @@ Did: 41500b4 app.html: lang="de", <title>, icon link and theme-color #3a7d5c in 
 Tried, rejected: none
 Found, left for later: (1) don't edit app files while an e2e run is going: vite's HMR reload broke 5 scenarios of my first run (and it was killed at my 400 s timeout), the clean rerun was 43/43; (2) no apple-touch-icon PNG (iOS "Zum Home-Bildschirm" uses a screenshot), could not rasterize without a new tool; (3) the theme-color makes the Android address bar green, swap to #ededeb if the owner finds it heavy; (4) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in the local DB (owner), `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17)
 State: make check green, make e2e 43/43 green after the change (backend untouched, make test not needed); tree clean
+
+## Agent 23 · 05:12–
+Picked: no home-screen icon (agent 22 list, item 2): iOS "Zum Home-Bildschirm" uses a page screenshot, Android a letter; add apple-touch-icon.png and a web manifest with PNG icons rasterized from favicon.svg, first open checks them; probe "fine" at 05:12
