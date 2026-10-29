@@ -428,7 +428,7 @@
 			div.style.setProperty('--c', TYPES.find((t) => t.id === b.type)?.color ?? '#8a8a8e');
 			div.style.setProperty('--s', `${size}px`);
 			div.style.zIndex = layer(size, sel);
-			div.textContent = String(b.count);
+			div.innerHTML = `<span>${b.count}</span>`;
 			div.classList.toggle('sel', sel);
 			div.classList.toggle('mine', b.mine);
 			div.classList.toggle('group', b.members.length > 1);
@@ -479,6 +479,21 @@
 				m.remove();
 				sensorMarkers.delete(id);
 			}
+		}
+	});
+
+	// a sensor pin on a bubble's middle hides its number, then the number moves to a badge on the lower edge
+	const quarterZoom = $derived(Math.round(zoom * 4) / 4);
+	$effect(() => {
+		if (!ready) return;
+		void quarterZoom; // pixel distances depend on the zoom only
+		void clusters;
+		void zoomStep; // after the bubbles were redrawn
+		const pins = sensors.map((s) => map.project([s.lon, s.lat]));
+		for (const m of clusterMarkers.values()) {
+			const p = map.project(m.getLngLat());
+			const covered = pins.some((q) => Math.abs(q.x - p.x) < SENSOR_PX / 2 + 12 && Math.abs(q.y - p.y) < SENSOR_PX / 2 + 8);
+			m.getElement().classList.toggle('covered', covered);
 		}
 	});
 
@@ -758,6 +773,18 @@
 		font-size: 14px;
 		border: 2px solid #fff;
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+	}
+	:global(.pin.cluster.covered span) {
+		position: absolute;
+		left: 50%;
+		bottom: -10px;
+		transform: translateX(-50%);
+		padding: 0 6px;
+		border-radius: 999px;
+		background: var(--c);
+		border: 2px solid #fff;
+		font-size: 12px;
+		line-height: 16px;
 	}
 	/* several bubbles in one: a second ring */
 	:global(.pin.cluster.group) {

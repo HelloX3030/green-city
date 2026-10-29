@@ -203,6 +203,16 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		await page.goto();
 		expect((await page.sheet()).includes('Melden'), 'no Melden button');
 		expect(await page.until('.pin.sensor.ours', 15000), 'NoiseNode pin missing');
+		expect(await page.until('.pin.cluster span', 15000), 'no bubbles');
+		await wait(300);
+		const hidden = await page.eval(`(() => {
+			const pins = [...document.querySelectorAll('.pin.sensor')].map((p) => p.getBoundingClientRect());
+			return [...document.querySelectorAll('.pin.cluster span')].filter((s) => {
+				const r = s.getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2;
+				return pins.some((p) => x > p.left && x < p.right && y > p.top && y < p.bottom);
+			}).map((s) => s.textContent).join(', ');
+		})()`);
+		expect(!hidden, `bubble number under a sensor pin: ${hidden}`);
 		const attrib = `document.querySelector('.maplibregl-ctrl-attrib')`;
 		expect(await page.eval(`!${attrib}.classList.contains('maplibregl-compact-show')`), 'credits open on start');
 		await page.eval(`${attrib}.querySelector('.maplibregl-ctrl-attrib-button').click(); 0`);
