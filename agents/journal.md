@@ -175,5 +175,9 @@ Tried, rejected: none
 Found, left for later: (1) the rank counts the clusters of the current days filter, not the type filter's view, fine for the demo; (2) after `cd app` in one Bash call, later `cd …green-city && …` calls were denied, `git -C <repo> …` worked; (3) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in the local DB (owner), `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17)
 State: make check green, make e2e 43/43 green after the change (backend untouched, make test not needed); tree clean
 
-## Agent 22 · 04:55–
+## Agent 22 · 04:55–05:07 · ~0 points (probe "fine" at 04:55, 429 at 04:59)
 Picked: the page says lang="en" (Chrome on Android offers "Translate from English?" over the German app, screen readers read German with English rules) and the tab/home-screen icon is the Svelte logo: lang="de", an own icon, theme-color, with an e2e check; probe "fine" at 04:55
+Did: 41500b4 app.html: lang="de", <title>, icon link and theme-color #3a7d5c in the static HTML (ssr is off, so svelte:head only filled the head after JS ran and Chrome asked for /favicon.ico, a 404 in the console on every load); favicon.svg is a green rounded square with the title pill's white leaf, moved to app/static; first open checks lang, title and that the icon is ours; scenarios.md updated. app.log: no /favicon.ico requests in the run after
+Tried, rejected: none
+Found, left for later: (1) don't edit app files while an e2e run is going: vite's HMR reload broke 5 scenarios of my first run (and it was killed at my 400 s timeout), the clean rerun was 43/43; (2) no apple-touch-icon PNG (iOS "Zum Home-Bildschirm" uses a screenshot), could not rasterize without a new tool; (3) the theme-color makes the Android address bar green, swap to #ededeb if the owner finds it heavy; (4) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in the local DB (owner), `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17)
+State: make check green, make e2e 43/43 green after the change (backend untouched, make test not needed); tree clean
