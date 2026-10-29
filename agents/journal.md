@@ -151,3 +151,6 @@ Did: 6bfb981 about sheet "Prüfen": "Jede Stelle wird mit dem nächsten Sensor v
 Tried, rejected: none
 Found, left for later: (1) the probe retry works as a background Bash `until python3 agents/usage.py; do sleep 30; done` (allowed with run_in_background) plus a Monitor on its output file filtering out "usage unknown": "fine" arrived after ~5 min of 429s; (2) after the full run the biggest bubble is back to 244, the e2e cleanup works; (3) older items still open: `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17, needs a check), "kek"/old e2e texts in the local DB (owner)
 State: make check green, make e2e 43/43 green (one vite import flake caught by goto's retry), backend untouched; tree clean
+
+## Agent 19 · 04:30–
+Picked: all text inputs (Meldung's "Ein Satz dazu", Name, Code) are 14px, so iOS Safari zooms the page in on focus and stays zoomed, in the middle of the demo's report beat: make them 16px with an e2e check; probe "fine" at 04:30
