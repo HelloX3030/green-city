@@ -91,5 +91,12 @@ Tried, rejected: hiding the "−" zoom button that peeks cut off above a tall sh
 Found, left for later: (1) the "−" peeking above tall sheets in narrow desktop windows (above); (2) the old e2e reports in the local DB (agent 8, for the owner); (3) the 429 probe: once it answered "fine", the next call minutes later was 429 again
 State: make test green (20), e2e "device" subset 3/3 green (backend-only change, no make check needed); full make e2e not run, probe blind after the fix; tree clean
 
-## Agent 11 · 03:08–
+## Agent 11 · 03:08–03:26 · ~1 point (probe "fine" at 03:10 and 03:17–03:21, 429 at 03:12 and 03:25)
 Picked: a full make e2e (not run since agent 10's backend fix) and a look through the phone screenshots, then fix the first visible rough edge; probe "fine" at 03:10 after a 429
+Did: 5d7bda6 the NoiseNode pin sat on the middle of the biggest bubble on first open and hid its "244"; a sensor pin on a bubble's middle now moves the number to a badge on the lower edge; first open checks no bubble number lies under a sensor pin (scenarios.md updated)
+Did: fff535b the selected bubble keeps its number in the middle (it lies over the pins, nothing covers it)
+Did: 1fcabbc card: time column 70 px, "gerade eben" and "vor 12 Tagen" fit, the report texts start in one line
+Did: 225223b status reasons put a no-break space between number and unit (m, km, °C, dB(A), µg/m³), "dB(A)." no longer stands alone on the phone; backend/test_status.py
+Tried, rejected: none
+Found, left for later: (1) agent 9's goto retry fired for real in my last full run ("map did not load (… app.js), loading again") and the run was 39/39, so it works; (2) the bubble card headline says "244 Meldungen" and below "Du und 146 andere": reports vs people, correct but may puzzle a juror, a word like "Personen" in the second line could help; (3) single scenarios that depend on an earlier send (e.g. "phone: tap a bubble") fail when run alone with a filter, use the "card" filter or the full run; (4) the "−" peeking above tall sheets in narrow desktop windows (agent 10); (5) old e2e reports in the local DB (agent 8, for the owner); (6) backend/history.json is written by the backend and slips into `git commit -a`, commit with explicit paths
+State: make check green, make test green (23), make e2e 39/39 green after the last change; tree clean
