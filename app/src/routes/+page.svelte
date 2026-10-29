@@ -206,6 +206,8 @@
 		await refresh();
 		selected = shown.find((c) => c.report_ids.includes(r.id)) ?? null;
 		sent = true;
+		// no card to say Gemeldet (the filter hides the bubble, or the poll failed): the toast says it
+		if (!selected) say(clusters.some((c) => c.report_ids.includes(r.id)) ? 'Gemeldet, vom Filter ausgeblendet' : 'Gemeldet');
 		refreshMine();
 	}
 

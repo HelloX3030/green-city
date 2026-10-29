@@ -723,6 +723,27 @@ const phone = async ({ page, send, expect, scenario, melden, type, nearlyZoom, s
 		expect(!(await page.has('.rb.dot')) && !(await page.sheetHas('ab 10')), 'the filter line or the dot stayed');
 	});
 
+	await scenario('phone: a report the filter hides still says Gemeldet', async () => {
+		// only Schlechte Luft from 10 reports: the Zu-laut bubble at my position is filtered out
+		await page.goto();
+		await page.eval(`localStorage.setItem('filter', JSON.stringify({ types: ['air'], min: 10 })); 0`);
+		await page.goto();
+		await melden();
+		await page.settled();
+		await wait(300);
+		await page.clickText('Zu laut');
+		await page.clickText('Melden');
+		let toast = '';
+		for (let t = 0; t < 6000 && !toast.startsWith('Gemeldet'); t += 200) {
+			await wait(200);
+			toast = await page.eval(`document.querySelector('.toast')?.textContent ?? ''`);
+		}
+		expect(toast.includes('Filter'), `no toast that the filter hides it: "${toast}"`);
+		expect((await page.sheet()).includes('Melden'), 'home sheet not back');
+		await page.shot('phone-sent-filtered');
+		await page.eval(`localStorage.removeItem('filter'); 0`);
+	});
+
 	await scenario('phone: a sensor under a big bubble is still tappable', async () => {
 		await page.goto();
 		// the NoiseNode is 30 m from the runner's bubble: at zoom 15 that is 19 px, inside the bubble

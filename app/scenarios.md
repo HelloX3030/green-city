@@ -20,6 +20,7 @@ Phone only
 - Melden with position outside Heilbronn: toast "Du bist außerhalb von Heilbronn", zooms in where it is
 - Melden with position denied: toast "Standort nicht verfügbar", zooms in where it is
 - report mode at zoom 15 and 16: the circle is 64 px, then 128 px (100 m on the ground), hint stays below the dot
+- send a report while the filter hides its bubble (only Schlechte Luft, ab 10): no card can say Gemeldet, so the toast "Gemeldet, vom Filter ausgeblendet" does, home sheet back
 - a sensor under a bigger bubble: at zoom 15 the NoiseNode pin lies inside the runner's bubble, a tap on it opens the sensor card, small pins sit above big ones
 - report mode with the centre on a bubble: bubble has a green ring, its number moves to the badge on the lower edge (the centre dot would cover it), hint "Kommt zu den … Meldungen hier dazu", 150 m further: no ring, plain hint
 - zoom out in report mode: circle grey, hint "Näher ranzoomen", Melden disabled, enabled again after zooming in
