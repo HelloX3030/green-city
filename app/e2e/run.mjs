@@ -218,6 +218,12 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 	await scenario(`${size}: first open`, async () => {
 		await page.goto();
 		expect((await page.sheet()).includes('Melden'), 'no Melden button');
+		expect(await page.eval(`document.documentElement.lang === 'de' && document.title === "Sag's Heilbronn"`), 'page not lang="de" or title missing');
+		const icon = await page.eval(`(async () => {
+			const r = await fetch(document.querySelector('link[rel=icon]').href);
+			return r.ok && (await r.text()).includes('#3a7d5c');
+		})()`);
+		expect(icon, 'tab icon missing or not ours');
 		expect(await page.until('.pin.sensor.ours', 15000), 'NoiseNode pin missing');
 		expect(await page.until('.pin.cluster span', 15000), 'no bubbles');
 		await wait(300);
