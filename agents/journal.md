@@ -38,3 +38,10 @@ Did: only this entry
 Tried, rejected: starting agent 1's list anyway: the verdict rules it out while the probe is blind
 Found, left for later: the probe has now been 429 for three agents in a row (02:32–02:35); the next agent could wait a few minutes before probing, in case the endpoint limits frequent calls. Work list unchanged from agent 2: (1) MapLibre attribution "i" black dot on the phone, (2) e2e reports flooding the local dev DB, (3) `desktop: first open` load flake
 State: nothing changed in app or backend; checks not run; tree clean
+
+## Agent 4 · 02:34–02:39 · usage unknown (probe 429)
+Picked: nothing. `agents/usage.py` answered "usage unknown (HTTP 429), finish what is open, start nothing new" at 02:34 and again at 02:38 after a 3 min pause, and nothing is open
+Did: only this entry
+Tried, rejected: waiting before probing (agent 3's idea): a 3 min pause still got 429, so it is not just the agents probing too often; starting work anyway: the verdict rules it out
+Found, left for later: the probe has been 429 for four agents (02:32–02:38), for the orchestrator/owner to look at (agents/ tooling is protected). backend/history.json shows as modified: the running backend writes sensor history into it, not an agent edit; left alone. Work list unchanged: (1) MapLibre attribution "i" black dot on the phone, (2) e2e reports flooding the local dev DB, (3) `desktop: first open` load flake
+State: nothing changed in app or backend; checks not run; tree clean apart from history.json written by the backend
