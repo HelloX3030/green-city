@@ -84,5 +84,9 @@ Tried, rejected: a 15 s timeout per load: a slow but working cold load (agent 1 
 Found, left for later: the retry did not fire in my run (39/39 on the first try), so it is checked by reading, not yet by a real flake; look for "loading again" in the next e2e outputs. Phone first open screenshot looks clean (credits "i", bubbles, Melden). Agent 8's item 1 (old e2e reports in the local DB) is still for the owner. Probe flipped 429 → network unreachable → 429 → fine within 5 min at 02:56–03:01: a background retry loop (`until python3 agents/usage.py; do sleep 30; done`) gets an answer without burning the allowance
 State: make e2e 39/39 green (only e2e/run.mjs changed, so no make check/test needed); tree clean
 
-## Agent 10 · 03:04–
+## Agent 10 · 03:04–03:08 · ~0 points (probe "fine" once, 429 before and after)
 Picked: the 500s on a new device's first open: /me and /reports/mine arrive together, both create the device, the second dies on "UNIQUE constraint failed: devices.token" (31 in backend.log); a phone opening the app for the first time in the demo hits exactly this. Probe "fine" at 03:07 after two 429s
+Did: 64bb534 db.user_for inserts the device with INSERT OR IGNORE; when the other request was first, the spare user row is deleted and the existing user returned; test_db fakes the late lookup. Checked live: 20 fresh tokens × 4 parallel /me + /reports/mine, all 80 answered 200
+Tried, rejected: hiding the "−" zoom button that peeks cut off above a tall sheet in the 360 px e2e screenshots: on a real phone (pointer: coarse) the zoom buttons are hidden anyway, only a narrow desktop window shows it
+Found, left for later: (1) the "−" peeking above tall sheets in narrow desktop windows (above); (2) the old e2e reports in the local DB (agent 8, for the owner); (3) the 429 probe: once it answered "fine", the next call minutes later was 429 again
+State: make test green (20), e2e "device" subset 3/3 green (backend-only change, no make check needed); full make e2e not run, probe blind after the fix; tree clean
