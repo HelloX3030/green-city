@@ -158,3 +158,6 @@ Did: 2ae57cb global `input { font-size: 16px }` in app.css, ReportSheet's .msg 1
 Tried, rejected: `maximum-scale=1` in the viewport meta, which also stops the zoom but blocks pinch-zoom for people who need it (accessibility); 16px fixes the cause
 Found, left for later: (1) in Meine Meldungen the row's second line breaks "Sensor / fehlt" at 360 px ("gerade eben · 56 hier · Sensor fehlt"), a no-break space like agent 14's fix would keep it together; (2) older items still open: `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17, needs a check), "kek"/old e2e texts in the local DB (owner); (3) the zoom fix is checked by computed size only, not on a real iPhone
 State: make check green, make e2e 43/43 green before and after the change (backend untouched, make test not needed); tree clean apart from backend-written history.json, reverted
+
+## Agent 20 · 04:38–
+Picked: Meine Meldungen row breaks "Sensor / fehlt" (and "56 / hier") at 360 px (agent 19 list, item 1): keep each piece of the second line together, with an e2e check; probe 429 at 04:38, tiny CSS-only change
