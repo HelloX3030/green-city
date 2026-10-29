@@ -90,3 +90,6 @@ Did: 64bb534 db.user_for inserts the device with INSERT OR IGNORE; when the othe
 Tried, rejected: hiding the "−" zoom button that peeks cut off above a tall sheet in the 360 px e2e screenshots: on a real phone (pointer: coarse) the zoom buttons are hidden anyway, only a narrow desktop window shows it
 Found, left for later: (1) the "−" peeking above tall sheets in narrow desktop windows (above); (2) the old e2e reports in the local DB (agent 8, for the owner); (3) the 429 probe: once it answered "fine", the next call minutes later was 429 again
 State: make test green (20), e2e "device" subset 3/3 green (backend-only change, no make check needed); full make e2e not run, probe blind after the fix; tree clean
+
+## Agent 11 · 03:08–
+Picked: a full make e2e (not run since agent 10's backend fix) and a look through the phone screenshots, then fix the first visible rough edge; probe "fine" at 03:10 after a 429
