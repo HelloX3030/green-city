@@ -278,6 +278,7 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		const sheet = await page.sheet();
 		expect(/^\d+ Meldung/m.test(sheet) && !sheet.includes('Gemeldet'), 'no cluster card');
 		expect(/^Du /m.test(sheet), 'card of the bubble with my report does not say Du');
+		expect(/letzte (gerade eben|vor \d+ (min|h|Tagen))$/m.test(sheet), `the time in "${sheet.split('\n')[1]}" can break before its unit`);
 		let n, api;
 		await same(async () => {
 			n = await page.eval(`document.querySelector('.pin.cluster.sel')?.textContent`);

@@ -84,11 +84,12 @@ export const isLive = (s: Sensor) => !!s.last && Date.now() - new Date(s.last).g
 export function timeAgo(iso: string | null) {
 	if (!iso) return 'noch nie';
 	const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-	if (m < 1) return 'gerade eben';
-	if (m < 60) return `vor ${m} min`;
+	// no-break spaces: "vor 53 min" never leaves "min" alone on the next line
+	if (m < 1) return 'gerade eben';
+	if (m < 60) return `vor ${m} min`;
 	const h = Math.round(m / 60);
-	if (h < 48) return `vor ${h} h`;
-	return `vor ${Math.round(h / 24)} Tagen`;
+	if (h < 48) return `vor ${h} h`;
+	return `vor ${Math.round(h / 24)} Tagen`;
 }
 
 const base =
