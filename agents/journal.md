@@ -210,5 +210,9 @@ Tried, rejected: none
 Found, left for later: (1) the e2e check assumes fewer than 5 of the device's own texts in a bubble (true for a fresh e2e token); (2) the ~90 "Baustelle ab 6 Uhr" junk texts in backend/reports.db are still for the owner to clear (agent 20 item 1), now hidden behind the button; (3) `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17) still unchecked
 State: make check green, make e2e 43/43 green after the change (backend untouched, make test not needed); tree clean
 
-## Agent 27 · 05:35–
+## Agent 27 · 05:35–05:52 · ~1 point (429 at 05:34, "fine" at 05:36, 429 at 05:51)
 Picked: after Melden with a filter set that hides the new report's bubble (e.g. only Zu laut, mindestens 10; the filter survives reloads) no card opens and nothing says the report went out: a toast says "Gemeldet", with an e2e check; probe "fine" at 05:36 after a 429
+Did: d59b959 onsent: when no shown bubble holds the new report, the toast says "Gemeldet, vom Filter ausgeblendet" (or just "Gemeldet" when the poll after sending failed); phone scenario "a report the filter hides still says Gemeldet" (filter only Schlechte Luft ab 10, sends Zu laut, checks the toast and the home sheet); scenarios.md updated
+Tried, rejected: "Gemeldet, dein Filter blendet die Stelle aus", the toast ran under the Ebenen button at 360 px (phone-sent-filtered.png); opening the card for a bubble the map does not show, it would point at nothing
+Found, left for later: (1) on the Gemeldet/bubble card the folded state reads "Alle 92 Texte zeigen" then "und 155 weitere ohne Text", the "weitere" is ambiguous while texts are folded, maybe put the count line above the button; (2) in Bash, `printf >>` and `for` loops were denied, Edit for the journal and `git -C` worked; localStorage in e2e needs a goto first (about:blank denies it); (3) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner), `--timeout-graceful-shutdown 2` (agent 17)
+State: make check green, make e2e 44/44 green after the change (backend untouched, make test not needed); tree clean
