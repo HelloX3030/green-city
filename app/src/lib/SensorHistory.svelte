@@ -17,6 +17,7 @@
 	const WD = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
 	const H = 150; // svg height
 	const PAD = { t: 8, r: 46, b: 18 }; // the tick labels sit right, the dates below
+	const hatch = `h${Math.random().toString(36).slice(2, 8)}`; // pattern id, unique per card
 
 	let history = $state<Record<string, Series> | null>(null);
 	let range = $state<Range>('7d');
@@ -48,11 +49,33 @@
 		});
 	});
 
+	// the window is always the whole range: the last 24 h or 7 days whatever the data, so a sensor
+	// that came last week shows as such instead of its two days stretched over the width; Alles is
+	// the sensor's whole lifetime, from its first value to now
+	const span = $derived.by(() => {
+		const t1 = Date.now();
+		if (range !== 'all') return { t0: t1 - (range === '24h' ? 24 * 3600e3 : 7 * 86400e3), t1 };
+		const s = history?.[key];
+		const first = s?.daily[0]?.[0] ?? s?.hourly[0]?.[0];
+		return { t0: first ? Date.parse(first) : t1 - 7 * 86400e3, t1 };
+	});
 	const points = $derived.by(() => {
 		const s = history?.[key];
 		if (!s) return [];
-		const since = range === '24h' ? Date.now() - 24 * 3600e3 : 0;
-		return (range === 'all' ? s.daily : s.hourly).map(([t, v]) => ({ t: Date.parse(t), v })).filter((p) => p.t >= since);
+		return (range === 'all' ? s.daily : s.hourly)
+			.map(([t, v]) => ({ t: Date.parse(t), v }))
+			.filter((p) => p.t >= span.t0 && p.t <= span.t1);
+	});
+	// the sensor's first value ever, when it lies inside the window: the sensor is younger than the range
+	// (never on Alles, whose window starts there). The hourly series knows the hour when the first day
+	// lies in its week, else the day has to do (a daily date is UTC midnight)
+	const born = $derived.by(() => {
+		const s = history?.[key];
+		if (!s || !points.length || range === 'all') return null;
+		const daily = s.daily.length ? Date.parse(s.daily[0][0]) : Infinity;
+		const hourly = s.hourly.length ? Date.parse(s.hourly[0][0]) : Infinity;
+		const first = daily >= hourly - 86400e3 ? hourly : daily;
+		return first > span.t0 + (span.t1 - span.t0) * 0.02 ? Math.max(first, points[0].t) : null;
 	});
 	const any = $derived(keys.some((k) => history![k].daily.length > 0 || history![k].hourly.length > 0));
 
@@ -62,16 +85,27 @@
 		return `${WD[d.getDay()]} ${d.getDate()}.${d.getMonth() + 1}.`;
 	};
 	const when = (t: number) => (range === 'all' ? day(t) : `${day(t)}, ${String(new Date(t).getHours()).padStart(2, '0')}:00`);
-	// hours when the data spans less than two days (a sensor that just went live), else days
+	// hours when the window is shorter than two days, weekdays up to two weeks (7 Tage, or Alles of a
+	// sensor that just went live), else dates
 	const axis = (t: number, span: number) => {
 		const d = new Date(t);
 		if (span < 2 * 86400e3) return `${String(d.getHours()).padStart(2, '0')}:00`;
-		if (range === '7d') return `${WD[d.getDay()]} ${d.getDate()}.`;
+		if (span < 14 * 86400e3) return `${WD[d.getDay()]} ${d.getDate()}.`;
 		return `${d.getDate()}.${d.getMonth() + 1}.`;
 	};
 
 	const geo = $derived.by(() => {
-		if (points.length < 2 || !w) return null;
+		if (!w) return null;
+		const { t0, t1 } = span;
+		const x = (t: number) => ((t - t0) / (t1 - t0)) * (w - PAD.r);
+		const labels = [0, 1, 2, 3]
+			.map((j) => {
+				const t = t0 + ((t1 - t0) * j) / 3;
+				return { x: x(t), text: axis(t, t1 - t0), anchor: j === 0 ? 'start' : j === 3 ? 'end' : 'middle' };
+			})
+			.filter((l, i, all) => !i || l.text !== all[i - 1].text); // a two-day Alles would say "Mi 28." twice
+		// the time axis stands even without a value in the window, so the empty window reads as empty
+		if (!points.length) return { xy: [] as number[][], line: '', area: '', ticks: [], labels, start: null };
 		const vs = points.map((p) => p.v);
 		let lo = Math.min(...vs);
 		let hi = Math.max(...vs);
@@ -80,9 +114,6 @@
 		(lo -= pad), (hi += pad);
 		// fine dust and noise are never below zero, so the pad must not draw a negative tick
 		if (key !== 'temp' && Math.min(...vs) >= 0) lo = Math.max(lo, 0);
-		const t0 = points[0].t;
-		const t1 = points[points.length - 1].t;
-		const x = (t: number) => ((t - t0) / (t1 - t0)) * (w - PAD.r);
 		const y = (v: number) => PAD.t + (1 - (v - lo) / (hi - lo)) * (H - PAD.t - PAD.b);
 		const xy = points.map((p) => [x(p.t), y(p.v)]);
 		// a gap in the data breaks the line, no stroke across hours or days with nothing
@@ -97,17 +128,23 @@
 		const base = H - PAD.b;
 		const area = runs.map((r) => `${path(r)}L${r[r.length - 1][0].toFixed(1)} ${base}L${r[0][0].toFixed(1)} ${base}Z`).join('');
 		const ticks = [hi, (hi + lo) / 2, lo].map((v) => ({ v, y: y(v) }));
-		const labels = [0, 1, 2, 3].map((j) => {
-			const t = t0 + ((t1 - t0) * j) / 3;
-			return { x: x(t), text: axis(t, t1 - t0), anchor: j === 0 ? 'start' : j === 3 ? 'end' : 'middle' };
-		});
-		return { xy, line, area, ticks, labels };
+		// a sensor younger than the window: a dashed line at its first value, "seit Do 27.10.",
+		// hatching before it, so the empty left part reads as "no sensor yet", not as a gap
+		const start =
+			born === null
+				? null
+				: {
+						x: x(born),
+						text: `seit ${range === '24h' ? `${String(new Date(born).getHours()).padStart(2, '0')}:00` : day(born)}`,
+						right: x(born) > (w - PAD.r) * 0.6 // the label goes left of the line near the right edge
+					};
+		return { xy, line, area, ticks, labels, start };
 	});
 
 	const at = $derived(points.length ? (hover ?? points.length - 1) : null);
 
 	function pick(e: PointerEvent) {
-		if (!geo) return;
+		if (!geo?.xy.length) return;
 		const px = e.clientX - (e.currentTarget as Element).getBoundingClientRect().left;
 		let best = 0;
 		for (let i = 1; i < geo.xy.length; i++) if (Math.abs(geo.xy[i][0] - px) < Math.abs(geo.xy[best][0] - px)) best = i;
@@ -132,7 +169,7 @@
 					<b>{fmt(points[at].v)} <small>{unit}</small></b>
 					<span>{when(points[at].t)}</span>
 				{:else}
-					<span>Zu wenig Daten für diesen Zeitraum</span>
+					<span>Keine Werte in diesem Zeitraum</span>
 				{/if}
 			</div>
 			<div class="seg">
@@ -159,6 +196,18 @@
 				{#each geo.labels as l}
 					<text x={l.x} y={H - 4} text-anchor={l.anchor}>{l.text}</text>
 				{/each}
+				{#if geo.start}
+					<defs>
+						<pattern id={hatch} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+							<line x1="0" y1="0" x2="0" y2="6" class="hatch" />
+						</pattern>
+					</defs>
+					<rect x="0" y={PAD.t} width={geo.start.x} height={H - PAD.t - PAD.b} fill="url(#{hatch})" class="before" />
+					<line x1={geo.start.x} x2={geo.start.x} y1={PAD.t} y2={H - PAD.b} class="start" />
+					<text x={geo.start.x + (geo.start.right ? -6 : 6)} y={PAD.t + 11} text-anchor={geo.start.right ? 'end' : 'start'} class="start-label">
+						{geo.start.text}
+					</text>
+				{/if}
 				<path d={geo.area} class="area" />
 				<path d={geo.line} class="line" />
 				{#if at !== null}
@@ -258,6 +307,21 @@
 	.cursor {
 		stroke: var(--ink2);
 		stroke-width: 1;
+	}
+	.hatch {
+		stroke: var(--line);
+		stroke-width: 1;
+	}
+	.before {
+		opacity: 0.7;
+	}
+	.start {
+		stroke: var(--ink2);
+		stroke-width: 1;
+		stroke-dasharray: 3 3;
+	}
+	.start-label {
+		font-weight: 600;
 	}
 	.dot {
 		fill: var(--c);

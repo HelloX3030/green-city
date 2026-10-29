@@ -1,14 +1,15 @@
 // Drives the app through headless Chrome and checks the flows in scenarios.md.
-// Needs the dev server (5173) and the backend (8000) running. Screenshots go to e2e/out/.
+// Needs the dev server (5173) and the backend (8000) running, other addresses via APP= and API=
+// (then start the dev server with VITE_API_URL=<API>). Screenshots go to e2e/out/.
 // Four Chromes run at once, one per screen size and one for the phone-only flows, each with its own profile.
-// usage: node e2e/run.mjs [filter]
+// usage: [APP=http://localhost:5173] [API=http://localhost:8000] node e2e/run.mjs [filter]
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-const APP = 'http://localhost:5173';
-const API = 'http://localhost:8000';
+const APP = process.env.APP ?? 'http://localhost:5173';
+const API = process.env.API ?? 'http://localhost:8000';
 const OUT = new URL('./out/', import.meta.url).pathname;
 const CITY = { latitude: 49.148, longitude: 9.221, accuracy: 10 };
 const AWAY = { latitude: 48.78, longitude: 9.18, accuracy: 10 }; // Stuttgart
@@ -446,9 +447,24 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		expect(await page.has('.legend'), 'no legend');
 	});
 
+	// the pin of the first of these sensors that comes on screen after a jump to it (the map stops at
+	// the city limit, a box outside it stays off screen), above the sheet: [sensor, [x, y]]
+	const onScreenPin = async (sensors) => {
+		for (const sensor of sensors) {
+			await page.setView(sensor.lon, sensor.lat, 16);
+			// the jump has to be over before the pin is measured, and the pin has to be on top at
+			// that point (a neighbour pin or the bubble number can sit on it), else the tap misses
+			await page.idle();
+			await wait(300);
+			const pin = await page.eval(`(() => { const p = window.__map.project([${sensor.lon}, ${sensor.lat}]); const box = document.querySelector('.map').getBoundingClientRect(); let best, bd = 1e9; for (const el of document.querySelectorAll('.pin.sensor')) { const r = el.getBoundingClientRect(); const d = Math.hypot(r.left + r.width / 2 - box.left - p.x, r.top + r.height / 2 - box.top - p.y); if (d < bd) (best = [el, r.left + r.width / 2, r.top + r.height / 2]), (bd = d); } if (!best || !best[0].contains(document.elementFromPoint(best[1], best[2]))) return null; return [best[1], best[2]]; })()`);
+			if (pin && pin[0] > 0 && pin[0] < page.w && pin[1] > 0 && pin[1] < page.h * 0.7) return [sensor, pin];
+		}
+		return [null, null];
+	};
+	const WD = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+
 	await scenario(`${size}: sensor card shows the history, Alles and 7 Tage switch the chart, a touch reads a value`, async () => {
-		// a sensor the server has hourly and daily values for, whose pin is on screen after a jump
-		// to it (the map stops at the city limit, a box outside it stays off screen)
+		// a sensor the server has hourly and daily values for
 		const withHistory = [];
 		for (const s of await (await fetch(`${API}/sensors`)).json()) {
 			const h = Object.values(await (await fetch(`${API}/sensors/${s.id}/history`)).json());
@@ -457,17 +473,7 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		expect(withHistory.length, 'no sensor with history on the server');
 		await page.goto();
 		expect(await page.until('.pin.sensor', 10000), 'no sensor pins');
-		let sensor, pin;
-		for (sensor of withHistory) {
-			await page.setView(sensor.lon, sensor.lat, 16);
-			// the jump has to be over before the pin is measured, and the pin has to be on top at
-			// that point (a neighbour pin or the bubble number can sit on it), else the tap misses
-			await page.idle();
-			await wait(300);
-			pin = await page.eval(`(() => { const p = window.__map.project([${sensor.lon}, ${sensor.lat}]); const box = document.querySelector('.map').getBoundingClientRect(); let best, bd = 1e9; for (const el of document.querySelectorAll('.pin.sensor')) { const r = el.getBoundingClientRect(); const d = Math.hypot(r.left + r.width / 2 - box.left - p.x, r.top + r.height / 2 - box.top - p.y); if (d < bd) (best = [el, r.left + r.width / 2, r.top + r.height / 2]), (bd = d); } if (!best || !best[0].contains(document.elementFromPoint(best[1], best[2]))) return null; return [best[1], best[2]]; })()`);
-			if (pin && pin[0] > 0 && pin[0] < page.w && pin[1] > 0 && pin[1] < page.h * 0.7) break; // above the sheet
-			pin = null;
-		}
+		const [sensor, pin] = await onScreenPin(withHistory);
 		expect(pin, `none of ${withHistory.map((s) => s.name).join(', ')} comes on screen`);
 		await page.tap(...pin);
 		expect(await page.sheetHas(sensor.name), `the tap did not open ${sensor.name}`);
@@ -485,6 +491,10 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		expect(all && all !== week, 'Alles draws the same line as 7 Tage');
 		await page.clickText('7 Tage');
 		await wait(200);
+		// the axis spans the whole window whatever the data: the first label is the day a week ago
+		const firstLabel = await page.eval(`[...document.querySelectorAll('.history svg text')].find((t) => t.getAttribute('text-anchor') === 'start' && +t.getAttribute('y') > 100)?.textContent`);
+		const weekAgo = new Date(Date.now() - 7 * 86400e3);
+		expect(firstLabel === `${WD[weekAgo.getDay()]} ${weekAgo.getDate()}.`, `the 7 Tage axis starts at "${firstLabel}"`);
 		const latest = await read();
 		const svg = await page.eval(`JSON.stringify(document.querySelector('.history svg').getBoundingClientRect())`).then(JSON.parse);
 		await page.tap(svg.x + svg.width * 0.3, svg.y + svg.height / 2);
@@ -507,6 +517,35 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		const ticks = await page.eval(`[...document.querySelectorAll('.history svg text')].map((t) => t.textContent)`);
 		expect(charted === 'Temperatur' || !ticks.some((t) => /^-\d/.test(t)), `the ${charted} chart has ticks ${ticks}`);
 		await page.shot(`${size}-sensor-history`);
+	});
+
+	await scenario(`${size}: a sensor younger than 7 Tage shows where it started`, async () => {
+		// a sensor whose history began within the week: the axis still spans the week, hatching and a
+		// dashed "seit Mo 27.10." line mark its first value; none on the server is a note, not a fail
+		const young = [];
+		for (const s of await (await fetch(`${API}/sensors`)).json()) {
+			const h = Object.values(await (await fetch(`${API}/sensors/${s.id}/history`)).json());
+			if (h.length && h.every((x) => x.hourly.length > 1 && x.daily.length && Date.parse(x.daily[0][0]) > Date.now() - 6.5 * 86400e3)) young.push(s);
+		}
+		if (!young.length) return console.log(`  note, ${size}: no sensor younger than a week on the server, nothing checked`);
+		await page.goto();
+		expect(await page.until('.pin.sensor', 10000), 'no sensor pins');
+		const [sensor, pin] = await onScreenPin(young);
+		expect(pin, `none of ${young.map((s) => s.name).join(', ')} comes on screen`);
+		await page.tap(...pin);
+		expect(await page.sheetHas(sensor.name), `the tap did not open ${sensor.name}`);
+		expect(await page.until('.history .start', 6000), `no start line on ${sensor.name}`);
+		const start = await page.eval(`[document.querySelector('.history .start-label')?.textContent.trim(), +document.querySelector('.history .before')?.getAttribute('width'), document.querySelector('.history svg').getBoundingClientRect().width]`);
+		expect(/^seit (So|Mo|Di|Mi|Do|Fr|Sa) \d+\.\d+\.$/.test(start[0]), `the start label reads "${start[0]}"`);
+		expect(start[1] > start[2] * 0.3 && start[1] < start[2], `the hatching before the start is ${start[1]} px of ${start[2]}`);
+		await page.shot(`${size}-sensor-young`); // 7 Tage; the scenario's own shot at the end shows Alles
+		// Alles is the sensor's lifetime: the axis starts at its first day, no start line, no hatching
+		await page.clickText('Alles');
+		await wait(200);
+		const firstDay = new Date(Date.parse(Object.values(await (await fetch(`${API}/sensors/${sensor.id}/history`)).json())[0].daily[0][0]));
+		const allFirst = await page.eval(`[...document.querySelectorAll('.history svg text')].find((t) => t.getAttribute('text-anchor') === 'start' && +t.getAttribute('y') > 100)?.textContent`);
+		expect(allFirst === `${WD[firstDay.getDay()]} ${firstDay.getDate()}.`, `the Alles axis starts at "${allFirst}" for a sensor since ${firstDay.toDateString()}`);
+		expect(!(await page.has('.history .start')), 'Alles still draws a start line');
 	});
 
 	await scenario(`${size}: a bubble without a sensor nearby says Sensor fehlt`, async () => {
