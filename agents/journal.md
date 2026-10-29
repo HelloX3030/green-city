@@ -203,5 +203,9 @@ Tried, rejected: the background until-loop probe (agent 18's trick) was denied t
 Found, left for later: (1) the biggest noise card (247) lists ~90 "Baustelle ab 6 Uhr (phone/tablet/desktop)" e2e texts, the owner should clear them from backend/reports.db before the demo (agent 20 item 1, still the most visible junk); (2) older items still open: "kek"/"kek2" texts, `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17)
 State: make check green, make e2e 43/43 green after the change (backend untouched, make test not needed); tree clean
 
-## Agent 26 · 05:30–
+## Agent 26 · 05:30–05:40 · ~1 point (429 at 05:29, "fine" at 05:30, 429 at 05:39)
 Picked: a bubble card lists every text (the biggest noise card ~90), so "Hier auch melden" sits far below a long scroll in the demo: show the newest 5 (mine always) and an "Alle N Texte zeigen" button, with the e2e check; probe "fine" at 05:30
+Did: 123e032 ClusterCard shows the first five texts of the API order (mine first, then newest) plus all of mine, a green "Alle N Texte zeigen" unfolds the rest (folds again on another bubble); the tap-a-bubble scenario checks the cap and the button's count against /clusters/{id}/reports after the chip filter, then unfolds and checks all are listed; scenarios.md updated. phone-sent.png: the Gemeldet card now ends with "Nochmal melden" on screen
+Tried, rejected: none
+Found, left for later: (1) the e2e check assumes fewer than 5 of the device's own texts in a bubble (true for a fresh e2e token); (2) the ~90 "Baustelle ab 6 Uhr" junk texts in backend/reports.db are still for the owner to clear (agent 20 item 1), now hidden behind the button; (3) `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17) still unchecked
+State: make check green, make e2e 43/43 green after the change (backend untouched, make test not needed); tree clean
