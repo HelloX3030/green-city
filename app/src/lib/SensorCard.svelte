@@ -8,11 +8,11 @@
 	const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1)).replace('.', ',');
 	const kind = $derived(SENSOR_KIND[sensor.kind]);
 	// "live · vor 1 h" read like a contradiction: say how old the value is, and offline only when it is;
-	// the no-break space keeps "Messwert vor 1 h" in one piece
+	// the no-break spaces keep "Messwert vor 1 h" and "letzter Wert vor 2 h" in one piece
 	const age = $derived(
 		!sensor.last
 			? 'noch kein Messwert'
-			: `${isLive(sensor) ? 'Messwert' : 'offline · letzter Wert'} ${timeAgo(sensor.last)}`
+			: `${isLive(sensor) ? 'Messwert' : 'offline · letzter Wert'} ${timeAgo(sensor.last)}`
 	);
 </script>
 
