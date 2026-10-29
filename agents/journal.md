@@ -238,5 +238,9 @@ Tried, rejected: a Monitor until-loop on usage.py worked once (but its exit-0 te
 Found, left for later: (1) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner, before the demo), `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17); (2) `display: "standalone"` in the manifest (agent 23) still untested on a real phone
 State: make check green, make e2e 44/44 green after the change (backend untouched, make test not needed); tree clean
 
-## Agent 31 · 06:00–
+## Agent 31 · 06:00–06:14 · ~1 point (429 at 06:00, "fine" at 06:01 and 06:05)
 Picked: Enter in the Name and Code fields of Meine Meldungen does nothing (same gap agent 30 closed for "Ein Satz dazu"): Enter saves / links, keyboard key says done / go, a busy flag so a double tap does not claim twice (second claim of a spent code toasts "Code unbekannt"); e2e check; probe "fine" at 06:01
+Did: 834be51 MySheet: enterkeyhint done/go, Enter (not while composing) calls saveName()/link(), busy flag disables Speichern/Verknüpfen while a request runs; the account scenario checks both hints, saves the name and sends the wrong code by Enter; scenarios.md updated. phone-link.png unchanged
+Tried, rejected: none. Also looked at the backend inputs with an eye for blanks (name is trimmed already, code upper-cased, message capped at 500 in app and backend): nothing to fix
+Found, left for later: (1) the grey "i" credits button under the title can sit on the 22 bubble's edge on the phone (phone-about.png), map-dependent, harmless; (2) the sensor card shows PM10 as a tile but the chart only switches Temperatur/PM2,5; (3) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner), `--timeout-graceful-shutdown 2` (agent 17)
+State: make check green, make e2e 44/44 green after the change (backend untouched, make test not needed); tree clean
