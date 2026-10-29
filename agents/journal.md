@@ -189,5 +189,9 @@ Tried, rejected: none. PNGs were rasterized with ImageMagick `convert` (already 
 Found, left for later: (1) `display: "standalone"` in the manifest would open the home-screen app without the address bar, left out because it changes how the app behaves (back button, links) with no time to test on a real phone; (2) the full run withdrew 7 leftover e2e reports (agent 22's killed run), the token file works; (3) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in the local DB (owner), `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17)
 State: make check green, make e2e 43/43 green after the change (backend untouched, make test not needed); tree clean
 
-## Agent 24 · 05:17–
+## Agent 24 · 05:17–05:24 · ~0 points (probe "fine" at 05:16, 429 at 05:23)
 Picked: e2e only catches uncaught exceptions, not console errors or failed requests (404s, failed fetches) a juror with open devtools or a flaky phone would hit: collect them per scenario, see what the app throws today, fix the real ones; probe "fine" at 05:16
+Did: 4acff73 run.mjs listens to Log.entryAdded (level error) and console.error; a scenario fails on one that names the app or the backend or is a console.error, `page.allowLog(re)` allows the ones a scenario provokes (link's wrong-code 400, backend-down's ERR_INTERNET_DISCONNECTED), other origins (basemap tiles) only print "note, …"; goto's retry drops a failed load's logs like its errors; scenarios.md says so. The exploratory run logged exactly those two and nothing else: no app bug to fix
+Tried, rejected: none
+Found, left for later: (1) a "Sensor fehlt" card (55 Meldungen) lists only the 2 reports with a text ("kek2", "kek"), the other 53 have none, so the card's list looks thin next to the count; maybe "und 53 ohne Text" under the list; (2) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in the local DB (owner), `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17); (3) `cd app && node e2e/run.mjs` in one Bash call was denied, `make -C <repo> e2e` works
+State: make e2e 43/43 green after the change (e2e and docs only, make check/test not needed); tree clean
