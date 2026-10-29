@@ -25,7 +25,7 @@
 		sending = true;
 		error = '';
 		try {
-			onsent(await postReport({ ...location, types: selected, message: message || undefined }));
+			onsent(await postReport({ ...location, types: selected, message: message.trim() || undefined }));
 		} catch (e) {
 			error = 'Senden fehlgeschlagen. Nochmal?';
 		} finally {

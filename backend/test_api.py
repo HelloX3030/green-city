@@ -55,6 +55,12 @@ class Api(unittest.TestCase):
         self.assertEqual(self.c.get(f"/clusters/{far['id']}/reports").json()[0]["message"], "elsewhere")
         self.assertEqual(self.c.get("/clusters/999/reports").status_code, 404)
 
+    def test_blank_text_is_no_text_and_each_type_counts_once(self):
+        r = self.c.post("/reports", json={**REPORT, "message": "   ", "types": ["noise", "noise"]}, headers=A).json()
+        self.assertEqual((r["message"], r["types"]), (None, ["noise"]))
+        r = self.c.post("/reports", json={**REPORT, "message": "  Baustelle \n"}, headers=A).json()
+        self.assertEqual(r["message"], "Baustelle")
+
     def test_events_stream_says_when_reports_change(self):
         async def run():
             ev = main.Events()

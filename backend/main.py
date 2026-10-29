@@ -8,7 +8,7 @@ from enum import Enum
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 import bikes
 import db
@@ -33,6 +33,16 @@ class ReportIn(BaseModel):
     lat: float = Field(ge=-90, le=90)
     lon: float = Field(ge=-180, le=180)
     types: list[ReportType] = Field(min_length=1)
+
+    @field_validator("message")
+    @classmethod
+    def blank_is_no_text(cls, v: str | None) -> str | None:
+        return v.strip() or None if v else None  # "   " would be an empty row on the card, counted as a text
+
+    @field_validator("types")
+    @classmethod
+    def each_type_once(cls, v: list[ReportType]) -> list[ReportType]:
+        return list(dict.fromkeys(v))
 
 
 class Report(ReportIn):

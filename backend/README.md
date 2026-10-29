@@ -8,7 +8,7 @@ Every request may carry `X-Device: <32-64 chars>`, the app's random token. `user
 
 - `GET /me` – `{id, name, created_at, devices}` of the caller; `PATCH /me {name}` sets the name, the whole account in v00
 - `POST /me/link` – `{code, expires_at}`, a 6-char code valid 10 min; `POST /me/claim {code}` on another device makes it this user, its reports so far come along (its old user row goes)
-- `POST /reports` `{lat, lon, types: ["noise"|"heat"|"air"|"no_shade"|"other"], message?}`, needs `X-Device`
+- `POST /reports` `{lat, lon, types: ["noise"|"heat"|"air"|"no_shade"|"other"], message?}`, needs `X-Device`; the message is trimmed (blank is none), a type named twice counts once
 - `GET /reports?since=<iso>`
 - `GET /reports/mine` – the caller's reports, newest first, needs `X-Device`
 - `DELETE /reports/{id}` – withdraw one of the caller's reports, 404 for anyone else's
