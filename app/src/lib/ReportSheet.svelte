@@ -128,7 +128,7 @@
 		background: var(--fill);
 		border: 0;
 		padding: 0 12px;
-		font-size: 14px;
+		font-size: 16px;
 	}
 	.msg::placeholder {
 		color: var(--ink2);

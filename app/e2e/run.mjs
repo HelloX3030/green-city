@@ -243,6 +243,8 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		await wait(300);
 		await page.clickText('Zu laut');
 		await type('.sheet .msg', `Baustelle ab 6 Uhr (${size})`);
+		const msgPx = await page.eval(`parseFloat(getComputedStyle(document.querySelector('.sheet .msg')).fontSize)`);
+		expect(msgPx >= 16, `message field is ${msgPx}px, iOS Safari zooms in on focus below 16px`);
 		await page.clickText('Melden');
 		await page.until('.sheet .badge', 6000); // post, then the clusters poll with the new report
 		await page.until('.sheet .voices li.me', 4000); // the card's own fetch of the texts
@@ -697,6 +699,8 @@ const phone = async ({ page, send, expect, scenario, melden, type, nearlyZoom, s
 		await wait(800);
 		const code = await page.eval(`document.querySelector('.sheet .code')?.innerText`);
 		expect(/^[A-Z2-9]{6}$/.test(code ?? ''), `code is ${code}`);
+		const small = await page.eval(`[...document.querySelectorAll('.sheet input')].map((i) => parseFloat(getComputedStyle(i).fontSize)).filter((px) => px < 16)`);
+		expect(!small.length, `inputs at ${small.join(', ')}px, iOS Safari zooms in on focus below 16px`);
 		await page.shot('phone-link');
 		// a wrong code typed on this device
 		await type('.sheet .claim input', 'ZZZZZZ');
