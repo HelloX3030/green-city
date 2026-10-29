@@ -3,7 +3,8 @@
 	// Alles from the daily one. A finger or the mouse on it reads the value under it, else the latest.
 	import { getSensorHistory, SENSOR_KIND, type Sensor, type Series } from './api';
 
-	let { sensor }: { sensor: Sensor } = $props();
+	// key and tabs bound so the card's value tiles can switch the chart too
+	let { sensor, key = $bindable(''), tabs = $bindable([]) }: { sensor: Sensor; key?: string; tabs?: string[] } = $props();
 
 	const LABELS: Record<string, string> = { temp: 'Temperatur', pm25: 'PM2,5', noise: 'Lärm' };
 	const UNITS: Record<string, string> = { temp: '°C', pm25: 'µg/m³', noise: 'dB' };
@@ -18,7 +19,6 @@
 	const PAD = { t: 8, r: 46, b: 18 }; // the tick labels sit right, the dates below
 
 	let history = $state<Record<string, Series> | null>(null);
-	let key = $state('');
 	let range = $state<Range>('7d');
 	let w = $state(0);
 	let hover = $state<number | null>(null);
@@ -28,6 +28,9 @@
 		if (!history) return [];
 		const live = sensor.values.map((v) => v.key).filter((k) => k in history!);
 		return [...live, ...Object.keys(history).filter((k) => !live.includes(k))];
+	});
+	$effect(() => {
+		tabs = keys;
 	});
 	const label = (k: string) => sensor.values.find((v) => v.key === k)?.label ?? LABELS[k] ?? k;
 	const unit = $derived(sensor.values.find((v) => v.key === key)?.unit ?? UNITS[key] ?? '');

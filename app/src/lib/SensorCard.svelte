@@ -14,6 +14,9 @@
 			? 'noch kein Messwert'
 			: `${isLive(sensor) ? 'Messwert' : 'offline · letzter Wert'} ${timeAgo(sensor.last)}`
 	);
+	// the phenomenon the chart below shows; a tap on its value tile switches the chart to it
+	let key = $state('');
+	let tabs = $state<string[]>([]);
 </script>
 
 <div class="head">
@@ -30,15 +33,21 @@
 	<button class="x" onclick={onclose} aria-label="Schließen"><Icon name="x" size={16} /></button>
 </div>
 {#if sensor.values.length}
-	<dl>
+	<div class="vals">
 		{#each sensor.values as v}
-			<div><dt>{v.label}</dt><dd>{fmt(v.value)} <small>{v.unit}</small></dd></div>
+			{#if tabs.length > 1 && tabs.includes(v.key)}
+				<button class="tile" class:on={v.key === key} aria-pressed={v.key === key} onclick={() => (key = v.key)}>
+					<span class="lbl">{v.label}</span><span class="val">{fmt(v.value)} <small>{v.unit}</small></span>
+				</button>
+			{:else}
+				<div class="tile"><span class="lbl">{v.label}</span><span class="val">{fmt(v.value)} <small>{v.unit}</small></span></div>
+			{/if}
 		{/each}
-	</dl>
+	</div>
 {:else}
 	<p class="empty">Sendet noch keine Daten.</p>
 {/if}
-<SensorHistory {sensor} />
+<SensorHistory {sensor} bind:key bind:tabs />
 
 <style>
 	.head {
@@ -78,28 +87,34 @@
 		color: var(--ink2);
 		flex: none;
 	}
-	dl {
+	.vals {
 		display: grid;
 		grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
 		gap: 10px;
-		margin: 0;
 	}
-	dl > div {
+	.tile {
+		display: block;
+		text-align: left;
 		background: var(--fill);
 		border-radius: 12px;
 		padding: 8px 10px;
+		box-shadow: inset 0 0 0 1.5px transparent;
 	}
-	dt {
+	.tile.on {
+		box-shadow: inset 0 0 0 1.5px var(--ink2);
+	}
+	.lbl {
+		display: block;
 		color: var(--ink2);
 		font-size: 12px;
 	}
-	dd {
-		margin: 0;
+	.val {
+		display: block;
 		font-size: 18px;
 		font-weight: 600;
 		font-variant-numeric: tabular-nums;
 	}
-	dd small {
+	.val small {
 		font-size: 12px;
 		font-weight: 500;
 		color: var(--ink2);

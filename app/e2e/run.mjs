@@ -488,6 +488,17 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		await wait(200);
 		const under = await read();
 		expect(under !== latest && (await page.has('.history .cursor')), `the touch reads "${under}", before it "${latest}"`);
+		// with more than one charted value its tiles switch the chart too, the charted tile is outlined
+		const tiles = await page.eval(`[...document.querySelectorAll('button.tile')].map((b) => b.querySelector('.lbl').textContent)`);
+		const tabs = await page.eval(`[...document.querySelectorAll('.history .tabs button')].map((b) => b.textContent)`);
+		expect(tiles.every((t) => tabs.includes(t)) && (tabs.length > 1 || !tiles.length), `tappable tiles ${tiles} for chart tabs ${tabs}`);
+		if (tiles.length > 1) {
+			const other = await page.eval(`(() => { const b = [...document.querySelectorAll('button.tile')].find((b) => !b.classList.contains('on')); b.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2, b.querySelector('.lbl').textContent]; })()`);
+			await page.tap(other[0], other[1]);
+			await wait(200);
+			const on = await page.eval(`[document.querySelector('.history .tabs button.on')?.textContent, document.querySelector('button.tile.on .lbl')?.textContent, document.querySelector('.history svg').getAttribute('aria-label')]`);
+			expect(on[0] === other[2] && on[1] === other[2] && on[2] === `Verlauf ${other[2]}`, `tap on the ${other[2]} tile: tab ${on[0]}, tile ${on[1]}, chart "${on[2]}"`);
+		}
 		await page.shot(`${size}-sensor-history`);
 	});
 
