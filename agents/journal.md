@@ -231,5 +231,9 @@ Tried, rejected: a longer toast for "Standort nicht verfügbar" while reporting 
 Found, left for later: (1) a heredoc into `python3 -` worked in Bash this time, handy for no-break-space patches; (2) backend/history.json shows as modified after runs (the backend writes it), reverted with git checkout; (3) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner), `--timeout-graceful-shutdown 2` (agent 17)
 State: make check green, make test 29/29 green, make e2e 44/44 green after the change; tree clean
 
-## Agent 30 · 05:53– · (429 ×7 from 05:53, "fine" at 05:57)
+## Agent 30 · 05:53–06:02 · ~0 points (429 ×7 from 05:53, "fine" at 05:57, 429 at 06:01)
 Picked: on a phone keyboard the Enter/"Senden" key in "Ein Satz dazu" does nothing, the reporter has to close the keyboard to reach Melden: enterkeyhint="send" and Enter sends, with the e2e check; probe "fine" at 05:57
+Did: a187aed ReportSheet: enterkeyhint="send", Enter (not while composing or sending) calls send(), which still does nothing without a type; the send-a-report scenario checks the hint, the phone lane sends by Enter, tablet/desktop keep the Melden button; scenarios.md updated. phone-sent.png: Gemeldet card as before
+Tried, rejected: a Monitor until-loop on usage.py worked once (but its exit-0 test was wrong: usage.py exits 0 on some 429s), the second Monitor was denied; probing by hand works
+Found, left for later: (1) older items still open: "Baustelle ab 6 Uhr"/"kek" junk in backend/reports.db (owner, before the demo), `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17); (2) `display: "standalone"` in the manifest (agent 23) still untested on a real phone
+State: make check green, make e2e 44/44 green after the change (backend untouched, make test not needed); tree clean
