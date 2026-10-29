@@ -21,7 +21,7 @@ Phone only
 - Melden with position denied: toast "Standort nicht verfügbar", zooms in where it is
 - report mode at zoom 15 and 16: the circle is 64 px, then 128 px (100 m on the ground), hint stays below the dot
 - a sensor under a bigger bubble: at zoom 15 the NoiseNode pin lies inside the runner's bubble, a tap on it opens the sensor card, small pins sit above big ones
-- report mode with the centre on a bubble: bubble has a green ring, hint "Kommt zu den … Meldungen hier dazu", 150 m further: no ring, plain hint
+- report mode with the centre on a bubble: bubble has a green ring, its number moves to the badge on the lower edge (the centre dot would cover it), hint "Kommt zu den … Meldungen hier dazu", 150 m further: no ring, plain hint
 - zoom out in report mode: circle grey, hint "Näher ranzoomen", Melden disabled, enabled again after zooming in
 - drag past the city edge six times: centre stays inside the city limit, no jump after release
 - jump far outside at zoom 8: centre snaps to the city limit, zoom is the min zoom, the whole city is on screen

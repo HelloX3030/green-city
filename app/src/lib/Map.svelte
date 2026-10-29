@@ -459,7 +459,12 @@
 	$effect(() => {
 		const id = joins?.id; // read outside the loop, the markers map is empty on the first run
 		void clusters; // and again after a refresh, the marker may be new
-		for (const [cid, m] of clusterMarkers) m.getElement().classList.toggle('join', cid === id);
+		const dot = id ? map.project([lon, lat]) : null; // the crosshair's dot, on the number it moves to the badge
+		for (const [cid, m] of clusterMarkers) {
+			const p = cid === id && dot ? map.project(m.getLngLat()) : null;
+			m.getElement().classList.toggle('join', cid === id);
+			m.getElement().classList.toggle('dotted', !!p && Math.abs(p.x - dot!.x) < 26 && Math.abs(p.y - dot!.y) < 18);
+		}
 	});
 
 	$effect(() => {
@@ -790,7 +795,8 @@
 		border: 2px solid #fff;
 		box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
 	}
-	:global(.pin.cluster.covered span) {
+	:global(.pin.cluster.covered span),
+	:global(.pin.cluster.dotted span) {
 		position: absolute;
 		left: 50%;
 		bottom: -10px;

@@ -513,6 +513,14 @@ const phone = async ({ page, send, expect, scenario, melden, type, nearlyZoom, s
 			return hint === `Kommt zu den ${count} Meldungen hier dazu`;
 		});
 		expect(hint === `Kommt zu den ${count} Meldungen hier dazu`, `hint is "${hint}", the API counts ${count}`);
+		// the crosshair's dot (10 px and a 3 px white ring) must not lie on the bubble's number
+		const under = await page.eval(`(() => {
+			const d = document.querySelector('.crosshair').getBoundingClientRect();
+			const x = d.left + d.width / 2, y = d.top + d.height / 2;
+			const n = document.querySelector('.pin.cluster.join span').getBoundingClientRect();
+			return x + 8 > n.left && x - 8 < n.right && y + 8 > n.top && y - 8 < n.bottom;
+		})()`);
+		expect(!under, 'the centre dot lies on the bubble number');
 		await page.shot('phone-join');
 		// 150 m east: outside the radius
 		await page.setView(c.lon + 0.00206, c.lat, 16);
