@@ -26,6 +26,8 @@ for (const [url, what] of [[APP, 'dev server (cd app && npm run dev)'], [`${API}
 fs.rmSync(OUT, { recursive: true, force: true });
 fs.mkdirSync(OUT, { recursive: true });
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+// every device token the run sends reports with; at the end their reports are withdrawn
+const tokens = new Set();
 
 // a headless Chrome of its own, the CDP connection and the page helpers
 async function browser() {
@@ -59,7 +61,17 @@ async function browser() {
 			if (r.result?.exceptionDetails) throw new Error('eval: ' + (r.result.exceptionDetails.exception?.description ?? r.result.exceptionDetails.text).split('\n')[0]);
 			return r.result?.result?.value;
 		},
+		device: async () => {
+			const t = await page.eval(`localStorage.getItem('device')`).catch(() => null);
+			if (t) tokens.add(t);
+		},
+		// a new device: the old token is kept for the cleanup first
+		forget: async () => {
+			await page.device();
+			await page.eval(`localStorage.clear(); 0`);
+		},
 		goto: async (geo = CITY) => {
+			await page.device();
 			await send('Emulation.setGeolocationOverride', geo ?? {});
 			await send('Page.navigate', { url: APP + '/' });
 			for (let t = 0; t < 30000; t += 250) {
@@ -121,6 +133,7 @@ async function browser() {
 	await send('Runtime.enable');
 	await send('Browser.grantPermissions', { origin: APP, permissions: ['geolocation'] });
 	const close = async () => {
+		await page.device();
 		ws.close();
 		const gone = new Promise((r) => chrome.on('exit', r));
 		chrome.kill();
@@ -513,6 +526,7 @@ const phone = async ({ page, send, expect, scenario, melden, type, nearlyZoom, s
 		// two people 150 m apart north of the runner's bubble: a group at zoom 12 for sure
 		for (const [i, dlon] of [[1, 0], [2, 0.0021]]) {
 			const tok = `e2e-group-${i}-`.padEnd(32, '0');
+			tokens.add(tok);
 			await fetch(`${API}/reports`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-device': tok }, body: JSON.stringify({ lat: CITY.latitude + 0.003, lon: CITY.longitude + dlon, types: ['air'] }) });
 		}
 		const apiCount = async () => (await fetch(`${API}/clusters`).then((r) => r.json())).reduce((n, c) => n + c.count, 0);
@@ -619,6 +633,7 @@ const phone = async ({ page, send, expect, scenario, melden, type, nearlyZoom, s
 		expect((await api('/me').then((r) => r.json())).name === 'Kim', 'name not saved');
 		// a second device with a report of its own claims this device's code
 		const other = 'e2e-other-' + Math.random().toString(16).slice(2).padEnd(24, '0');
+		tokens.add(other);
 		await api('/reports', { method: 'POST', body: JSON.stringify({ lat: 49.14, lon: 9.2, types: ['heat'] }) }, other);
 		const before = (await api('/reports/mine').then((r) => r.json())).length;
 		await page.clickText('Anderes Gerät verknüpfen');
@@ -652,7 +667,7 @@ const phone = async ({ page, send, expect, scenario, melden, type, nearlyZoom, s
 		expect(list.length >= 1 && !('user_id' in list[0]), `/reports/mine: ${JSON.stringify(list[0])}`);
 		expect((await fetch(`${API}/reports/mine`)).status === 400, '/reports/mine without a token did not refuse');
 		expect(await page.has('.pin.cluster.mine'), 'no bubble on the map is marked as mine');
-		await page.eval(`localStorage.clear(); 0`);
+		await page.forget();
 		await page.goto();
 		expect(!(await page.has('.pin.cluster.mine')), 'a cleared device still sees its bubbles as mine');
 		const me = async () => (await fetch(`${API}/me`, { headers: { 'x-device': await token() } }).then((r) => r.json())).id;
@@ -662,7 +677,7 @@ const phone = async ({ page, send, expect, scenario, melden, type, nearlyZoom, s
 		await page.goto();
 		expect((await token()) === t1, 'token changed on reload');
 		expect((await me()) === id1, 'user changed on reload');
-		await page.eval(`localStorage.clear(); 0`);
+		await page.forget();
 		await page.goto();
 		expect((await token()) !== t1, 'cleared device kept its token');
 		expect((await me()) !== id1, 'cleared device kept its user');
@@ -678,6 +693,7 @@ const phone = async ({ page, send, expect, scenario, melden, type, nearlyZoom, s
 		const count = () => page.eval(`[...document.querySelectorAll('.pin.cluster')].reduce((n, p) => n + +p.textContent, 0)`);
 		const before = await count();
 		const tok = `e2e-live-${Date.now()}`.padEnd(32, '0');
+		tokens.add(tok);
 		await fetch(`${API}/reports`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-device': tok }, body: JSON.stringify({ lat: CITY.latitude, lon: CITY.longitude, types: ['heat'] }) });
 		let after = before;
 		for (let i = 0; i < 10 && after === before; i++) (await wait(250)), (after = await count());
@@ -701,5 +717,14 @@ const phone = async ({ page, send, expect, scenario, melden, type, nearlyZoom, s
 const t0 = Date.now();
 const results = (await Promise.all([...Object.keys(SIZES).map((size) => lane((t) => sized(size, t))), lane(phone)])).flat();
 const failed = results.filter((r) => r.fails.length);
+// the run's own reports go again, so the local map does not fill up with test bubbles
+let withdrawn = 0;
+for (const t of tokens) {
+	const headers = { 'x-device': t };
+	for (const r of await fetch(`${API}/reports/mine`, { headers }).then((r) => r.json()).catch(() => [])) {
+		if ((await fetch(`${API}/reports/${r.id}`, { method: 'DELETE', headers })).ok) withdrawn++;
+	}
+}
+console.log(`\n${withdrawn} test reports withdrawn`);
 console.log(`\n${results.length - failed.length}/${results.length} ok in ${((Date.now() - t0) / 1000).toFixed(0)} s, screenshots in e2e/out/`);
 process.exit(failed.length ? 1 : 0);
