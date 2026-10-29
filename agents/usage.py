@@ -50,19 +50,19 @@ def probe():
 
 
 def advance(state, sample):
-    """Fold a sample into the state: consumed points grow by the utilization delta; when the
-    5-hour window resets (resets_at changes), everything in the new window counts as ours."""
+    """Fold a sample into the state: consumed points grow by the utilization delta. A drop in the
+    utilization is the 5-hour window turning over, then everything in the new window counts as ours.
+    resets_at is not used for that: it is unreliable (microsecond jitter, sometimes missing)."""
     u, r = sample.get('session_percent'), sample.get('session_resets_at')
     if u is None:
         return state
-    last_u, last_r = state.get('last_util'), state.get('last_resets_at')
-    same_window = last_r is not None and r is not None and str(r)[:19] == str(last_r)[:19]  # microseconds jitter per request
+    last_u = state.get('last_util')
     if last_u is None:
         pass
-    elif last_r is not None and not same_window:
+    elif float(u) < float(last_u):
         state['consumed'] = state.get('consumed', 0.0) + float(u)
     else:
-        state['consumed'] = state.get('consumed', 0.0) + max(0.0, float(u) - float(last_u))
+        state['consumed'] = state.get('consumed', 0.0) + float(u) - float(last_u)
     state['last_util'], state['last_resets_at'] = float(u), r
     state['weekly'] = sample.get('weekly_percent')
     state['sampled_at'] = sample.get('fetched_at')
