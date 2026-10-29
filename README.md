@@ -24,7 +24,7 @@ make dev     # backend :8000 + app :5173, phone on same wifi: http://<laptop-ip>
 
 - `app/` – the web app (branch `app`)
 - `NoiseNode/` – senseBox firmware (branch `hardware`)
-- `resources/` – hackathon slides, Heilbronn noise maps
+- `resources/` – hackathon slides, Heilbronn noise maps, `resources/qr/` printable QR code
 - `notes.md` – local scratch, untracked
 
 ## Resources
