@@ -292,6 +292,8 @@ def main():
     ap.add_argument('--fresh', action='store_true', help='forget a previous unfinished run')
     ap.add_argument('--dry-run', action='store_true', help='print the first prompt, start nothing')
     args = ap.parse_args()
+    args.min_agent_points = min(args.min_agent_points, args.agent_points)
+    args.min_agent_minutes = min(args.min_agent_minutes, args.agent_minutes)
 
     global LOG
     os.makedirs(RUN, exist_ok=True)
@@ -382,7 +384,8 @@ def main():
             if n > args.max_agents:
                 why = f'max agents {args.max_agents} reached'
             elif remaining < args.min_agent_points:
-                why = f"budget used ({state['consumed']:.1f} of {args.budget} points, {args.reserve} reserved)"
+                why = (f"budget used ({state['consumed']:.1f} of {args.budget} points, {args.reserve} reserved, "
+                       f"{remaining:.1f} left is less than the {args.min_agent_points:g} an agent needs)")
             elif mins_left - args.report_minutes < args.min_agent_minutes:
                 why = f'{mins_left:.0f} min left, {args.report_minutes} needed for the report'
             elif state.get('weekly') is not None and state['weekly'] >= args.weekly_ceiling:

@@ -56,9 +56,10 @@ def advance(state, sample):
     if u is None:
         return state
     last_u, last_r = state.get('last_util'), state.get('last_resets_at')
+    same_window = last_r is not None and r is not None and str(r)[:19] == str(last_r)[:19]  # microseconds jitter per request
     if last_u is None:
         pass
-    elif last_r is not None and r != last_r:
+    elif last_r is not None and not same_window:
         state['consumed'] = state.get('consumed', 0.0) + float(u)
     else:
         state['consumed'] = state.get('consumed', 0.0) + max(0.0, float(u) - float(last_u))
