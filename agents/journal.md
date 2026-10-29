@@ -209,3 +209,6 @@ Did: 123e032 ClusterCard shows the first five texts of the API order (mine first
 Tried, rejected: none
 Found, left for later: (1) the e2e check assumes fewer than 5 of the device's own texts in a bubble (true for a fresh e2e token); (2) the ~90 "Baustelle ab 6 Uhr" junk texts in backend/reports.db are still for the owner to clear (agent 20 item 1), now hidden behind the button; (3) `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17) still unchecked
 State: make check green, make e2e 43/43 green after the change (backend untouched, make test not needed); tree clean
+
+## Agent 27 · 05:35–
+Picked: after Melden with a filter set that hides the new report's bubble (e.g. only Zu laut, mindestens 10; the filter survives reloads) no card opens and nothing says the report went out: a toast says "Gemeldet", with an e2e check; probe "fine" at 05:36 after a 429
