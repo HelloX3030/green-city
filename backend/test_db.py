@@ -24,6 +24,22 @@ class Db(unittest.TestCase):
             self.assertIsNone(db.user_of(con, "c" * 32))  # a look-up does not create
             self.assertIsNone(db.user_of(con, None))
 
+    def test_two_requests_of_a_new_device_make_one_user(self):
+        # the second request looked the token up before the first one created it
+        db.init()
+        with db.connect() as con:
+            a = db.user_for(con, "a" * 32)
+        lookup, calls = db.user_of, []
+        db.user_of = lambda con, token: lookup(con, token) if calls.append(token) or len(calls) > 1 else None
+        try:
+            with db.connect() as con:
+                b = db.user_for(con, "a" * 32)
+        finally:
+            db.user_of = lookup
+        self.assertEqual(b, a)
+        with db.connect() as con:
+            self.assertEqual(con.execute("SELECT count(*) FROM users").fetchone()[0], 1)
+
     def test_old_reports_get_a_user_from_their_author(self):
         with db.connect() as con:
             con.execute("CREATE TABLE reports (id INTEGER PRIMARY KEY, message TEXT, author TEXT, lat REAL, lon REAL, types TEXT, created_at TEXT)")

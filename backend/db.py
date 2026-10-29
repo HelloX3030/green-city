@@ -67,7 +67,10 @@ def user_for(con: sqlite3.Connection, token: str) -> int:
         return uid
     now = datetime.now(timezone.utc).isoformat()
     uid = con.execute("INSERT INTO users (created_at) VALUES (?)", (now,)).lastrowid
-    con.execute("INSERT INTO devices (token, user_id, created_at) VALUES (?,?,?)", (token, uid, now))
+    # a new phone sends /me and /reports/mine at once: the other request may have created the device meanwhile
+    if not con.execute("INSERT OR IGNORE INTO devices (token, user_id, created_at) VALUES (?,?,?)", (token, uid, now)).rowcount:
+        con.execute("DELETE FROM users WHERE id = ?", (uid,))
+        return user_of(con, token)
     return uid
 
 
