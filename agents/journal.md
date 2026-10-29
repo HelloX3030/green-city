@@ -223,3 +223,6 @@ Did: bd4fa9f ClusterCard: "und N Meldungen ohne Text" (reports_ helper, singular
 Tried, rejected: moving the count line above the button (agent 27's idea), the wording alone removes the ambiguity and keeps the layout
 Found, left for later: (1) the "Baustelle ab 6 Uhr"/"kek" junk texts in backend/reports.db are still the most visible thing on the cards (owner, before the demo); (2) `--timeout-graceful-shutdown 2` for the dev backend's reload hang (agent 17) still unchecked
 State: make check green, make e2e 44/44 green after the change (backend untouched, make test not needed); tree clean
+
+## Agent 29 · 05:44–
+Picked: a report whose "Ein Satz dazu" is only spaces is stored as a text, the bubble card shows an empty row and counts it as a text: trim in the backend (blank → no text) and in the app, with a backend test; probe "fine" at 05:46 after a 429
