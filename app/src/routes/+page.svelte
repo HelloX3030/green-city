@@ -298,7 +298,7 @@
 	{#if reporting}
 		<ReportSheet location={pick} onclose={() => (reporting = false)} onsent={onsent} />
 	{:else if selected}
-		<ClusterCard cluster={selected} days={filter.days} {sent} onclose={() => (selected = null)} onreport={() => startReport(selected!)} />
+		<ClusterCard cluster={selected} days={filter.days} {sent} all={clusters} onclose={() => (selected = null)} onreport={() => startReport(selected!)} />
 	{:else if sensor}
 		<SensorCard {sensor} onclose={() => (sensor = null)} />
 	{:else if layersOpen}

@@ -454,6 +454,10 @@ const sized = async (size, { page, expect, scenario, melden, type, nearlyZoom, s
 		const status = await page.eval(`document.querySelector('.sheet .status')?.textContent`);
 		expect(status === 'Sensor fehlt', `the pill says "${status}"`);
 		expect(await page.sheetHas('Hier fehlt'), 'no reason under the pill');
+		// where the next sensors should go: this spot's place among all spots without one (the other runs may add a spot meanwhile)
+		const rank = await page.eval(`document.querySelector('.sheet .rank')?.textContent ?? ''`);
+		const m = rank.match(/^Platz (\d+) von (\d+) Stellen ohne Sensor, nach Meldungen\.$/);
+		expect(none.length < 2 || (m && +m[1] <= +m[2] && +m[2] >= none.length - 1), `the rank line says "${rank}"`);
 		await page.shot(`${size}-no-sensor`);
 	});
 

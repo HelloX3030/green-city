@@ -6,9 +6,18 @@
 		cluster,
 		days = 14,
 		sent = false,
+		all = [],
 		onclose,
 		onreport
-	}: { cluster: Cluster; days?: number; sent?: boolean; onclose: () => void; onreport: () => void } = $props();
+	}: { cluster: Cluster; days?: number; sent?: boolean; all?: Cluster[]; onclose: () => void; onreport: () => void } = $props();
+
+	// no sensor here: where this spot stands among all spots without one, by reports, for "the next sensors go here"
+	const gaps = $derived(all.filter((c) => c.status === 'no_data'));
+	const rank = $derived(
+		cluster.status === 'no_data' && gaps.length > 1
+			? `Platz ${1 + gaps.filter((c) => c.count > cluster.count).length} von ${gaps.length} Stellen ohne Sensor, nach Meldungen.`
+			: null
+	);
 
 	const mine = $derived(cluster.mine > 0); // one of the reports here is from this device
 	const others = $derived(cluster.people - 1); // other people, not other reports
@@ -77,6 +86,7 @@
 {#if cluster.status}
 	<span class="status" style="background: {STATUS[cluster.status].color}">{STATUS[cluster.status].label}</span>
 	<p class="reason">{cluster.reason}</p>
+	{#if rank}<p class="rank">{rank}</p>{/if}
 {/if}
 {#if Object.keys(cluster.types).length > 1 || myTypes.size}
 <div class="types">
@@ -172,6 +182,11 @@
 	.reason {
 		margin: 10px 0 0;
 		font-size: 13.5px;
+	}
+	.rank {
+		margin: 4px 0 0;
+		font-size: 12px;
+		color: var(--ink2);
 	}
 	.types {
 		display: flex;
