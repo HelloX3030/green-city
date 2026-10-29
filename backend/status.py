@@ -44,7 +44,7 @@ def assess(lat: float, lon: float, type_: str) -> tuple[str | None, str | None]:
     if type_ == "heat":
         box, d = _nearest(lat, lon, "temp")
         if not box or d > NEAR_M:
-            return "no_data", f"Kein Temperatursensor im Umkreis von {NEAR_M} m."
+            return "no_data", f"Kein Temperatursensor im Umkreis von {NEAR_M} m. Hier fehlt ein Sensor."
         daily = box["phenomena"]["temp"]["daily"]
         n = _days(daily, lambda v: v >= HOT_DAY_C)
         where = f"{box['name']} ({_dist(d)})"
@@ -67,7 +67,7 @@ def assess(lat: float, lon: float, type_: str) -> tuple[str | None, str | None]:
             if not uba or d > UBA_NEAR_M:
                 if ride:
                     return "unconfirmed", f"Kein fester Feinstaubsensor im Umkreis von {NEAR_M} m.{bike}"
-                return "no_data", f"Kein Feinstaubsensor im Umkreis von {NEAR_M} m."
+                return "no_data", f"Kein Feinstaubsensor im Umkreis von {NEAR_M} m. Hier fehlt ein Sensor."
             daily, where = uba["daily"], f"{UBA_STATION['name']}, {_dist(d)}"
         n = _days(daily, lambda v: v > PM25_WHO)
         if n >= PM25_DAYS_MIN:
@@ -77,7 +77,7 @@ def assess(lat: float, lon: float, type_: str) -> tuple[str | None, str | None]:
     if type_ == "noise":
         box, d = _nearest(lat, lon, "noise")
         if not box or d > NEAR_M:
-            return "no_data", "Kein Lärmsensor in der Nähe. Hier fehlt eine Messung."
+            return "no_data", f"Kein Lärmsensor im Umkreis von {NEAR_M} m. Hier fehlt ein Sensor."
         daily = box["phenomena"]["noise"]["daily"]
         where = f"{box['name']} ({_dist(d)})"
         if not daily:
