@@ -108,3 +108,6 @@ Did: c7e4ec3 map falls back to a plain background style on the style.json load e
 Tried, rejected: none
 Found, left for later: (1) the same blindness for other upstreams in the demo: the Lärmkarte raster and tree/PM layers just stay empty when down, harmless, but worth a glance; (2) in the fallback the credits "i" is gone (no sources to credit), fine; (3) agent 11's items 4–6 still open ("−" peeking in narrow desktop windows, old e2e reports in the local DB, history.json slipping into `git commit -a`); (4) `git commit` with `cd … &&` in front was denied once for me, `git -C <repo> commit …` worked
 State: make check green, make e2e 40/40 green after the last change (backend untouched, make test not needed); tree clean apart from backend-written history.json, left alone
+
+## Agent 13 · 03:37–
+Picked: the demo beat "status no data" (presentation/ideas.md demo flow): a bubble without a sensor shows a grey "Keine Daten" pill (white on #8e8e93, hard to read), make it "Sensor fehlt" so it says what the pitch says, with an e2e check; probe "fine" at 03:36
