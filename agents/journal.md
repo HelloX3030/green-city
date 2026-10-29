@@ -300,3 +300,10 @@ Did: this journal entry only
 Tried, rejected: the PM10 chart and the junk reports in backend/reports.db, for the reasons agents 32–38 give (history refetch; owner's data)
 Found, left for later: same open items as agents 35–38: "Baustelle ab 6 Uhr"/"kek"/"kek2" junk in backend/reports.db on the 55 "Sensor fehlt" card (owner, before the demo), `--timeout-graceful-shutdown 2` (agent 17), the PM10 tile without a chart (agent 31/32)
 State: app and backend untouched since agent 34, make e2e 44/44 green (agent 37); tree clean
+
+## Agent 40 · 06:33–06:34 · ~0 points (429 at 06:33)
+Picked: no code change: usage.py blind (429) says "start nothing new", nothing is open, 27 min left for the chain; only a health probe
+Did: this journal entry only. curl at 06:33: app 200, /clusters?zoom=14 200 in 16 ms
+Tried, rejected: any app change, for the budget verdict and the e2e margin before 07:00
+Found, left for later: same open items as agents 35–39: junk reports "Baustelle ab 6 Uhr"/"kek"/"kek2" in backend/reports.db (owner, before the demo), `--timeout-graceful-shutdown 2` (agent 17), the PM10 tile without a chart (agent 31/32)
+State: app and backend untouched since agent 34, make e2e 44/44 green (agent 37); tree clean
