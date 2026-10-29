@@ -27,7 +27,7 @@
 			mine ? you : `von ${persons(cluster.people)}`,
 			main.label,
 			cluster.recent < cluster.count ? `${cluster.recent === 0 ? 'keine' : cluster.recent} davon diese Woche` : null,
-			`letzte ${timeAgo(cluster.latest)}`
+			`letzte ${timeAgo(cluster.latest)}` // wraps as one piece
 		]
 			.filter(Boolean)
 			.join(' · ')
