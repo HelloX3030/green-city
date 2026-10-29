@@ -32,11 +32,17 @@
 		name = me?.name ?? '';
 		mode = 'name';
 	}
+	// a double tap or Enter then tap sends once: a second claim of the spent code would toast "Code unbekannt"
+	let busy = $state(false);
 	async function saveName() {
+		if (busy) return;
+		busy = true;
 		try {
 			await setName(name);
 		} catch {
 			return onsay('Speichern fehlgeschlagen');
+		} finally {
+			busy = false;
 		}
 		mode = 'list';
 		onchanged();
@@ -69,10 +75,14 @@
 	}
 	onDestroy(() => clearInterval(watch));
 	async function link() {
+		if (busy || theirs.trim().length !== 6) return;
+		busy = true;
 		try {
 			await claim(theirs.trim());
 		} catch {
 			return onsay('Code unbekannt oder abgelaufen');
+		} finally {
+			busy = false;
 		}
 		back();
 		onsay('Geräte verknüpft');
@@ -100,15 +110,30 @@
 </div>
 {#if mode === 'name'}
 	<p class="hint">Freiwillig, steht nirgends öffentlich.</p>
-	<input bind:value={name} maxlength="40" placeholder="Name" autocomplete="off" />
-	<button class="primary" onclick={saveName}>Speichern</button>
+	<input
+		bind:value={name}
+		maxlength="40"
+		placeholder="Name"
+		autocomplete="off"
+		enterkeyhint="done"
+		onkeydown={(e) => e.key === 'Enter' && !e.isComposing && saveName()}
+	/>
+	<button class="primary" onclick={saveName} disabled={busy}>Speichern</button>
 {:else if mode === 'link'}
 	<p class="hint">Auf dem anderen Gerät: Meine Meldungen → Anderes Gerät verknüpfen → diesen Code eingeben. Gilt 10 Minuten.</p>
 	<div class="code">{myCode || '······'}</div>
 	<p class="hint">Oder hier den Code des anderen Geräts eingeben, dann gehören dessen Meldungen zu diesem.</p>
 	<div class="claim">
-		<input bind:value={theirs} maxlength="6" placeholder="Code" autocomplete="off" autocapitalize="characters" />
-		<button class="primary" onclick={link} disabled={theirs.trim().length !== 6}>Verknüpfen</button>
+		<input
+			bind:value={theirs}
+			maxlength="6"
+			placeholder="Code"
+			autocomplete="off"
+			autocapitalize="characters"
+			enterkeyhint="go"
+			onkeydown={(e) => e.key === 'Enter' && !e.isComposing && link()}
+		/>
+		<button class="primary" onclick={link} disabled={busy || theirs.trim().length !== 6}>Verknüpfen</button>
 	</div>
 {:else}
 {#if reports.length === 0}

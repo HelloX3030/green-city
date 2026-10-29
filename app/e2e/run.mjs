@@ -791,7 +791,9 @@ const phone = async ({ page, send, expect, scenario, melden, type, nearlyZoom, s
 		await page.clickText('Name angeben');
 		await wait(200);
 		await type('.sheet input', 'Kim');
-		await page.clickText('Speichern');
+		// the keyboard's key saves, as the Speichern button does
+		expect(await page.eval(`document.querySelector('.sheet input').enterKeyHint`) === 'done', 'the keyboard key of the name field does not say done');
+		await page.eval(`document.querySelector('.sheet input').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); 0`);
 		expect(await page.sheetHas('Kim'), 'name not on the sheet');
 		expect((await api('/me').then((r) => r.json())).name === 'Kim', 'name not saved');
 		// a second device with a report of its own claims this device's code
@@ -809,7 +811,9 @@ const phone = async ({ page, send, expect, scenario, melden, type, nearlyZoom, s
 		// a wrong code typed on this device
 		await type('.sheet .claim input', 'ZZZZZZ');
 		page.allowLog(/400 \(Bad Request\) .*\/me\/claim/);
-		await page.clickText('Verknüpfen');
+		// Enter in the field links, as the Verknüpfen button does
+		expect(await page.eval(`document.querySelector('.sheet .claim input').enterKeyHint`) === 'go', 'the keyboard key of the code field does not say go');
+		await page.eval(`document.querySelector('.sheet .claim input').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); 0`);
 		await wait(800);
 		expect((await page.eval(`document.querySelector('.toast')?.innerText`)) === 'Code unbekannt oder abgelaufen', 'no toast for a bad code');
 		// the other device claims the code, this one notices on its own
